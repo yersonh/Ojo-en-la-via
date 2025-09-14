@@ -135,7 +135,7 @@
     <!-- Lado izquierdo -->
     <div class="left">
       <h1>Bienvenido!</h1>
-      <p>Explora nuestra plataforma "Ojo en la vía",donde podrás reportar y consultar el estado de las calles de villavicencio.</p>
+      <p>Explora nuestra plataforma "Ojo en la vía",donde podrás reportar y consultar el estado de las calles de Villavicencio.</p>
       <div class="icons">
         <i class="fab fa-facebook"></i>
         <i class="fab fa-twitter"></i>
