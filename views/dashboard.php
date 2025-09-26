@@ -7,11 +7,7 @@ $db = $database->conectar();
 
 $sesion = new SesionControlador($db);
 
-// Si no está logueado, volver al login
-if (!$sesion->estaLogueado()) {
-    header("Location: login.php");
-    exit;
-}
+
 ?>
 <!DOCTYPE html>
 <html lang="es">

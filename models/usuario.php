@@ -6,32 +6,100 @@ class Usuario {
         $this->conn = $db;
     }
 
-    // Insertar un nuevo usuario
-    public function insertar($nombre, $apellidos, $telefono, $cedula) {
-        $sql = "INSERT INTO usuario (nombre, apellidos, telefono, cedula)
-                VALUES (:nombre, :apellidos, :telefono, :cedula)
-                RETURNING id_usuario";
+    public function insertar($id_persona, $id_rol, $id_estado, $correo, $password) {
+        $hash = password_hash($password, PASSWORD_DEFAULT);
+
+        $sql = "INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena)
+                VALUES (:id_persona, :id_rol, :id_estado, :correo, :password)";
         $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':nombre', $nombre);
-        $stmt->bindParam(':apellidos', $apellidos);
-        $stmt->bindParam(':telefono', $telefono);
-        $stmt->bindParam(':cedula', $cedula);
+        $stmt->bindParam(':id_persona', $id_persona);
+        $stmt->bindParam(':id_rol', $id_rol);
+        $stmt->bindParam(':id_estado', $id_estado);
+        $stmt->bindParam(':correo', $correo);
+        $stmt->bindParam(':password', $hash);
 
         try {
-            $stmt->execute();
-            $row = $stmt->fetch();
-            return $row['id_usuario']; // devolvemos el id generado
+            return $stmt->execute();
         } catch (PDOException $e) {
             echo "❌ Error al insertar usuario: " . $e->getMessage();
             return false;
         }
     }
 
-    // Listar usuarios
-    public function listar() {
-        $sql = "SELECT * FROM usuario";
+    public function existeCorreo($correo) {
+        $sql = "SELECT COUNT(*) FROM usuario WHERE correo = :correo";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':correo', $correo);
+
+        try {
+            $stmt->execute();
+            $count = $stmt->fetchColumn();
+            return $count > 0;
+        } catch (PDOException $e) {
+            echo "❌ Error al verificar correo: " . $e->getMessage();
+            return true;
+        }
+    }
+
+    // MÉTODO NUEVO PARA LOGIN
+    public function obtenerPorCorreo($correo) {
+        $sql = "SELECT u.*, p.nombres, p.apellidos, p.telefono 
+                FROM usuario u 
+                JOIN persona p ON u.id_persona = p.id_persona 
+                WHERE u.correo = :correo";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':correo', $correo);
+        
+        try {
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "❌ Error al obtener usuario por correo: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    // MÉTODOS ADICIONALES (opcionales pero útiles)
+    public function obtenerPorId($id_usuario) {
+        $sql = "SELECT u.*, p.nombres, p.apellidos, p.telefono 
+                FROM usuario u 
+                JOIN persona p ON u.id_persona = p.id_persona 
+                WHERE u.id_usuario = :id_usuario";
+        
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id_usuario', $id_usuario);
+        
+        try {
+            $stmt->execute();
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            echo "❌ Error al obtener usuario por ID: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function actualizarEstado($id_usuario, $id_estado) {
+        $sql = "UPDATE usuario SET id_estado = :id_estado WHERE id_usuario = :id_usuario";
+        $stmt = $this->conn->prepare($sql);
+        $stmt->bindParam(':id_usuario', $id_usuario);
+        $stmt->bindParam(':id_estado', $id_estado);
+        
+        try {
+            return $stmt->execute();
+        } catch (PDOException $e) {
+            echo "❌ Error al actualizar estado: " . $e->getMessage();
+            return false;
+        }
+    }
+
+    public function listar(){
+        $sql = "SELECT u.*, p.nombres, p.apellidos, p.telefono 
+                FROM usuario u 
+                JOIN persona p ON u.id_persona = p.id_persona";
         $stmt = $this->conn->prepare($sql);
         $stmt->execute();
-        return $stmt->fetchAll();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 }
+?>

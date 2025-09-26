@@ -2,7 +2,7 @@
 class Database {
     private $host = "localhost";
     private $port = "5432";
-    private $dbname = "SistemaVentaBackup2";
+    private $dbname = "ojoEnLaVIabd";
     private $user = "postgres";
     private $password = "admin";
     private $conn;
@@ -18,7 +18,6 @@ class Database {
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 
-            echo "✅ Conexión establecida con PostgreSQL";
         } catch (PDOException $e) {
             echo "❌ Error de conexión: " . $e->getMessage();
         }

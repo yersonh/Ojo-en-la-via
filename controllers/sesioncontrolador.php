@@ -1,58 +1,56 @@
 <?php
-require_once '../models/usuario.php';
-require_once '../models/sesion.php';
+require_once __DIR__ . '/../models/persona.php';
+require_once __DIR__ . '/../models/usuario.php';
 
 class SesionControlador {
+    private $personaModel;
     private $usuarioModel;
-    private $sesionModel;
 
     public function __construct($db) {
+        $this->personaModel = new Persona($db);
         $this->usuarioModel = new Usuario($db);
-        $this->sesionModel = new Sesion($db);
-
-        if (session_status() === PHP_SESSION_NONE) {
-            session_start();
-        }
     }
 
-    // Registrar usuario + crear sesión
-    public function registrar($nombre, $apellidos, $telefono, $cedula, $correo, $password) {
-        // Insertar usuario primero
-        $id_usuario = $this->usuarioModel->insertar($nombre, $apellidos, $telefono, $cedula);
+    public function registrar($nombres, $apellidos, $correo, $telefono, $id_rol, $id_estado, $password) {
+        // Validar si el correo ya existe en la tabla usuario
+        if ($this->usuarioModel->existeCorreo($correo)) {
+            echo "⚠️ El correo ya está registrado, por favor use otro.";
+            return false;
+        }
 
-        if ($id_usuario) {
-            // Crear la sesión para ese usuario
-            $hash = password_hash($password, PASSWORD_DEFAULT);
-            return $this->sesionModel->insertar($correo, $hash, $id_usuario);
+        $id_persona = $this->personaModel->insertar($nombres, $apellidos, $telefono);
+
+        if ($id_persona) {
+            // Insertar usuario asociado a la persona (incluyendo id_estado)
+            return $this->usuarioModel->insertar($id_persona, $id_rol, $id_estado, $correo, $password);
         }
 
         return false;
     }
 
-    // Login
     public function login($correo, $password) {
-        $user = $this->sesionModel->obtenerPorCorreo($correo);
+        $usuario = $this->usuarioModel->obtenerPorCorreo($correo);
+        
+        if ($usuario && password_verify($password, $usuario['contrasena'])) {
 
-        if ($user && password_verify($password, $user['contraseña'])) {
-            $_SESSION['usuario'] = $user['id_usuario'];
-            return true;
+            if ($usuario['id_estado'] == 1) { // 1 = Activo
+                return $usuario;
+            } else {
+                echo "Tu cuenta está inactiva o bloqueada.";
+                return false;
+            }
         }
+        
+        echo "Credenciales incorrectas.";
         return false;
     }
 
-    // Logout
-    public function logout() {
-        session_unset();
-        session_destroy();
+    public function obtenerUsuario($id_usuario) {
+        return $this->usuarioModel->obtenerPorId($id_usuario);
     }
 
-    // Verificar sesión
-    public function verificarSesion() {
-        return $_SESSION['usuario'] ?? null;
-    }
-
-    // Saber si está logueado
-    public function estaLogueado() {
-        return isset($_SESSION['usuario']);
+    public function actualizarEstado($id_usuario, $id_estado) {
+        return $this->usuarioModel->actualizarEstado($id_usuario, $id_estado);
     }
 }
+?>

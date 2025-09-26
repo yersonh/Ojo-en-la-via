@@ -18,7 +18,7 @@
             overflow: hidden;
         }
 
-        /* Fondo con imagen de mapa y overlay oscuro */
+        
         body::before {
             content: "";
             position: absolute;
