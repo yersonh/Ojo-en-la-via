@@ -1,9 +1,10 @@
 <?php
 class Database {
-    private $host = "localhost";
+    // Host es el nombre del servicio en docker-compose.yml
+    private $host = "db";  
     private $port = "5432";
     private $dbname = "ojoEnLaVIabd";
-    private $user = "postgres";
+    private $user = "yerson";
     private $password = "admin";
     private $conn;
 
@@ -17,7 +18,7 @@ class Database {
                 $this->password
             );
             $this->conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
+            // echo "✅ Conexión exitosa a PostgreSQL";
         } catch (PDOException $e) {
             echo "❌ Error de conexión: " . $e->getMessage();
         }
