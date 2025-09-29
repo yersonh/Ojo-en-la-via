@@ -1,12 +1,21 @@
 <?php
 class Database {
-    // Host es el nombre del servicio en docker-compose.yml
-    private $host = "db";  
-    private $port = "5432";
-    private $dbname = "ojoEnLaVIabd";
-    private $user = "yerson";
-    private $password = "admin";
+    // Usar variables de entorno con valores por defecto
+    private $host;
+    private $port; 
+    private $dbname;
+    private $user;
+    private $password;
     private $conn;
+
+    public function __construct() {
+        // Obtener valores de variables de entorno o usar valores por defecto
+        $this->host = getenv('PGHOST') ?: 'db';
+        $this->port = getenv('PGPORT') ?: '5432';
+        $this->dbname = getenv('PGDATABASE') ?: 'ojoEnLaVIabd';
+        $this->user = getenv('PGUSER') ?: 'yerson';
+        $this->password = getenv('PGPASSWORD') ?: 'admin';
+    }
 
     public function conectar() {
         $this->conn = null;

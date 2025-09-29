@@ -13,4 +13,12 @@ COPY . /var/www/html/
 # Dar permisos correctos
 RUN chown -R www-data:www-data /var/www/html
 
-EXPOSE 80
+# CONFIGURACIÓN ESPECÍFICA PARA RAILWAY
+EXPOSE 8080
+ENV PORT=8080
+
+# Configurar Apache para usar el puerto de Railway
+RUN sed -i 's/80/${PORT}/g' /etc/apache2/ports.conf
+RUN sed -i 's/80/${PORT}/g' /etc/apache2/sites-available/000-default.conf
+
+CMD ["apache2-foreground"]

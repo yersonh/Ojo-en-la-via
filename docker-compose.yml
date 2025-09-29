@@ -5,11 +5,17 @@ services:
     build: .
     container_name: php-apache
     ports:
-      - "8080:80"
+      - "8080:8080"  # Cambiado de 80 a 8080
     volumes:
       - .:/var/www/html
     depends_on:
       - db
+    environment:  # Agregar variables para consistencia
+      - PGHOST=db
+      - PGPORT=5432
+      - PGDATABASE=ojoEnLaVIabd
+      - PGUSER=yerson
+      - PGPASSWORD=admin
 
   db:
     image: postgres:15
