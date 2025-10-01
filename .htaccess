@@ -1,0 +1,15 @@
+RewriteEngine On
+
+# Redirigir todas las solicitudes a index.php si el archivo no existe
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Configurar directorio por defecto
+DirectoryIndex index.php
+
+# Permitir reescritura de URLs
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+</IfModule>

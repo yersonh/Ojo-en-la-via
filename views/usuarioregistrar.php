@@ -1,6 +1,6 @@
 <?php
-require_once '../config/database.php';
-require_once '../controllers/sesioncontrolador.php';
+require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../controllers/sesioncontrolador.php';
 
 // Crear conexión
 $database = new Database();
