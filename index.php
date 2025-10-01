@@ -6,7 +6,7 @@ require_once 'models/persona.php';
 require_once 'models/usuario.php';
 
 $database = new Database();
-$db = $database->conectar(); // ← Cambiado de connect() a conectar()
+$db = $database->conectar();
 $sesionControlador = new SesionControlador($db);
 
 // Manejo del login
@@ -28,14 +28,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         $error_message = "Credenciales incorrectas o cuenta inactiva.";
     }
 }
-?>
 
+// Determinar base URL automáticamente
+$protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
+$base_url = $protocol . "://" . $_SERVER['HTTP_HOST'];
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ojo en la vía</title>
-  <link rel="shortcut icon" href="./imagenes/fiveicon.png" type="image/x-icon">
+  <link rel="shortcut icon" href="<?php echo $base_url; ?>/imagenes/fiveicon.png" type="image/x-icon">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * {
@@ -50,13 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
       display: flex;
       justify-content: center;
       align-items: center;
-      background: url("./imagenes/login3.jpg") no-repeat center center/cover;
+      background: url("<?php echo $base_url; ?>/imagenes/login3.jpg") no-repeat center center/cover;
+      padding: 20px;
     }
 
     .container {
-      width: 80%;
+      width: 100%;
       max-width: 1000px;
-      height: 600px;
+      height: auto;
+      min-height: 500px;
       display: grid;
       grid-template-columns: 1fr 1fr;
       border-radius: 15px;
@@ -66,7 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 
     /* Lado izquierdo */
     .left {
-      background: rgba(59, 57, 57, 0.5);
+      background: rgba(59, 57, 57, 0.8);
       color: white;
       display: flex;
       flex-direction: column;
@@ -75,20 +81,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     }
 
     .left h1 {
-      font-size: 40px;
+      font-size: clamp(2rem, 4vw, 2.5rem);
       margin-bottom: 20px;
+      text-align: center;
     }
 
     .left p {
       margin-bottom: 20px;
       color: #ddd;
       line-height: 1.5;
+      text-align: center;
+      font-size: clamp(0.9rem, 2vw, 1.1rem);
+    }
+
+    .icons {
+      text-align: center;
     }
 
     .icons i {
       margin: 0 10px;
       cursor: pointer;
-      font-size: 20px;
+      font-size: 1.5rem;
       transition: color 0.3s;
     }
 
@@ -98,7 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 
     /* Lado derecho */
     .right {
-      background: rgba(40, 38, 38, 0.1);
+      background: rgba(40, 38, 38, 0.85);
       backdrop-filter: blur(10px);
       display: flex;
       flex-direction: column;
@@ -110,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     .right h2 {
       text-align: center;
       margin-bottom: 30px;
-      font-size: 28px;
+      font-size: clamp(1.5rem, 3vw, 1.8rem);
     }
 
     .input-box {
@@ -120,7 +133,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 
     .input-box input {
       width: 100%;
-      padding: 12px 40px;
+      padding: 14px 40px;
       border: none;
       border-bottom: 2px solid #fff;
       background: transparent;
@@ -132,6 +145,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 
     .input-box input:focus {
       border-bottom-color: #1e8ee9;
+    }
+
+    .input-box input::placeholder {
+      color: #ccc;
     }
 
     .input-box i {
@@ -148,12 +165,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
       font-size: 14px;
       margin-bottom: 25px;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
     }
 
     .options label {
       display: flex;
       align-items: center;
       gap: 5px;
+      white-space: nowrap;
     }
 
     .options a {
@@ -169,18 +189,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     .btn {
       background: #1e8ee9;
       border: none;
-      padding: 12px;
+      padding: 14px;
       width: 100%;
       color: white;
       font-size: 16px;
       cursor: pointer;
-      border-radius: 5px;
-      transition: background 0.3s;
+      border-radius: 8px;
+      transition: all 0.3s;
       font-weight: bold;
     }
 
     .btn:hover {
       background: #1865c2;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(30, 142, 233, 0.3);
+    }
+
+    .btn:active {
+      transform: translateY(0);
     }
 
     .signup {
@@ -202,25 +228,79 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
 
     /* Mensaje de error */
     .alert-error {
-      background: rgba(255, 68, 68, 0.8);
+      background: rgba(255, 68, 68, 0.9);
       color: white;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 12px;
+      border-radius: 8px;
       margin-bottom: 20px;
       text-align: center;
       display: <?php echo isset($error_message) ? 'block' : 'none'; ?>;
+      border-left: 4px solid #ff4444;
     }
 
     /* Responsive */
     @media (max-width: 768px) {
+      body {
+        padding: 15px;
+        height: auto;
+        min-height: 100vh;
+        align-items: flex-start;
+        padding-top: 40px;
+      }
+      
       .container {
         grid-template-columns: 1fr;
         height: auto;
-        margin: 20px;
+        margin: 0;
       }
       
       .left, .right {
-        padding: 30px;
+        padding: 30px 25px;
+      }
+      
+      .left {
+        order: 2;
+      }
+      
+      .right {
+        order: 1;
+      }
+      
+      .options {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .left, .right {
+        padding: 25px 20px;
+      }
+      
+      .input-box input {
+        padding: 12px 35px;
+        font-size: 16px; /* Previene zoom en iOS */
+      }
+      
+      .btn {
+        padding: 12px;
+      }
+    }
+
+    /* Para pantallas muy grandes */
+    @media (min-width: 1200px) {
+      .container {
+        max-width: 1100px;
+      }
+    }
+
+    /* Asegurar que el fondo cubra toda la pantalla */
+    @media (max-height: 600px) {
+      body {
+        align-items: flex-start;
+        padding-top: 20px;
+        padding-bottom: 20px;
       }
     }
   </style>
@@ -267,7 +347,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         <button class="btn" type="submit">Ingresar</button>
 
         <div class="signup">
-          ¿No tienes cuenta? <a href="views/usuarioRegistrar.php">Regístrate</a>
+          ¿No tienes cuenta? <a href="<?php echo $base_url; ?>/views/usuarioRegistrar.php">Regístrate</a>
         </div>
       </form>
     </div>
@@ -295,6 +375,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
       
       return true;
     });
+
+    // Detectar y mostrar tamaño de pantalla (solo para debug)
+    console.log('Ancho de pantalla:', window.innerWidth, 'Altura:', window.innerHeight);
   </script>
 </body>
 </html>
