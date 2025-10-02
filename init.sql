@@ -31,3 +31,29 @@ CREATE TABLE usuario (
 -- Inserts iniciales
 INSERT INTO estado_usuario (nombre) VALUES ('Activo'), ('Inactivo');
 INSERT INTO rol (nombre, descripcion) VALUES ('Admin', 'Administrador general'), ('Usuario', 'Usuario estándar');
+
+INSERT INTO persona (nombres, apellidos, telefono) VALUES 
+('Yerson', 'Solano Alfonso', '3142452456'),
+('Lauren', 'Oviedo Garces', '3117962475'),
+('Isabella', 'Hernadez Parrado', '3154567890');
+
+-- INSERTS con hashes bcrypt reales para la contraseña "12345678"
+INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
+(1, 1, 1, 'solanoalfonsoy@gmail.com', '$2b$12$TuijOg5BDHfcJ42GzyinNuaqLaiRPtYaLEGLNiHl5gmyNu4QWtjSO'),
+(2, 1, 1, 'laurenoviedo@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
+(3, 1, 1, 'isabellahernadez@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC');
+
+-- Opcional: usuario adicional admin (con contraseña 'admin123')
+INSERT INTO persona (nombres, apellidos, telefono) VALUES ('Super', 'Admin', '3000000000');
+INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
+(4, 1, 1, 'admin@example.com', '$2b$12$4j5TRCPTBxt3NUpzkmb1teaALHw9w6XAWXG.KIVdzlAYbVu.qyvJy');
+
+CREATE TABLE recovery_tokens (
+    id SERIAL PRIMARY KEY,
+    id_usuario INTEGER NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expiracion TIMESTAMP NOT NULL,
+    usado BOOLEAN DEFAULT FALSE,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_recovery_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
+);
