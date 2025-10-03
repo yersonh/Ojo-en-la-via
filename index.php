@@ -8,14 +8,28 @@ require_once BASE_PATH . 'controllers/sesioncontrolador.php';
 require_once BASE_PATH . 'models/persona.php';
 require_once BASE_PATH . 'models/usuario.php';
 
-require_once BASE_PATH . 'PHPMailer/PHPMailer.php';
-require_once BASE_PATH . 'PHPMailer/SMTP.php';
-require_once BASE_PATH . 'PHPMailer/Exception.php';
+require_once __DIR__ . '/phpmailer/PHPMailer.php';
+require_once __DIR__ . '/phpmailer/SMTP.php';
+require_once __DIR__ . '/phpmailer/Exception.php';
+
 
 
 // Determinar base URL automáticamente
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $base_url = $protocol . "://" . $_SERVER['HTTP_HOST'];
+
+$view = $_GET['view'] ?? 'index'; // 'index' es tu vista por defecto
+
+switch ($view) {
+  case 'usuarioregistrar':
+    include 'views/usuarioregistrar.php';
+    break;
+  case 'index':
+  default:
+    include 'index.php'; // tu contenido principal
+    break;
+}
+
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -126,7 +140,9 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Ojo en la vía</title>
-  <link rel="shortcut icon" href="<?php echo $base_url; ?>/imagenes/fiveicon.png" type="image/x-icon">
+  <link rel="icon" href="/imagenes/fiveicon.png" type="image/png">
+  <link rel="shortcut icon" href="/imagenes/fiveicon.png" type="image/png">
+  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     * {

@@ -40,12 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $mail->isSMTP();
             $mail->Host       = 'smtp.gmail.com';
             $mail->SMTPAuth   = true;
-             $mail->Username   = 'ojoenlaviaparalosciudadanosg@gmail.com'; // tu correo Gmail
+             $mail->Username   = 'lauren.sofiaog@gmail.com'; // tu correo Gmail
             $mail->Password   = 'rsbz pumzpvdpdgka';        // contraseña de aplicación (App Password)
             $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
             $mail->Port       = 587;
 
-              $mail->setFrom('ojoenlaviaparalosciudadanosg@gmail.com', 'Soporte');
+              $mail->setFrom('lauren.sofiaog@gmail.com', 'Soporte');
             $mail->addAddress($correoUsuario);
 
             $mail->isHTML(true);
