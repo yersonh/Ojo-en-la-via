@@ -51,8 +51,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     }
 }
 
-
-
 // Función para procesar recuperación de contraseña
 function procesarRecuperacion($db, $correoUsuario, $base_url) {
     // Verificar si el correo existe
@@ -119,6 +117,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
