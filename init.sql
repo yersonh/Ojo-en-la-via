@@ -40,8 +40,8 @@ INSERT INTO persona (nombres, apellidos, telefono) VALUES
 -- INSERTS con hashes bcrypt reales para la contraseña "12345678"
 INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
 (1, 1, 1, 'solanoalfonsoy@gmail.com', '$2b$12$TuijOg5BDHfcJ42GzyinNuaqLaiRPtYaLEGLNiHl5gmyNu4QWtjSO'),
-(2, 1, 1, 'laurenoviedo@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
-(3, 1, 1, 'isabellahernadez@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC');
+(2, 1, 1, 'lauren.oviedo68@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
+(3, 1, 1, 'isamoradahernandezp@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC');
 
 -- Opcional: usuario adicional admin (con contraseña 'admin123')
 INSERT INTO persona (nombres, apellidos, telefono) VALUES ('Super', 'Admin', '3000000000');
