@@ -74,15 +74,15 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
             // Enviar correo
             $mail = new PHPMailer(true);
             try {
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
+                $mail->Host       = getenv('SMTP_HOST');
                 $mail->SMTPAuth   = true;
-                $mail->Username   = 'lauren.sofiaog@gmail.com'; // tu correo Gmail
-                $mail->Password   = 'rsbz pumzpvdpdgka';        // contraseña de aplicación
+                $mail->Username   = getenv('SMTP_USER');
+                $mail->Password   = getenv('SMTP_PASS');
                 $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port       = 587;
+                $mail->Port       = getenv('SMTP_PORT');
+                    
+                $mail->setFrom(getenv('SMTP_FROM'), getenv('SMTP_FROM_NAME'));
 
-                $mail->setFrom('lauren.sofiaog@gmail.com', 'Soporte - Ojo en la Vía');
                 $mail->addAddress($correoUsuario);
 
                 $mail->isHTML(true);
