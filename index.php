@@ -12,24 +12,9 @@ require_once __DIR__ . '/phpmailer/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/SMTP.php';
 require_once __DIR__ . '/phpmailer/Exception.php';
 
-
-
 // Determinar base URL automáticamente
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $base_url = $protocol . "://" . $_SERVER['HTTP_HOST'];
-
-$view = $_GET['view'] ?? 'index'; // 'index' es tu vista por defecto
-
-switch ($view) {
-  case 'usuarioregistrar':
-    include 'views/usuarioregistrar.php';
-    break;
-  case 'index':
-  default:
-    include 'index.php'; // tu contenido principal
-    break;
-}
-
 
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
@@ -65,8 +50,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         $mensaje_recuperacion = procesarRecuperacion($db, $correoRecuperacion, $base_url);
     }
 }
-
-
 
 // Función para procesar recuperación de contraseña
 function procesarRecuperacion($db, $correoUsuario, $base_url) {
@@ -134,6 +117,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -512,7 +496,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         <button class="btn" type="submit">Ingresar</button>
 
         <div class="signup">
-          ¿No tienes cuenta? <a href="<?php echo $base_url; ?>/views/usuarioRegistrar.php">Regístrate</a>
+          ¿No tienes cuenta? <a href="<?php echo $base_url; ?>/views/usuarioregistrar.php">Regístrate</a>
         </div>
       </form>
     </div>
