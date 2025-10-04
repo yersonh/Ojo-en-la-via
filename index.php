@@ -69,31 +69,28 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         $stmtToken->bindParam(':id_usuario', $usuario['id_usuario']);
         $stmtToken->bindParam(':token', $token);
         $stmtToken->bindParam(':expiracion', $expiracion);
-        
+
         if ($stmtToken->execute()) {
-            // Enviar correo
-            $mail = new PHPMailer(true);
-            try {
-                $mail->isSMTP();
-                $mail->Host       = 'smtp.gmail.com';
-                $mail->SMTPAuth   = true;
-                $mail->Username   = 'lauren.sofiaog@gmail.com'; // tu correo Gmail
-                $mail->Password   = 'rsbz pumzpvdpdgka';        // contraseña de aplicación
-                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
-                $mail->Port       = 587;
+            // Crear el enlace de recuperación
+            $link = "{$base_url}/views/manage/nueva_contraseña.php?token={$token}";
 
-                $mail->setFrom('lauren.sofiaog@gmail.com', 'Soporte - Ojo en la Vía');
-                $mail->addAddress($correoUsuario);
-
-                $mail->isHTML(true);
-                $mail->Subject = 'Recuperación de contraseña - Ojo en la Vía';
-                $mail->Body    = "
+            // Configurar datos del correo
+            $payload = [
+                "sender" => [
+                    "name"  => getenv('SMTP_FROM_NAME') ?: "Soporte - Ojo en la Vía",
+                    "email" => getenv('SMTP_FROM') ?: "988a48002@smtp-brevo.com"
+                ],
+                "to" => [
+                    ["email" => $correoUsuario]
+                ],
+                "subject" => "Recuperación de contraseña - Ojo en la Vía",
+                "htmlContent" => "
                     <h2>Recuperación de Contraseña</h2>
                     <p>Hola,</p>
                     <p>Hemos recibido una solicitud para restablecer tu contraseña en <strong>Ojo en la Vía</strong>.</p>
                     <p>Haz clic en el siguiente enlace para crear una nueva contraseña:</p>
                     <p>
-                        <a href='{$base_url}/views/manage/nueva_contraseña.php?token={$token}' 
+                        <a href='{$link}' 
                            style='background: #1e8ee9; color: white; padding: 12px 20px; text-decoration: none; border-radius: 5px; display: inline-block;'>
                             Restablecer Contraseña
                         </a>
@@ -102,12 +99,29 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
                     <p>Si no solicitaste este cambio, ignora este mensaje.</p>
                     <br>
                     <p>Saludos,<br>El equipo de Ojo en la Vía</p>
-                ";
+                "
+            ];
 
-                $mail->send();
+            // Enviar correo vía API de Brevo
+            $apiKey = getenv('BREVO_API_KEY');
+            $ch = curl_init("https://api.brevo.com/v3/smtp/email");
+            curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                "Accept: application/json",
+                "Content-Type: application/json",
+                "api-key: $apiKey"
+            ]);
+            curl_setopt($ch, CURLOPT_POST, true);
+            curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+
+            $response = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            curl_close($ch);
+
+            if ($httpCode >= 200 && $httpCode < 300) {
                 return "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
-            } catch (Exception $e) {
-                return "❌ Error al enviar el correo. Intenta nuevamente.";
+            } else {
+                return "❌ Error al enviar el correo (Código: $httpCode). Respuesta: $response";
             }
         } else {
             return "❌ Error al generar el enlace de recuperación.";
@@ -116,6 +130,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         return "❌ El correo ingresado no está registrado en nuestro sistema.";
     }
 }
+
 ?>
 
 <!DOCTYPE html>
