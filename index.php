@@ -12,7 +12,6 @@ require_once __DIR__ . '/phpmailer/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/SMTP.php';
 require_once __DIR__ . '/phpmailer/Exception.php';
 
-// Determinar base URL automáticamente
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $base_url = $protocol . "://" . $_SERVER['HTTP_HOST'];
 
@@ -27,7 +26,7 @@ $sesionControlador = new SesionControlador($db);
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     // Verificar si es login normal o recuperación
     if (isset($_POST['password'])) {
-        // Login normal
+       
         $correo = trim($_POST['email']);
         $password = $_POST['password'];
 
@@ -39,13 +38,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
             
-            header("Location: manage/Inicio.php");
+            header("Location: views/manage/vermapa.php");
             exit();
         } else {
             $error_message = "Credenciales incorrectas o cuenta inactiva.";
         }
     } else {
-        // Recuperación de contraseña
+        
         $correoRecuperacion = trim($_POST['email']);
         $mensaje_recuperacion = procesarRecuperacion($db, $correoRecuperacion, $base_url);
     }
@@ -60,21 +59,20 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($usuario) {
-        // Crear token único y expiración
+        
         $token = bin2hex(random_bytes(32));
         $expiracion = date("Y-m-d H:i:s", strtotime("+1 hour"));
 
-        // Guardar token en la base de datos
+        
         $stmtToken = $db->prepare("INSERT INTO recovery_tokens (id_usuario, token, expiracion) VALUES (:id_usuario, :token, :expiracion)");
         $stmtToken->bindParam(':id_usuario', $usuario['id_usuario']);
         $stmtToken->bindParam(':token', $token);
         $stmtToken->bindParam(':expiracion', $expiracion);
 
         if ($stmtToken->execute()) {
-            // Crear el enlace de recuperación
+            
             $link = "{$base_url}/views/manage/nueva_contraseña.php?token={$token}";
 
-            // Configurar datos del correo
             $payload = [
                 "sender" => [
                     "name"  => getenv('SMTP_FROM_NAME') ?: "Soporte - Ojo en la Vía",
@@ -102,7 +100,6 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
                 "
             ];
 
-            // Enviar correo vía API de Brevo
             $apiKey = getenv('BREVO_API_KEY');
             $ch = curl_init("https://api.brevo.com/v3/smtp/email");
             curl_setopt($ch, CURLOPT_HTTPHEADER, [
@@ -578,7 +575,6 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       }
     });
 
-    // Validación del formulario de recuperación
     document.getElementById('recoveryForm').addEventListener('submit', function(e) {
       const email = document.querySelector('#recoveryForm input[name="email"]').value;
       

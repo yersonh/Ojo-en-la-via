@@ -57,3 +57,73 @@ CREATE TABLE recovery_tokens (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_recovery_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 );
+CREATE TABLE tipo_incidente (
+    id_tipo_incidente SERIAL PRIMARY KEY,
+    nombre VARCHAR(100) NOT NULL,
+    descripcion TEXT
+);
+
+-- Ejemplos iniciales
+INSERT INTO tipo_incidente (nombre, descripcion) VALUES
+('Accidente de tránsito', 'Colisión o siniestro vial'),
+('Hueco en la vía', 'Daño en la calzada'),
+('Semáforo dañado', 'Falla en la señal de tránsito'),
+('Inundación', 'Vía obstruida por acumulación de agua');
+
+CREATE TABLE reporte (
+    id_reporte SERIAL PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    id_tipo_incidente INT NOT NULL,
+    descripcion TEXT NOT NULL,
+    latitud DECIMAL(10,8) NOT NULL,
+    longitud DECIMAL(11,8) NOT NULL,
+    fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    estado VARCHAR(50) DEFAULT 'Pendiente', -- Pendiente, Verificado, Resuelto
+    CONSTRAINT fk_reporte_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT fk_reporte_tipo FOREIGN KEY (id_tipo_incidente) REFERENCES tipo_incidente (id_tipo_incidente) ON DELETE RESTRICT
+);
+
+CREATE TABLE imagen_reporte (
+    id_imagen SERIAL PRIMARY KEY,
+    id_reporte INT NOT NULL,
+    url_imagen TEXT NOT NULL,
+    fecha_subida TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_imagen_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE
+);
+
+CREATE TABLE comentario_reporte (
+    id_comentario SERIAL PRIMARY KEY,
+    id_reporte INT NOT NULL,
+    id_usuario INT NOT NULL,
+    comentario TEXT NOT NULL,
+    fecha_comentario TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_comentario_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
+    CONSTRAINT fk_comentario_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE
+);
+
+CREATE TABLE historial_estado (
+    id_historial SERIAL PRIMARY KEY,
+    id_reporte INT NOT NULL,
+    estado_anterior VARCHAR(50),
+    estado_nuevo VARCHAR(50),
+    fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    id_usuario INT, -- quién realizó el cambio
+    CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
+    CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
+);
+-- Insertar un tipo de incidente
+INSERT INTO tipo_incidente (nombre, descripcion)
+VALUES ('Hueco en la vía', 'Bache o daño en la calzada');
+
+-- Insertar un reporte de prueba
+INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud, estado)
+VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);
+
+-- Insertar una imagen relacionada
+INSERT INTO imagen_reporte (id_reporte, url_imagen)
+VALUES (1, 'https://miapp.com/uploads/hueco_parque.jpg');
+
+-- Insertar un comentario
+INSERT INTO comentario_reporte (id_reporte, id_usuario, comentario)
+VALUES (1, 2, 'Yo también lo vi, sigue igual esta semana.');
+
