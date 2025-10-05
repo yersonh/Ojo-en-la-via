@@ -14,7 +14,7 @@ class SesionControlador {
     public function registrar($nombres, $apellidos, $correo, $telefono, $id_rol, $id_estado, $password) {
         // Validar si el correo ya existe en la tabla usuario
         if ($this->usuarioModel->existeCorreo($correo)) {
-            echo "⚠️ El correo ya está registrado, por favor use otro.";
+            
             return false;
         }
 
@@ -36,12 +36,11 @@ class SesionControlador {
             if ($usuario['id_estado'] == 1) { // 1 = Activo
                 return $usuario;
             } else {
-                echo "Tu cuenta está inactiva o bloqueada.";
+                
                 return false;
             }
         }
         
-        echo "Credenciales incorrectas.";
         return false;
     }
 

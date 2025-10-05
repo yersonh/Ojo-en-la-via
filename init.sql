@@ -116,7 +116,7 @@ INSERT INTO tipo_incidente (nombre, descripcion)
 VALUES ('Hueco en la vía', 'Bache o daño en la calzada');
 
 -- Insertar un reporte de prueba
-INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud, estado)
+INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
 VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);
 
 -- Insertar una imagen relacionada

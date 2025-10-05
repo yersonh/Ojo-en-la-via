@@ -36,15 +36,30 @@ try {
         case 'registrar':
             // Si viene con formulario (multipart/form-data)
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                $id_usuario = $_POST['id_usuario'];
-                $id_tipo_incidente = $_POST['id_tipo_incidente'];
-                $descripcion = $_POST['descripcion'];
-                $latitud = $_POST['latitud'];
-                $longitud = $_POST['longitud'];
+                // Sanitizar y validar datos
+                $id_usuario = filter_var($_POST['id_usuario'], FILTER_VALIDATE_INT);
+                $id_tipo_incidente = filter_var($_POST['id_tipo_incidente'], FILTER_VALIDATE_INT);
+                $descripcion = filter_var($_POST['descripcion'], FILTER_SANITIZE_STRING);
+                $latitud = filter_var($_POST['latitud'], FILTER_VALIDATE_FLOAT);
+                $longitud = filter_var($_POST['longitud'], FILTER_VALIDATE_FLOAT);
 
                 // Validar datos requeridos
                 if (empty($id_usuario) || empty($id_tipo_incidente) || empty($descripcion) || empty($latitud) || empty($longitud)) {
                     throw new Exception("Todos los campos son obligatorios");
+                }
+
+                // Validar coordenadas
+                if ($latitud < -90 || $latitud > 90 || $longitud < -180 || $longitud > 180) {
+                    throw new Exception("Coordenadas no válidas");
+                }
+
+                // ✅ Validar que el usuario existe y está activo
+                $queryUser = "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario";
+                $stmtUser = $db->prepare($queryUser);
+                $stmtUser->execute([':id_usuario' => $id_usuario]);
+                
+                if (!$stmtUser->fetch()) {
+                    throw new Exception("Usuario no válido");
                 }
 
                 // 📌 Insertar reporte
@@ -65,20 +80,28 @@ try {
 
                 // 📸 Manejo de imagen
                 if (!empty($_FILES['imagen']['name']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-                    // Directorio para imágenes
-                    $directorio = __DIR__ . '/../imagenes/reportes/';
+                    // Directorio para imágenes (usando documento raíz)
+                    $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
                     
                     // Crear directorio si no existe
                     if (!is_dir($directorio)) {
-                        mkdir($directorio, 0777, true);
+                        mkdir($directorio, 0755, true);
                     }
 
-                    // Validar tipo de archivo
+                    // ✅ Validación robusta de tipo de archivo
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime_type = finfo_file($finfo, $_FILES['imagen']['tmp_name']);
+                    finfo_close($finfo);
+
                     $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                    $file_type = $_FILES['imagen']['type'];
                     
-                    if (!in_array($file_type, $allowed_types)) {
+                    if (!in_array($mime_type, $allowed_types)) {
                         throw new Exception("Solo se permiten imágenes JPEG, PNG, GIF o WebP");
+                    }
+
+                    // ✅ Validar que sea una imagen real
+                    if (!getimagesize($_FILES['imagen']['tmp_name'])) {
+                        throw new Exception("El archivo no es una imagen válida");
                     }
 
                     // Validar tamaño (máximo 5MB)
@@ -86,7 +109,9 @@ try {
                         throw new Exception("La imagen no debe superar los 5MB");
                     }
 
-                    $nombreArchivo = uniqid('reporte_') . '.' . pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+                    // Generar nombre seguro
+                    $extension = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
+                    $nombreArchivo = uniqid('reporte_') . '.' . $extension;
                     
                     // Ruta para guardar en servidor
                     $rutaDestino = $directorio . $nombreArchivo;
@@ -95,11 +120,12 @@ try {
                     $rutaRelativa = '/imagenes/reportes/' . $nombreArchivo;
 
                     if (move_uploaded_file($_FILES['imagen']['tmp_name'], $rutaDestino)) {
-                        $queryImg = "INSERT INTO imagen_reporte (id_reporte, ruta_imagen) VALUES (:id_reporte, :ruta_imagen)";
+                        // ✅ Corregido: usar url_imagen en lugar de ruta_imagen
+                        $queryImg = "INSERT INTO imagen_reporte (id_reporte, url_imagen) VALUES (:id_reporte, :url_imagen)";
                         $stmtImg = $db->prepare($queryImg);
                         $stmtImg->execute([
                             ':id_reporte' => $id_reporte,
-                            ':ruta_imagen' => $rutaRelativa
+                            ':url_imagen' => $rutaRelativa
                         ]);
                     } else {
                         throw new Exception("Error al subir la imagen");

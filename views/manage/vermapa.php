@@ -21,6 +21,8 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ojo en la Vía - Reportes</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
 
    <style>
         * { 
@@ -44,7 +46,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             overflow: hidden;
         }
 
-        /* 📍 MAPA - CORREGIDO */
+        /* 📍 MAPA */
         #map {
             flex: 2;
             height: 100vh !important;
@@ -122,6 +124,11 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         button:active {
             transform: translateY(1px);
+        }
+
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
         }
 
         .preview {
@@ -245,12 +252,12 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             </select>
 
             <label for="descripcion">Descripción:</label>
-            <textarea id="descripcion" name="descripcion" rows="3"  required></textarea>
+            <textarea id="descripcion" name="descripcion" rows="3" required></textarea>
 
             <label for="foto">📸 Fotografía (opcional):</label>
             <input type="file" id="foto" name="imagen" accept="image/*">
             <div class="preview">
-                <img id="previewImg" src="" alt="">
+                <img id="previewImg" src="" alt="" style="display: none;">
             </div>
 
             <label>🗺️ Seleccione ubicación en el mapa:</label>
@@ -274,7 +281,8 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </div>
 
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    <script>
 // Inicializar mapa centrado en Villavicencio
 const map = L.map('map').setView([4.142, -73.626], 13);
 
@@ -285,6 +293,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 
 // Variables globales
+let markerCluster = L.markerClusterGroup();
 let markers = [];
 let markerNuevo = null;
 
@@ -309,11 +318,45 @@ function mostrarAlerta(mensaje, tipo = 'success') {
     }
 }
 
+// ✅ Función de validación del formulario
+function validarFormulario() {
+    const lat = document.getElementById('latitud').value;
+    const lng = document.getElementById('longitud').value;
+    const tipo = document.getElementById('tipo').value;
+    const descripcion = document.getElementById('descripcion').value.trim();
+    const foto = document.getElementById('foto').files[0];
+    
+    // Validar tipo de incidente
+    if (!tipo) {
+        mostrarAlerta('Seleccione un tipo de incidente', 'error');
+        return false;
+    }
+    
+    // Validar descripción
+    if (!descripcion) {
+        mostrarAlerta('Ingrese una descripción del incidente', 'error');
+        return false;
+    }
+    
+    if (descripcion.length < 10) {
+        mostrarAlerta('La descripción debe tener al menos 10 caracteres', 'error');
+        return false;
+    }
+    
+    // Validar ubicación
+    if (!lat || !lng) {
+        mostrarAlerta('Debe seleccionar una ubicación en el mapa', 'error');
+        return false;
+    }
+    
+    return true;
+}
+
 // 📍 Cargar reportes existentes
 async function cargarReportes() {
     try {
         // Limpiar marcadores anteriores
-        markers.forEach(marker => map.removeLayer(marker));
+        markerCluster.clearLayers();
         markers = [];
 
         const resp = await fetch('../../controllers/reportecontrolador.php?action=listar');
@@ -328,7 +371,7 @@ async function cargarReportes() {
                 iconAnchor: [15, 30]
             });
 
-            const marker = L.marker([r.latitud, r.longitud], { icon: icono }).addTo(map);
+            const marker = L.marker([r.latitud, r.longitud], { icon: icono });
             
             marker.bindPopup(`
                 <div style="min-width: 250px;">
@@ -342,8 +385,11 @@ async function cargarReportes() {
                 </div>
             `);
             
+            markerCluster.addLayer(marker);
             markers.push(marker);
         });
+
+        map.addLayer(markerCluster);
     } catch (error) {
         console.error('Error al cargar reportes:', error);
         mostrarAlerta('Error al cargar reportes del servidor.', 'error');
@@ -353,7 +399,7 @@ async function cargarReportes() {
 // Cargar reportes al iniciar
 cargarReportes();
 
-// 🗺️ Seleccionar coordenadas - CORREGIDO
+// 🗺️ Seleccionar coordenadas
 map.on('click', function(e) {
     const { lat, lng } = e.latlng;
     
@@ -362,7 +408,7 @@ map.on('click', function(e) {
         map.removeLayer(markerNuevo);
     }
     
-    // Crear nuevo marcador con estilo destacado - CORREGIDO
+    // Crear nuevo marcador con estilo destacado
     markerNuevo = L.marker([lat, lng], {
         icon: L.divIcon({
             className: 'custom-marker marker-selected',
@@ -378,7 +424,7 @@ map.on('click', function(e) {
     document.getElementById('latDisplay').textContent = lat.toFixed(6);
     document.getElementById('lngDisplay').textContent = lng.toFixed(6);
     
-    // Mostrar popup con las coordenadas - CORREGIDO
+    // Mostrar popup con las coordenadas
     markerNuevo.bindPopup(`
         <div style="text-align: center;">
             <strong>Ubicación seleccionada</strong><br>
@@ -388,12 +434,21 @@ map.on('click', function(e) {
     `).openPopup();
 });
 
-// 📸 Previsualizar imagen
+// 📸 Previsualizar imagen con validación de tamaño
 document.getElementById('foto').addEventListener('change', function(e) {
     const file = e.target.files[0];
     const previewImg = document.getElementById('previewImg');
     
     if (file) {
+        // Validar tamaño de archivo (5MB máximo)
+        if (file.size > 5 * 1024 * 1024) {
+            mostrarAlerta('La imagen no debe superar los 5MB', 'error');
+            this.value = '';
+            previewImg.style.display = 'none';
+            previewImg.src = '';
+            return;
+        }
+        
         const reader = new FileReader();
         reader.onload = function(ev) {
             previewImg.src = ev.target.result;
@@ -410,17 +465,16 @@ document.getElementById('foto').addEventListener('change', function(e) {
 document.getElementById('formReporte').addEventListener('submit', async function(e) {
     e.preventDefault();
 
+    // Validar formulario antes de enviar
+    if (!validarFormulario()) {
+        return;
+    }
+
     const form = e.target;
     const formData = new FormData(form);
     const submitBtn = document.getElementById('submitBtn');
     const loading = document.getElementById('loading');
 
-    // Validar ubicación
-    if (!formData.get('latitud') || !formData.get('longitud')) {
-        mostrarAlerta('Debe seleccionar una ubicación en el mapa.', 'error');
-        return;
-    }
-    
     // Mostrar loading
     submitBtn.disabled = true;
     loading.style.display = 'block';
@@ -466,6 +520,8 @@ document.getElementById('formReporte').addEventListener('submit', async function
 
 // Debug: Verificar que el mapa se cargue correctamente
 console.log('Mapa inicializado:', map);
+ // Detectar y mostrar tamaño de pantalla (solo para debug)
+    console.log('Ancho de pantalla:', window.innerWidth, 'Altura:', window.innerHeight);
 </script>
 </body>
 </html>
