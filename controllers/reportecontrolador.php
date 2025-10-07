@@ -142,6 +142,69 @@ try {
             }
             break;
 
+            // Agregar estos casos al switch:
+
+        case 'listar_comentarios':
+            $id_reporte = $_GET['id_reporte'] ?? '';
+            if (empty($id_reporte)) {
+                throw new Exception("ID de reporte requerido");
+            }
+            
+            $query = "
+                SELECT 
+                    c.id_comentario,
+                    c.comentario,
+                    c.fecha_comentario,
+                    u.correo AS usuario,
+                    p.nombres,
+                    p.apellidos
+                FROM comentario_reporte c
+                INNER JOIN usuario u ON c.id_usuario = u.id_usuario
+                INNER JOIN persona p ON u.id_persona = p.id_persona
+                WHERE c.id_reporte = :id_reporte
+                ORDER BY c.fecha_comentario ASC
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute([':id_reporte' => $id_reporte]);
+            $comentarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            echo json_encode($comentarios);
+            break;
+
+        case 'agregar_comentario':
+            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+                $id_reporte = $_POST['id_reporte'];
+                $id_usuario = $_POST['id_usuario'];
+                $comentario = filter_var($_POST['comentario'], FILTER_SANITIZE_STRING);
+                
+                if (empty($id_reporte) || empty($id_usuario) || empty($comentario)) {
+                    throw new Exception("Todos los campos son obligatorios");
+                }
+                
+                // Verificar que el reporte existe
+                $queryCheck = "SELECT id_reporte FROM reporte WHERE id_reporte = :id_reporte";
+                $stmtCheck = $db->prepare($queryCheck);
+                $stmtCheck->execute([':id_reporte' => $id_reporte]);
+                
+                if (!$stmtCheck->fetch()) {
+                    throw new Exception("El reporte no existe");
+                }
+                
+                $query = "INSERT INTO comentario_reporte (id_reporte, id_usuario, comentario) 
+                        VALUES (:id_reporte, :id_usuario, :comentario)";
+                $stmt = $db->prepare($query);
+                $stmt->execute([
+                    ':id_reporte' => $id_reporte,
+                    ':id_usuario' => $id_usuario,
+                    ':comentario' => $comentario
+                ]);
+                
+                echo json_encode([
+                    "success" => true,
+                    "mensaje" => "Comentario agregado correctamente",
+                    "id_comentario" => $db->lastInsertId()
+                ]);
+            }
+            break;
         default:
             echo json_encode(["error" => "Acción no válida"]);
             break;

@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
 <html lang="es">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="shortcut icon" href="../imagenes/fiveicon.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <title>Registrar Usuario - Ojo en la vía</title>
@@ -51,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             background: url("../imagenes/login3.jpg") no-repeat center center/cover; 
             color: #fff; 
             text-align: center; 
-            padding: 40px 20px;
+            padding: 20px;
             min-height: 100vh;
             display: flex;
             flex-direction: column;
@@ -65,10 +66,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             display: flex;
             flex-direction: column;
             justify-content: center;
-            padding: 40px;
+            padding: 30px 25px;
             border-radius: 15px;
             width: 100%;
             max-width: 450px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
         }
         
         h2 {
@@ -78,7 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         }
         
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 18px;
             text-align: left;
         }
         
@@ -96,7 +98,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             border-radius: 5px; 
             background: #333;
             color: #fff;
-            font-size: 14px;
+            font-size: 16px; /* Mejor para móviles */
         }
         
         input:focus, select:focus {
@@ -129,7 +131,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         button { 
             background: #007bff; 
             color: #fff; 
-            padding: 12px 20px; 
+            padding: 14px 20px; 
             border: none; 
             border-radius: 5px; 
             cursor: pointer; 
@@ -175,6 +177,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         .alert-success {
             background: #44ff44;
             color: black;
+        }
+        
+        /* Media Queries para Responsive */
+        @media (max-width: 480px) {
+            body {
+                padding: 15px;
+                justify-content: flex-start;
+                padding-top: 30px;
+            }
+            
+            .form-box {
+                padding: 20px 15px;
+                border-radius: 10px;
+            }
+            
+            h2 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+            
+            .form-group {
+                margin-bottom: 15px;
+            }
+            
+            input, select {
+                padding: 14px; /* Más espacio para toques */
+                font-size: 16px; /* Previene zoom en iOS */
+            }
+            
+            button {
+                padding: 16px 20px; /* Botón más grande para tocar */
+            }
+            
+            .volver-link {
+                margin-top: 15px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            body {
+                padding: 10px;
+            }
+            
+            .form-box {
+                padding: 15px 10px;
+            }
+            
+            h2 {
+                font-size: 18px;
+            }
         }
     </style>
 </head>

@@ -38,7 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
             
-            header("Location: views/manage/vermapa.php");
+            header("Location: views/vermapa.php");
             exit();
         } else {
             $error_message = "Credenciales incorrectas o cuenta inactiva.";
