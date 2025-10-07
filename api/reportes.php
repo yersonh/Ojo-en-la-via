@@ -1,5 +1,5 @@
 <?php
-// Mostrar errores solo en desarrollo (puedes desactivar en producción)
+// Mostrar errores solo en desarrollo
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
@@ -10,7 +10,6 @@ header("Access-Control-Allow-Origin: *");
 require_once __DIR__ . '/../config/database.php';
 
 try {
-    // Conexión a base de datos
     $database = new Database();
 $db = $database->conectar();
 
@@ -36,7 +35,6 @@ $db = $database->conectar();
 
     $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Enviar respuesta JSON
     echo json_encode($reportes);
 
 } catch (Exception $e) {

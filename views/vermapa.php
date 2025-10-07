@@ -5,7 +5,6 @@ if (!isset($_SESSION['usuario_id'])) {
     header("Location: ../../index.php");
     exit();
 }
-// Cargar tipos de incidente desde la base de datos
 require_once __DIR__ . '/../config/database.php';
 $database = new Database();
 $db = $database->conectar();
@@ -21,7 +20,6 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ojo en la Vía - Reportes</title>
     
-    <!-- Hojas de estilo externas -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
@@ -45,14 +43,14 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             position: relative;
         }
         
-        /* 🌍 Mapa */
+        /* Mapa */
         #map {
             flex: 1;
             height: 100%;
             z-index: 1;
         }
         
-        /* 📋 Panel de formulario */
+        /*Panel de formulario */
         #panel {
             width: 400px;
             background: white;
@@ -333,10 +331,10 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <!-- Contenedor principal -->
     <div class="app-container">
-        <!-- 🌍 Mapa -->
+        <!-- Mapa -->
         <div id="map"></div>
 
-        <!-- 📋 Panel de formulario -->
+        <!-- Panel de formulario -->
         <div id="panel">
             <h2>Registrar Reporte</h2>
 

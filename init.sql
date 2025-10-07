@@ -43,10 +43,7 @@ INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES
 (2, 1, 1, 'lauren.oviedo68@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
 (3, 1, 1, 'isamoradahernandezp@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC');
 
--- Opcional: usuario adicional admin (con contraseña 'admin123')
-INSERT INTO persona (nombres, apellidos, telefono) VALUES ('Super', 'Admin', '3000000000');
-INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
-(4, 1, 1, 'admin@example.com', '$2b$12$4j5TRCPTBxt3NUpzkmb1teaALHw9w6XAWXG.KIVdzlAYbVu.qyvJy');
+
 
 CREATE TABLE recovery_tokens (
     id SERIAL PRIMARY KEY,
@@ -63,7 +60,6 @@ CREATE TABLE tipo_incidente (
     descripcion TEXT
 );
 
--- Ejemplos iniciales
 INSERT INTO tipo_incidente (nombre, descripcion) VALUES
 ('Accidente de tránsito', 'Colisión o siniestro vial'),
 ('Hueco en la vía', 'Daño en la calzada'),
@@ -111,10 +107,6 @@ CREATE TABLE historial_estado (
     CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
     CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
 );
--- Insertar un tipo de incidente
-INSERT INTO tipo_incidente (nombre, descripcion)
-VALUES ('Hueco en la vía', 'Bache o daño en la calzada');
-
 -- Insertar un reporte de prueba
 INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
 VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);
