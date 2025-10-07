@@ -16,8 +16,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         $_POST['apellidos'],
         $_POST['correo'],
         $_POST['telefono'],
-        $_POST['id_rol'],
-        $_POST['id_estado'], // Nuevo campo añadido
+        2, // Rol fijo: Usuario (valor 2)
+        1, // Estado fijo: Activo (valor 1)
         $_POST['password']
     );
     
@@ -266,24 +266,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
                 <input type="password" id="password" name="password" placeholder="Crea una contraseña segura" required>
             </div>
             
-            <div class="form-group">
-                <label for="id_rol">Rol:</label>
-                <select id="id_rol" name="id_rol" required>
-                    <option value="">Selecciona un rol</option>
-                    <option value="1">Administrador</option>
-                    <option value="2">Usuario</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="id_estado">Estado:</label>
-                <select id="id_estado" name="id_estado" required>
-                    <option value="">Selecciona un estado</option>
-                    <option value="1" selected>Activo</option>
-                    <option value="2">Inactivo</option>
-                    <option value="3">Bloqueado</option>
-                </select>
-            </div>
+            <!-- Campos ocultos para rol y estado fijos -->
+            <input type="hidden" name="id_rol" value="2">
+            <input type="hidden" name="id_estado" value="1">
 
             <button type="submit" name="registrar" id="btnRegistrar">Registrar</button>
         </form>
@@ -386,8 +371,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
                 return false;
             }
             
-            // Validación adicional de campos (incluyendo el nuevo id_estado)
-            const campos = ['nombres', 'apellidos', 'telefono', 'password', 'id_rol', 'id_estado'];
+            // Validación adicional de campos (sin id_rol e id_estado ya que son fijos)
+            const campos = ['nombres', 'apellidos', 'telefono', 'password'];
             for (let campo of campos) {
                 if (!document.getElementById(campo).value.trim()) {
                     e.preventDefault();
@@ -395,18 +380,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
                     return false;
                 }
             }
-            
+                
             return true;
         });
 
         // Validar teléfono (solo números)
         document.getElementById("telefono").addEventListener("input", function(e) {
             this.value = this.value.replace(/[^0-9]/g, '');
-        });
-
-        // Establecer estado por defecto como "Activo"
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('id_estado').value = '1';
         });
     </script>
 </body>

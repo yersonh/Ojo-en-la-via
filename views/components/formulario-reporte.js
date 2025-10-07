@@ -79,76 +79,49 @@ const FormularioManager = {
     },
 
     async enviarFormulario(e) {
-    e.preventDefault();
+        e.preventDefault();
 
-    if (!this.validarFormulario()) {
-        return;
-    }
-
-    const form = e.target;
-    const formData = new FormData(form);
-    const submitBtn = document.getElementById('submitBtn');
-    const loading = document.getElementById('loading');
-
-    submitBtn.disabled = true;
-    loading.style.display = 'block';
-
-    try {
-        // ✅ CORREGIR RUTA - misma lógica que arriba
-        const posiblesRutas = [
-            '../../controllers/reportecontrolador.php',
-            '../controllers/reportecontrolador.php',
-            'controllers/reportecontrolador.php',
-            '/controllers/reportecontrolador.php'
-        ];
-
-        let result = null;
-        let responseText = '';
-
-        for (let ruta of posiblesRutas) {
-            try {
-                const url = `${ruta}?action=registrar`;
-                console.log(`🔍 Probando ruta para registrar: ${url}`);
-                
-                const resp = await fetch(url, {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                responseText = await resp.text();
-                console.log(`📋 Respuesta cruda de ${ruta}:`, responseText);
-                
-                if (resp.ok) {
-                    result = JSON.parse(responseText);
-                    console.log(`✅ Ruta funcionó: ${ruta}`);
-                    break;
-                }
-            } catch (err) {
-                console.log(`❌ Ruta falló: ${ruta}`, err);
-            }
+        if (!this.validarFormulario()) {
+            return;
         }
 
-        if (result && result.success) {
-            MapaManager.mostrarAlerta('✅ ' + result.mensaje);
-            this.limpiarFormulario();
-            MapaManager.limpiarMarcadorTemporal();
-            await MapaManager.cargarReportes();
-        } else {
-            // Si ninguna ruta funcionó, mostrar el último error
-            try {
-                const errorResult = JSON.parse(responseText);
-                MapaManager.mostrarAlerta('❌ ' + (errorResult.mensaje || errorResult.error || 'Error desconocido'), 'error');
-            } catch {
-                MapaManager.mostrarAlerta('❌ Error del servidor. Revisa la consola para detalles.', 'error');
-            }
-        }
+        const form = e.target;
+        const formData = new FormData(form);
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
 
-    } catch (error) {
-        console.error('Error de red:', error);
-        MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
-    } finally {
-        submitBtn.disabled = false;
-        loading.style.display = 'none';
+        submitBtn.disabled = true;
+        loading.style.display = 'block';
+
+        try {
+            const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await resp.json();
+            
+            if (result.success) {
+                MapaManager.mostrarAlerta('✅ ' + result.mensaje);
+                this.limpiarFormulario();
+                MapaManager.limpiarMarcadorTemporal();
+                await MapaManager.cargarReportes();
+            } else {
+                MapaManager.mostrarAlerta('❌ ' + (result.mensaje || result.error || 'Error desconocido'), 'error');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            loading.style.display = 'none';
+        }
+    },
+
+    limpiarFormulario() {
+        document.getElementById('formReporte').reset();
+        document.getElementById('previewImg').style.display = 'none';
+        document.getElementById('latDisplay').textContent = 'No seleccionada';
+        document.getElementById('lngDisplay').textContent = 'No seleccionada';
     }
-}
 };

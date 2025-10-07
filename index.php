@@ -38,7 +38,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
             
-            header("Location: views/vermapa.php");
+            // Redirección según el rol del usuario
+            if ($usuario['id_rol'] == 1) {
+                // Administrador
+                header("Location: views/admin.php");
+            } else {
+                // Usuario normal
+                header("Location: views/vermapa.php");
+            }
             exit();
         } else {
             $error_message = "Credenciales incorrectas o cuenta inactiva.";

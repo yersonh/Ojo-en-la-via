@@ -11,66 +11,43 @@ const ComentariosManager = {
     },
 
     async cargarComentarios(id_reporte) {
-    try {
-        // ✅ CORREGIR RUTA
-        const posiblesRutas = [
-            '../../controllers/reportecontrolador.php',
-            '../controllers/reportecontrolador.php',
-            'controllers/reportecontrolador.php',
-            '/controllers/reportecontrolador.php'
-        ];
-
-        let comentarios = [];
-
-        for (let ruta of posiblesRutas) {
-            try {
-                const url = `${ruta}?action=listar_comentarios&id_reporte=${id_reporte}`;
-                console.log(`🔍 Probando ruta para comentarios: ${url}`);
-                
-                const resp = await fetch(url);
-                if (resp.ok) {
-                    comentarios = await resp.json();
-                    console.log(`✅ Ruta funcionó: ${ruta}`);
-                    break;
-                }
-            } catch (err) {
-                console.log(`❌ Ruta falló: ${ruta}`);
+        try {
+            const resp = await fetch(`../../controllers/reportecontrolador.php?action=listar_comentarios&id_reporte=${id_reporte}`);
+            const comentarios = await resp.json();
+            
+            const comentariosList = document.getElementById('comentariosList');
+            comentariosList.innerHTML = '';
+            
+            if (comentarios.length === 0) {
+                comentariosList.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay comentarios aún. Sé el primero en comentar.</p>';
+                return;
             }
-        }
-
-        const comentariosList = document.getElementById('comentariosList');
-        comentariosList.innerHTML = '';
-        
-        if (comentarios.length === 0) {
-            comentariosList.innerHTML = '<p style="text-align: center; color: #6c757d;">No hay comentarios aún. Sé el primero en comentar.</p>';
-            return;
-        }
-        
-        comentarios.forEach(comentario => {
-            const fecha = new Date(comentario.fecha_comentario).toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+            
+            comentarios.forEach(comentario => {
+                const fecha = new Date(comentario.fecha_comentario).toLocaleDateString('es-ES', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+                
+                const comentarioHTML = `
+                    <div class="comentario-item">
+                        <div class="comentario-header">
+                            <span class="comentario-usuario">${comentario.nombres} ${comentario.apellidos}</span>
+                            <span class="comentario-fecha">${fecha}</span>
+                        </div>
+                        <div class="comentario-texto">${comentario.comentario}</div>
+                    </div>
+                `;
+                comentariosList.innerHTML += comentarioHTML;
             });
             
-            const comentarioHTML = `
-                <div class="comentario-item">
-                    <div class="comentario-header">
-                        <span class="comentario-usuario">${comentario.nombres} ${comentario.apellidos}</span>
-                        <span class="comentario-fecha">${fecha}</span>
-                    </div>
-                    <div class="comentario-texto">${comentario.comentario}</div>
-                </div>
-            `;
-            comentariosList.innerHTML += comentarioHTML;
-        });
-        
-    } catch (error) {
-        console.error('Error al cargar comentarios:', error);
-    }
-},
+        } catch (error) {
+            console.error('Error al cargar comentarios:', error);
+        }
+    },
 
     async agregarComentario(e) {
         e.preventDefault();
