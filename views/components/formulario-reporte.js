@@ -10,7 +10,7 @@ const FormularioManager = {
             this.previsualizarImagen(e);
         });
 
-        // Enviar formulario
+        // Enviar formulario - USAR BIND PARA MANTENER EL CONTEXTO
         document.getElementById('formReporte').addEventListener('submit', (e) => {
             this.enviarFormulario(e);
         });
@@ -21,7 +21,6 @@ const FormularioManager = {
         const previewImg = document.getElementById('previewImg');
         
         if (file) {
-            // Validar tamaño de archivo (5MB máximo)
             if (file.size > 5 * 1024 * 1024) {
                 MapaManager.mostrarAlerta('La imagen no debe superar los 5MB', 'error');
                 e.target.value = '';
@@ -78,59 +77,80 @@ const FormularioManager = {
         return true;
     },
 
+    limpiarFormulario() {
+        document.getElementById('formReporte').reset();
+        document.getElementById('previewImg').style.display = 'none';
+        document.getElementById('previewImg').src = '';
+        document.getElementById('latDisplay').textContent = 'No seleccionada';
+        document.getElementById('lngDisplay').textContent = 'No seleccionada';
+        document.getElementById('latitud').value = '';
+        document.getElementById('longitud').value = '';
+    },
+
     async enviarFormulario(e) {
-    e.preventDefault();
+        e.preventDefault();
 
-    if (!this.validarFormulario()) {
-        return;
-    }
-
-    const form = e.target;
-    const formData = new FormData(form);
-    const submitBtn = document.getElementById('submitBtn');
-    const loading = document.getElementById('loading');
-
-    submitBtn.disabled = true;
-    loading.style.display = 'block';
-
-    try {
-        console.log('📤 Enviando formulario a:', '../../controllers/reportecontrolador.php?action=registrar');
-        
-        const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
-            method: 'POST',
-            body: formData
-        });
-
-        console.log('📥 Respuesta status:', resp.status, resp.statusText);
-        
-        // VER QUÉ ESTÁ DEVOLVIENDO REALMENTE EL SERVIDOR
-        const responseText = await resp.text();
-        console.log('📄 Respuesta completa:', responseText);
-
-        // Intentar parsear como JSON
-        let result;
-        try {
-            result = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ No es JSON válido. El servidor devolvió:', responseText.substring(0, 200));
-            MapaManager.mostrarAlerta('❌ Error del servidor: Respuesta no válida', 'error');
+        if (!this.validarFormulario()) {
             return;
         }
-        
-        if (result.success) {
-            MapaManager.mostrarAlerta('✅ ' + result.mensaje);
-            this.limpiarFormulario();
-            MapaManager.limpiarMarcadorTemporal();
-            await MapaManager.cargarReportes();
-        } else {
-            MapaManager.mostrarAlerta('❌ ' + (result.mensaje || result.error || 'Error desconocido'), 'error');
+
+        const form = e.target;
+        const formData = new FormData(form);
+        const submitBtn = document.getElementById('submitBtn');
+        const loading = document.getElementById('loading');
+
+        submitBtn.disabled = true;
+        loading.style.display = 'block';
+
+        try {
+            console.log('📤 Enviando formulario a:', '../../controllers/reportecontrolador.php?action=registrar');
+            
+            const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
+                method: 'POST',
+                body: formData
+            });
+
+            console.log('📥 Respuesta status:', resp.status, resp.statusText);
+            
+            const responseText = await resp.text();
+            console.log('📄 Respuesta completa:', responseText);
+
+            let result;
+            try {
+                result = JSON.parse(responseText);
+            } catch (parseError) {
+                console.error('❌ No es JSON válido. El servidor devolvió:', responseText.substring(0, 200));
+                MapaManager.mostrarAlerta('❌ Error del servidor: Respuesta no válida', 'error');
+                return;
+            }
+            
+            if (result.success) {
+                MapaManager.mostrarAlerta('✅ ' + result.mensaje);
+                
+                // SOLUCIÓN DEFINITIVA: Llamar directamente al método usando FormularioManager
+                FormularioManager.limpiarFormulario();
+                MapaManager.limpiarMarcadorTemporal();
+                await MapaManager.cargarReportes();
+            } else {
+                MapaManager.mostrarAlerta('❌ ' + (result.mensaje || result.error || 'Error desconocido'), 'error');
+            }
+        } catch (error) {
+            console.error('💥 Error de conexión:', error);
+            MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
+        } finally {
+            submitBtn.disabled = false;
+            loading.style.display = 'none';
         }
-    } catch (error) {
-        console.error('💥 Error de conexión:', error);
-        MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
-    } finally {
-        submitBtn.disabled = false;
-        loading.style.display = 'none';
     }
-}
 };
+
+// Función auxiliar independiente como respaldo
+function limpiarFormularioGlobal() {
+    document.getElementById('formReporte').reset();
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('previewImg').src = '';
+    document.getElementById('latDisplay').textContent = 'No seleccionada';
+    document.getElementById('lngDisplay').textContent = 'No seleccionada';
+    document.getElementById('latitud').value = '';
+    document.getElementById('longitud').value = '';
+}
