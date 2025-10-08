@@ -79,49 +79,58 @@ const FormularioManager = {
     },
 
     async enviarFormulario(e) {
-        e.preventDefault();
+    e.preventDefault();
 
-        if (!this.validarFormulario()) {
+    if (!this.validarFormulario()) {
+        return;
+    }
+
+    const form = e.target;
+    const formData = new FormData(form);
+    const submitBtn = document.getElementById('submitBtn');
+    const loading = document.getElementById('loading');
+
+    submitBtn.disabled = true;
+    loading.style.display = 'block';
+
+    try {
+        console.log('📤 Enviando formulario a:', '../../controllers/reportecontrolador.php?action=registrar');
+        
+        const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
+            method: 'POST',
+            body: formData
+        });
+
+        console.log('📥 Respuesta status:', resp.status, resp.statusText);
+        
+        // VER QUÉ ESTÁ DEVOLVIENDO REALMENTE EL SERVIDOR
+        const responseText = await resp.text();
+        console.log('📄 Respuesta completa:', responseText);
+
+        // Intentar parsear como JSON
+        let result;
+        try {
+            result = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('❌ No es JSON válido. El servidor devolvió:', responseText.substring(0, 200));
+            MapaManager.mostrarAlerta('❌ Error del servidor: Respuesta no válida', 'error');
             return;
         }
-
-        const form = e.target;
-        const formData = new FormData(form);
-        const submitBtn = document.getElementById('submitBtn');
-        const loading = document.getElementById('loading');
-
-        submitBtn.disabled = true;
-        loading.style.display = 'block';
-
-        try {
-            const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
-                method: 'POST',
-                body: formData
-            });
-
-            const result = await resp.json();
-            
-            if (result.success) {
-                MapaManager.mostrarAlerta('✅ ' + result.mensaje);
-                this.limpiarFormulario();
-                MapaManager.limpiarMarcadorTemporal();
-                await MapaManager.cargarReportes();
-            } else {
-                MapaManager.mostrarAlerta('❌ ' + (result.mensaje || result.error || 'Error desconocido'), 'error');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
-        } finally {
-            submitBtn.disabled = false;
-            loading.style.display = 'none';
+        
+        if (result.success) {
+            MapaManager.mostrarAlerta('✅ ' + result.mensaje);
+            this.limpiarFormulario();
+            MapaManager.limpiarMarcadorTemporal();
+            await MapaManager.cargarReportes();
+        } else {
+            MapaManager.mostrarAlerta('❌ ' + (result.mensaje || result.error || 'Error desconocido'), 'error');
         }
-    },
-
-    limpiarFormulario() {
-        document.getElementById('formReporte').reset();
-        document.getElementById('previewImg').style.display = 'none';
-        document.getElementById('latDisplay').textContent = 'No seleccionada';
-        document.getElementById('lngDisplay').textContent = 'No seleccionada';
+    } catch (error) {
+        console.error('💥 Error de conexión:', error);
+        MapaManager.mostrarAlerta('❌ Error de conexión: ' + error.message, 'error');
+    } finally {
+        submitBtn.disabled = false;
+        loading.style.display = 'none';
     }
+}
 };

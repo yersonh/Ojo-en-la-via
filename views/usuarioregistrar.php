@@ -1,6 +1,19 @@
 <?php
+// Medidas de seguridad adicionales
+header("X-Frame-Options: DENY");
+header("X-Content-Type-Options: nosniff");
+header("Referrer-Policy: strict-origin-when-cross-origin");
+
+// Iniciar sesión para CSRF token
+session_start();
+
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../controllers/sesioncontrolador.php';
+
+// Generar token CSRF si no existe
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 
 // Crear conexión
 $database = new Database();
@@ -11,18 +24,64 @@ $controller = new SesionControlador($db);
 
 // Manejo de registro
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
+    
+    // Validar token CSRF
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Token de seguridad inválido");
+    }
+    
+    // Limpiar y validar datos
+    $nombres = trim(htmlspecialchars($_POST['nombres'] ?? ''));
+    $apellidos = trim(htmlspecialchars($_POST['apellidos'] ?? ''));
+    $correo = filter_var(trim($_POST['correo'] ?? ''), FILTER_VALIDATE_EMAIL);
+    $telefono = preg_replace('/[^0-9]/', '', $_POST['telefono'] ?? '');
+    $password = $_POST['password'] ?? '';
+    
+    // Validaciones adicionales
+    if (empty($nombres) || strlen($nombres) > 50) {
+        die("Nombre inválido");
+    }
+    
+    if (empty($apellidos) || strlen($apellidos) > 50) {
+        die("Apellido inválido");
+    }
+    
+    if (!$correo || strlen($correo) > 100) {
+        die("Correo electrónico inválido");
+    }
+    
+    if (empty($telefono) || strlen($telefono) < 7 || strlen($telefono) > 15) {
+        die("Teléfono inválido");
+    }
+    
+    if (empty($password) || strlen($password) < 8) {
+        die("La contraseña debe tener al menos 8 caracteres");
+    }
+    
+    // Validar fortaleza de contraseña
+    if (!preg_match('/[A-Z]/', $password) || 
+        !preg_match('/[a-z]/', $password) || 
+        !preg_match('/[0-9]/', $password)) {
+        die("La contraseña debe contener mayúsculas, minúsculas y números");
+    }
+    
     $resultado = $controller->registrar(
-        $_POST['nombres'],
-        $_POST['apellidos'],
-        $_POST['correo'],
-        $_POST['telefono'],
+        $nombres,
+        $apellidos,
+        $correo,
+        $telefono,
         2, // Rol fijo: Usuario (valor 2)
         1, // Estado fijo: Activo (valor 1)
-        $_POST['password']
+        $password
     );
     
     if ($resultado) {
+        // Regenerar sesión después del registro exitoso
+        session_regenerate_id(true);
+        $_SESSION = [];
+        
         echo "<script>
+            alert('✅ Usuario registrado correctamente.');
             window.location.href = '../index.php';
         </script>";
         exit;
@@ -36,8 +95,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Registro seguro de usuario - Ojo en la vía">
     <link rel="shortcut icon" href="../imagenes/fiveicon.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Security headers meta tags -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:;">
+    
     <title>Registrar Usuario - Ojo en la vía</title>
     <style>
         * {
@@ -97,7 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             border-radius: 5px; 
             background: #333;
             color: #fff;
-            font-size: 16px; /* Mejor para móviles */
+            font-size: 16px;
         }
         
         input:focus, select:focus {
@@ -126,6 +190,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             font-size: 12px;
             margin-top: 5px;
         }
+        
+        .password-strength {
+            margin-top: 5px;
+            font-size: 12px;
+        }
+        
+        .strength-weak { color: #ff4444; }
+        .strength-medium { color: #ffaa00; }
+        .strength-strong { color: #44ff44; }
         
         button { 
             background: #007bff; 
@@ -201,30 +274,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             }
             
             input, select {
-                padding: 14px; /* Más espacio para toques */
-                font-size: 16px; /* Previene zoom en iOS */
+                padding: 14px;
+                font-size: 16px;
             }
             
             button {
-                padding: 16px 20px; /* Botón más grande para tocar */
+                padding: 16px 20px;
             }
             
             .volver-link {
                 margin-top: 15px;
-            }
-        }
-        
-        @media (max-width: 360px) {
-            body {
-                padding: 10px;
-            }
-            
-            .form-box {
-                padding: 15px 10px;
-            }
-            
-            h2 {
-                font-size: 18px;
             }
         }
     </style>
@@ -236,20 +295,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         <div id="alert-message" class="alert"></div>
         
         <form method="POST" id="registroForm">
+            <!-- Token CSRF -->
+            <input type="hidden" name="csrf_token" value="<?php echo $_SESSION['csrf_token']; ?>">
+            
             <div class="form-group">
                 <label for="nombres">Nombres:</label>
-                <input type="text" id="nombres" name="nombres" placeholder="Ingresa tus nombres" required>
+                <input type="text" id="nombres" name="nombres" placeholder="Ingresa tus nombres" 
+                       maxlength="50" pattern="[A-Za-záéíóúÁÉÍÓÚñÑ\s]+" required>
             </div>
             
             <div class="form-group">
                 <label for="apellidos">Apellidos:</label>
-                <input type="text" id="apellidos" name="apellidos" placeholder="Ingresa tus apellidos" required>
+                <input type="text" id="apellidos" name="apellidos" placeholder="Ingresa tus apellidos" 
+                       maxlength="50" pattern="[A-Za-záéíóúÁÉÍÓÚñÑ\s]+" required>
             </div>
             
             <div class="form-group">
                 <label for="correo">Correo electrónico:</label>
                 <div class="input-group">
-                    <input type="email" id="correo" name="correo" placeholder="ejemplo@correo.com" required>
+                    <input type="email" id="correo" name="correo" placeholder="ejemplo@correo.com" 
+                           maxlength="100" required>
                     <span id="correo-alerta" class="icono-alerta" title="Este correo ya está registrado">⚠️</span>
                 </div>
                 <small id="mensaje-error" class="mensaje-error"></small>
@@ -257,12 +322,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             
             <div class="form-group">
                 <label for="telefono">Teléfono:</label>
-                <input type="text" id="telefono" name="telefono" placeholder="Ingresa tu teléfono" required>
+                <input type="tel" id="telefono" name="telefono" placeholder="Ingresa tu teléfono" 
+                       pattern="[0-9]{7,15}" maxlength="15" required>
+                <small style="color: #ccc;">Solo números, 7-15 dígitos</small>
             </div>
             
             <div class="form-group">
                 <label for="password">Contraseña:</label>
-                <input type="password" id="password" name="password" placeholder="Crea una contraseña segura" required>
+                <input type="password" id="password" name="password" 
+                       placeholder="Mínimo 8 caracteres con mayúsculas, minúsculas y números" 
+                       minlength="8" required>
+                <div id="password-strength" class="password-strength"></div>
             </div>
             
             <!-- Campos ocultos para rol y estado fijos -->
@@ -288,12 +358,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             }, 5000);
         }
 
+        // Verificar fortaleza de contraseña
+        document.getElementById("password").addEventListener("input", function(e) {
+            const password = this.value;
+            const strengthElement = document.getElementById("password-strength");
+            
+            if (password.length === 0) {
+                strengthElement.textContent = "";
+                return;
+            }
+            
+            let strength = 0;
+            let feedback = "";
+            
+            if (password.length >= 8) strength++;
+            if (/[A-Z]/.test(password)) strength++;
+            if (/[a-z]/.test(password)) strength++;
+            if (/[0-9]/.test(password)) strength++;
+            if (/[^A-Za-z0-9]/.test(password)) strength++;
+            
+            if (strength <= 2) {
+                feedback = "Débil";
+                strengthElement.className = "password-strength strength-weak";
+            } else if (strength <= 4) {
+                feedback = "Media";
+                strengthElement.className = "password-strength strength-medium";
+            } else {
+                feedback = "Fuerte";
+                strengthElement.className = "password-strength strength-strong";
+            }
+            
+            strengthElement.textContent = `Fortaleza: ${feedback}`;
+        });
+
         // Verificar correo al perder foco
         document.getElementById("correo").addEventListener("blur", function() {
             verificarCorreo(this.value);
         });
 
-        // Verificar correo mientras se escribe (después de 1 segundo sin escribir)
+        // Verificar correo mientras se escribe
         let timeoutId;
         document.getElementById("correo").addEventListener("input", function() {
             clearTimeout(timeoutId);
@@ -307,7 +410,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
             const mensajeError = document.getElementById("mensaje-error");
             const btnRegistrar = document.getElementById("btnRegistrar");
 
-            // Validación básica de email
             const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
             
             if (correo.trim() === "") {
@@ -363,6 +465,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
         document.getElementById("registroForm").addEventListener("submit", function(e) {
             const correo = document.getElementById("correo").value;
             const alerta = document.getElementById("correo-alerta");
+            const password = document.getElementById("password").value;
             
             if (alerta.style.display === "inline") {
                 e.preventDefault();
@@ -370,7 +473,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
                 return false;
             }
             
-            // Validación adicional de campos (sin id_rol e id_estado ya que son fijos)
+            // Validar fortaleza de contraseña
+            if (password.length < 8) {
+                e.preventDefault();
+                mostrarAlerta("❌ La contraseña debe tener al menos 8 caracteres.", "error");
+                return false;
+            }
+            
+            if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])/.test(password)) {
+                e.preventDefault();
+                mostrarAlerta("❌ La contraseña debe contener mayúsculas, minúsculas y números.", "error");
+                return false;
+            }
+            
             const campos = ['nombres', 'apellidos', 'telefono', 'password'];
             for (let campo of campos) {
                 if (!document.getElementById(campo).value.trim()) {

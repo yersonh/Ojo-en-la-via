@@ -1,16 +1,22 @@
 <?php
+// LO PRIMERO EN EL ARCHIVO - Sin espacios/blancos antes!
+ob_start(); // Capturar cualquier output accidental
+error_reporting(0);
+ini_set('display_errors', 0);
+
 header('Content-Type: application/json; charset=utf-8');
-require_once __DIR__ . '/../config/database.php';
 
 $action = $_GET['action'] ?? '';
 
 try {
+    require_once __DIR__ . '/../config/database.php';
+
     $database = new Database();
     $db = $database->conectar();
 
     switch ($action) {
 
-        // ✅ Listar todos los reportes (para el mapa)
+        // Listar los reportes
         case 'listar':
             $query = "
                 SELECT 
@@ -29,10 +35,18 @@ try {
             ";
             $stmt = $db->query($query);
             $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Verificar si hay output accidental antes del JSON
+            $unexpected_output = ob_get_contents();
+            if (!empty($unexpected_output)) {
+                error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
+                ob_clean(); // Limpiar solo el output accidental
+            }
+            
             echo json_encode($reportes);
             break;
 
-        // 📌 Registrar un nuevo reporte
+        // Registrar reporte 
         case 'registrar':
             // Si viene con formulario (multipart/form-data)
             if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -53,7 +67,7 @@ try {
                     throw new Exception("Coordenadas no válidas");
                 }
 
-                // ✅ Validar que el usuario existe y está activo
+                // Validar que el usuario existe y está activo
                 $queryUser = "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario";
                 $stmtUser = $db->prepare($queryUser);
                 $stmtUser->execute([':id_usuario' => $id_usuario]);
@@ -62,7 +76,7 @@ try {
                     throw new Exception("Usuario no válido");
                 }
 
-                // 📌 Insertar reporte
+                // Insertar reporte
                 $query = "
                     INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
                     VALUES (:id_usuario, :id_tipo_incidente, :descripcion, :latitud, :longitud)
@@ -78,7 +92,7 @@ try {
 
                 $id_reporte = $db->lastInsertId();
 
-                // 📸 Manejo de imagen
+                // Manejo de imagen
                 if (!empty($_FILES['imagen']['name']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
                     // Directorio para imágenes (usando documento raíz)
                     $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
@@ -132,6 +146,13 @@ try {
                     }
                 }
 
+                // Verificar output accidental antes de enviar respuesta
+                $unexpected_output = ob_get_contents();
+                if (!empty($unexpected_output)) {
+                    error_log("⚠️ Output inesperado en registrar: " . $unexpected_output);
+                    ob_clean(); // Limpiar solo el output accidental
+                }
+
                 echo json_encode([
                     "success" => true,
                     "mensaje" => "Reporte registrado correctamente",
@@ -141,8 +162,6 @@ try {
                 throw new Exception("Método no permitido");
             }
             break;
-
-            // Agregar estos casos al switch:
 
         case 'listar_comentarios':
             $id_reporte = $_GET['id_reporte'] ?? '';
@@ -167,6 +186,14 @@ try {
             $stmt = $db->prepare($query);
             $stmt->execute([':id_reporte' => $id_reporte]);
             $comentarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            // Verificar output accidental
+            $unexpected_output = ob_get_contents();
+            if (!empty($unexpected_output)) {
+                error_log("⚠️ Output inesperado en listar_comentarios: " . $unexpected_output);
+                ob_clean();
+            }
+            
             echo json_encode($comentarios);
             break;
 
@@ -198,6 +225,13 @@ try {
                     ':comentario' => $comentario
                 ]);
                 
+                // Verificar output accidental
+                $unexpected_output = ob_get_contents();
+                if (!empty($unexpected_output)) {
+                    error_log("⚠️ Output inesperado en agregar_comentario: " . $unexpected_output);
+                    ob_clean();
+                }
+                
                 echo json_encode([
                     "success" => true,
                     "mensaje" => "Comentario agregado correctamente",
@@ -206,10 +240,24 @@ try {
             }
             break;
         default:
+            // Verificar output accidental
+            $unexpected_output = ob_get_contents();
+            if (!empty($unexpected_output)) {
+                error_log("⚠️ Output inesperado en default: " . $unexpected_output);
+                ob_clean();
+            }
+            
             echo json_encode(["error" => "Acción no válida"]);
             break;
     }
 } catch (Exception $e) {
+    // Verificar output accidental antes del error
+    $unexpected_output = ob_get_contents();
+    if (!empty($unexpected_output)) {
+        error_log("⚠️ Output inesperado en catch: " . $unexpected_output);
+        ob_clean();
+    }
+    
     http_response_code(500);
     echo json_encode([
         "success" => false,
@@ -217,4 +265,7 @@ try {
         "mensaje" => $e->getMessage()
     ]);
 }
+
+// Finalizar el buffer sin limpiar (ya limpiamos solo lo accidental)
+ob_end_flush();
 ?>
