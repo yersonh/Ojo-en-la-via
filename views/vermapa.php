@@ -375,7 +375,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     <div class="spinner"></div> Procesando...
                 </div>
 
-                <button type="submit" id="submitBtn">✅ Registrar Reporte</button>
+                <button type="submit" id="submitBtn">Registrar Reporte</button>
             </form>
 
             <!-- 📝 Sección de Comentarios -->
