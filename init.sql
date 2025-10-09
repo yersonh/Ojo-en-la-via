@@ -107,6 +107,17 @@ CREATE TABLE historial_estado (
     CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
     CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
 );
+CREATE TABLE remember_tokens (
+    id_token INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    expiracion DATETIME NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_token ON remember_tokens(token);
+CREATE INDEX idx_expiracion ON remember_tokens(expiracion);
 -- Insertar un reporte de prueba
 INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
 VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);

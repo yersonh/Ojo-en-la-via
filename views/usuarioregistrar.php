@@ -1,4 +1,7 @@
 <?php
+// Content Security Policy en una sola línea
+header("Content-Security-Policy: default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; font-src 'self' https://cdnjs.cloudflare.com data:; img-src 'self' data: https:; connect-src 'self'; frame-src 'none'; object-src 'none';");
+
 // Medidas de seguridad adicionales
 header("X-Frame-Options: DENY");
 header("X-Content-Type-Options: nosniff");
@@ -98,9 +101,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['registrar'])) {
     <meta name="description" content="Registro seguro de usuario - Ojo en la vía">
     <link rel="shortcut icon" href="../imagenes/fiveicon.png" type="image/x-icon">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
-    <!-- Security headers meta tags -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; img-src 'self' data: https:;">
     
     <title>Registrar Usuario - Ojo en la vía</title>
     <style>

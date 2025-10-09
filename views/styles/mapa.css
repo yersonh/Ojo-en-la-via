@@ -297,3 +297,117 @@
                 font-size: 14px;
             }
         }
+        /* Estilos para la funcionalidad de cámara */
+.campo-imagen {
+    margin-bottom: 15px;
+}
+
+.opciones-imagen {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+}
+
+.btn-camara, .btn-archivo {
+    flex: 1;
+    padding: 12px;
+    border: 2px dashed #007bff;
+    background: #f8f9fa;
+    color: #007bff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+    min-width: 120px;
+}
+
+.btn-camara:hover, .btn-archivo:hover {
+    background: #007bff;
+    color: white;
+}
+
+.separador {
+    color: #666;
+    font-size: 14px;
+}
+
+.controles-camara {
+    display: flex;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-capturar {
+    background: #28a745;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-cancelar {
+    background: #dc3545;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    color: white;
+    cursor: pointer;
+    flex: 1;
+}
+
+.btn-capturar:hover {
+    background: #218838;
+}
+
+.btn-cancelar:hover {
+    background: #c82333;
+}
+
+.sin-imagen {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border: 2px dashed #ddd;
+    margin-top: 10px;
+}
+
+.preview {
+    position: relative;
+    margin-top: 10px;
+}
+
+#videoCamara {
+    background: #000;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+/* Mejoras responsive para móviles */
+@media (max-width: 768px) {
+    .opciones-imagen {
+        flex-direction: column;
+    }
+    
+    .separador {
+        display: none;
+    }
+    
+    .btn-camara, .btn-archivo {
+        width: 100%;
+    }
+    
+    .controles-camara {
+        flex-direction: column;
+    }
+    
+    .btn-capturar, .btn-cancelar {
+        padding: 14px;
+        font-size: 16px;
+    }
+}

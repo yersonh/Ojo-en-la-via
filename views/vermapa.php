@@ -54,10 +54,47 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 <label for="descripcion">Descripción:</label>
                 <textarea id="descripcion" name="descripcion" rows="3" required></textarea>
 
-                <label for="foto">📸 Fotografía (opcional):</label>
-                <input type="file" id="foto" name="imagen" accept="image/*">
-                <div class="preview">
-                    <img id="previewImg" src="" alt="" style="display: none;">
+                <!-- SECCIÓN DE IMAGEN MEJORADA CON CÁMARA -->
+                <div class="campo-imagen">
+                    <label for="foto">📸 Fotografía (opcional):</label>
+                    
+                    <!-- Contenedor de opciones de imagen -->
+                    <div class="opciones-imagen">
+                        <button type="button" id="btnTomarFoto" class="btn-camara">
+                            📸 Tomar Foto
+                        </button>
+                        <span class="separador">o</span>
+                        <button type="button" id="btnSeleccionarArchivo" class="btn-archivo">
+                            📁 Seleccionar Archivo
+                        </button>
+                    </div>
+
+                    <!-- Input de archivo oculto -->
+                    <input type="file" id="foto" name="imagen" accept="image/*" capture="environment" style="display: none;">
+                    
+                    <!-- Previsualización -->
+                    <div class="preview">
+                        <img id="previewImg" src="" alt="Vista previa" style="display: none;">
+                        <div id="sinImagen" class="sin-imagen">
+                            📷 No hay imagen seleccionada
+                        </div>
+                    </div>
+
+                    <!-- Video para la cámara -->
+                    <video id="videoCamara" autoplay playsinline style="display: none; width: 100%; border-radius: 8px;"></video>
+                    
+                    <!-- Controles de cámara -->
+                    <div id="controlesCamara" class="controles-camara" style="display: none;">
+                        <button type="button" id="btnCapturar" class="btn-capturar">
+                            ✅ Capturar Foto
+                        </button>
+                        <button type="button" id="btnCancelarCamara" class="btn-cancelar">
+                            ❌ Cancelar
+                        </button>
+                    </div>
+
+                    <!-- Canvas oculto para capturar foto -->
+                    <canvas id="canvasCaptura" style="display: none;"></canvas>
                 </div>
 
                 <label>🗺️ Seleccione ubicación en el mapa:</label>

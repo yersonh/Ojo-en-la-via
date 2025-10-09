@@ -1,30 +1,159 @@
 // Módulo para gestionar el formulario de reportes
 const FormularioManager = {
+    streamCamara: null,
+
     inicializar() {
         this.configurarEventos();
     },
 
     configurarEventos() {
-        // Previsualizar imagen
+        // Previsualizar imagen cuando se selecciona archivo
         document.getElementById('foto').addEventListener('change', (e) => {
             this.previsualizarImagen(e);
         });
 
-        // Enviar formulario - USAR BIND PARA MANTENER EL CONTEXTO
+        // Enviar formulario
         document.getElementById('formReporte').addEventListener('submit', (e) => {
             this.enviarFormulario(e);
         });
+        
+        // Nuevos eventos para cámara
+        document.getElementById('btnTomarFoto').addEventListener('click', () => {
+            this.activarCamara();
+        });
+        
+        document.getElementById('btnSeleccionarArchivo').addEventListener('click', () => {
+            document.getElementById('foto').click();
+        });
+        
+        document.getElementById('btnCapturar').addEventListener('click', () => {
+            this.capturarFoto();
+        });
+        
+        document.getElementById('btnCancelarCamara').addEventListener('click', () => {
+            this.desactivarCamara();
+        });
+    },
+
+    async activarCamara() {
+        try {
+            console.log('📸 Activando cámara...');
+            
+            // Ocultar elementos no necesarios
+            document.getElementById('sinImagen').style.display = 'none';
+            document.getElementById('previewImg').style.display = 'none';
+            
+            // Mostrar video y controles
+            const video = document.getElementById('videoCamara');
+            const controles = document.getElementById('controlesCamara');
+            
+            video.style.display = 'block';
+            controles.style.display = 'block';
+            
+            // Configurar cámara
+            const constraints = {
+                video: { 
+                    facingMode: 'environment', // Cámara trasera
+                    width: { ideal: 1920 },
+                    height: { ideal: 1080 }
+                }, 
+                audio: false 
+            };
+            
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            this.streamCamara = stream;
+            video.srcObject = stream;
+            
+            // Esperar a que el video esté listo
+            await new Promise((resolve) => {
+                video.onloadedmetadata = () => {
+                    video.play();
+                    resolve();
+                };
+            });
+            
+            console.log('✅ Cámara activada correctamente');
+            
+        } catch (error) {
+            console.error('❌ Error al acceder a la cámara:', error);
+            MapaManager.mostrarAlerta('No se pudo acceder a la cámara. Verifica los permisos.', 'error');
+            this.desactivarCamara();
+        }
+    },
+
+    capturarFoto() {
+        try {
+            const video = document.getElementById('videoCamara');
+            const canvas = document.getElementById('canvasCaptura');
+            const previewImg = document.getElementById('previewImg');
+            
+            // Configurar canvas con las dimensiones del video
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            
+            // Dibujar el frame actual del video en el canvas
+            const context = canvas.getContext('2d');
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            
+            // Convertir canvas a blob y crear archivo
+            canvas.toBlob((blob) => {
+                // Crear archivo a partir del blob
+                const archivo = new File([blob], `foto_${Date.now()}.jpg`, {
+                    type: 'image/jpeg',
+                    lastModified: Date.now()
+                });
+                
+                // Crear DataTransfer y asignar el archivo
+                const dataTransfer = new DataTransfer();
+                dataTransfer.items.add(archivo);
+                
+                // Asignar al input file
+                const inputFile = document.getElementById('foto');
+                inputFile.files = dataTransfer.files;
+                
+                // Mostrar previsualización
+                previewImg.src = URL.createObjectURL(blob);
+                previewImg.style.display = 'block';
+                document.getElementById('sinImagen').style.display = 'none';
+                
+                // Limpiar y desactivar cámara
+                this.desactivarCamara();
+                
+                MapaManager.mostrarAlerta('✅ Foto capturada correctamente');
+                
+            }, 'image/jpeg', 0.8); // Calidad del 80%
+            
+        } catch (error) {
+            console.error('❌ Error al capturar foto:', error);
+            MapaManager.mostrarAlerta('Error al capturar la foto', 'error');
+        }
+    },
+
+    desactivarCamara() {
+        // Detener stream de cámara
+        if (this.streamCamara) {
+            this.streamCamara.getTracks().forEach(track => track.stop());
+            this.streamCamara = null;
+        }
+        
+        // Ocultar elementos de cámara
+        document.getElementById('videoCamara').style.display = 'none';
+        document.getElementById('controlesCamara').style.display = 'none';
+        document.getElementById('videoCamara').srcObject = null;
     },
 
     previsualizarImagen(e) {
         const file = e.target.files[0];
         const previewImg = document.getElementById('previewImg');
+        const sinImagen = document.getElementById('sinImagen');
         
         if (file) {
             if (file.size > 5 * 1024 * 1024) {
                 MapaManager.mostrarAlerta('La imagen no debe superar los 5MB', 'error');
                 e.target.value = '';
                 previewImg.style.display = 'none';
+                sinImagen.style.display = 'block';
                 previewImg.src = '';
                 return;
             }
@@ -33,10 +162,12 @@ const FormularioManager = {
             reader.onload = (ev) => {
                 previewImg.src = ev.target.result;
                 previewImg.style.display = 'block';
+                sinImagen.style.display = 'none';
             };
             reader.readAsDataURL(file);
         } else {
             previewImg.style.display = 'none';
+            sinImagen.style.display = 'block';
             previewImg.src = '';
         }
     },
@@ -81,10 +212,14 @@ const FormularioManager = {
         document.getElementById('formReporte').reset();
         document.getElementById('previewImg').style.display = 'none';
         document.getElementById('previewImg').src = '';
+        document.getElementById('sinImagen').style.display = 'block';
         document.getElementById('latDisplay').textContent = 'No seleccionada';
         document.getElementById('lngDisplay').textContent = 'No seleccionada';
         document.getElementById('latitud').value = '';
         document.getElementById('longitud').value = '';
+        
+        // Limpiar cámara si está activa
+        this.desactivarCamara();
     },
 
     async enviarFormulario(e) {
@@ -127,8 +262,7 @@ const FormularioManager = {
             if (result.success) {
                 MapaManager.mostrarAlerta('✅ ' + result.mensaje);
                 
-                // SOLUCIÓN DEFINITIVA: Llamar directamente al método usando FormularioManager
-                FormularioManager.limpiarFormulario();
+                this.limpiarFormulario();
                 MapaManager.limpiarMarcadorTemporal();
                 await MapaManager.cargarReportes();
             } else {
@@ -149,6 +283,7 @@ function limpiarFormularioGlobal() {
     document.getElementById('formReporte').reset();
     document.getElementById('previewImg').style.display = 'none';
     document.getElementById('previewImg').src = '';
+    document.getElementById('sinImagen').style.display = 'block';
     document.getElementById('latDisplay').textContent = 'No seleccionada';
     document.getElementById('lngDisplay').textContent = 'No seleccionada';
     document.getElementById('latitud').value = '';
