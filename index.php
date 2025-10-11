@@ -117,9 +117,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $error_message = "Credenciales incorrectas o cuenta inactiva.";
         }
     } else {
-        // Procesar recuperación de contraseña
+         // Procesar recuperación de contraseña
         $correoRecuperacion = trim($_POST['email']);
         $mensaje_recuperacion = procesarRecuperacion($db, $correoRecuperacion, $base_url);
+        
+        // ✅ CORRECIÓN: Guardar mensaje en sesión para mostrarlo después
+        $_SESSION['mensaje_recuperacion'] = $mensaje_recuperacion;
+        
+        // ✅ Redirigir al mismo index para mostrar el mensaje
+        header("Location: index.php");
+        exit();
     }
 }
 
@@ -208,40 +215,16 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
             curl_close($ch);
 
             if ($httpCode >= 200 && $httpCode < 300) {
-                // ✅ ÉXITO: Configurar sesión y redirigir
-                $_SESSION['mensaje_recuperacion'] = "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
-                $_SESSION['correo_recuperacion'] = $correoUsuario;
-                $_SESSION['tipo_mensaje'] = 'success';
-                
-                header("Location: views/reset_password.php");
-                exit();
+                return "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
             } 
             else {
-                // ❌ ERROR: Configurar sesión y redirigir
-                $_SESSION['mensaje_recuperacion'] = "❌ Error al enviar el correo (Código: $httpCode). Por favor, intenta nuevamente.";
-                $_SESSION['correo_recuperacion'] = $correoUsuario;
-                $_SESSION['tipo_mensaje'] = 'error';
-                
-                header("Location: views/reset_password.php");
-                exit();
+                return "❌ Error al enviar el correo (Código: $httpCode). Respuesta: $response";
             }
         } else {
-            // ❌ ERROR: Configurar sesión y redirigir
-            $_SESSION['mensaje_recuperacion'] = "❌ Error al generar el enlace de recuperación. Por favor, intenta nuevamente.";
-            $_SESSION['correo_recuperacion'] = $correoUsuario;
-            $_SESSION['tipo_mensaje'] = 'error';
-            
-            header("Location: views/reset_password.php");
-            exit();
+            return "❌ Error al generar el enlace de recuperación.";
         }
     } else {
-        // ❌ CORREO NO ENCONTRADO: Configurar sesión y redirigir
-        $_SESSION['mensaje_recuperacion'] = "❌ El correo ingresado no está registrado en nuestro sistema.";
-        $_SESSION['correo_recuperacion'] = $correoUsuario;
-        $_SESSION['tipo_mensaje'] = 'error';
-        
-        header("Location: views/reset_password.php");
-        exit();
+        return "❌ El correo ingresado no está registrado en nuestro sistema.";
     }
 }
 
@@ -484,6 +467,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       margin-bottom: 20px;
       text-align: center;
       border-left: 4px solid #4CAF50;
+      display:block;
     }
 
     /* Modal de recuperación */

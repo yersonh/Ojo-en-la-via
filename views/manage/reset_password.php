@@ -1,6 +1,7 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../../config/database.php';
 session_start();
+
 
 $database = new Database();
 $db = $database->conectar();
@@ -66,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Mostrar mensaje y redirigir después de 3 segundos
         $mensaje = "✅ Contraseña cambiada correctamente. Serás redirigido al inicio de sesión...";
-        header("refresh:3;url=/views/login.php");
+        header("refresh:3;url=/index.php");
     }
 }
 ?>
