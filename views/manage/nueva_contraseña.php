@@ -1,5 +1,75 @@
 <?php
+require_once __DIR__ . '/../../config/database.php';
+session_start();
 
+
+$database = new Database();
+$db = $database->conectar();
+
+// Variable para mensajes
+$mensaje = "";
+
+// Validacion token
+if (!isset($_GET['token']) || empty($_GET['token'])) {
+    die("Token no proporcionado o inválido.");
+}
+
+$token = $_GET['token'];
+
+// Verificar token válido
+$stmt = $db->prepare("
+    SELECT * 
+    FROM public.recovery_tokens 
+    WHERE token = :token 
+      AND expiracion > NOW() 
+      AND usado = FALSE 
+    LIMIT 1
+");
+$stmt->bindParam(':token', $token);
+$stmt->execute();
+$tokenData = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if (!$tokenData) {
+    die("Token inválido o expirado.");
+}
+
+//Procesar el formulario (POST)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $password = $_POST['password'] ?? '';
+
+    // Validaciones básicas
+    if (empty($password)) {
+        $mensaje = "Por favor ingresa una nueva contraseña.";
+    } elseif (strlen($password) < 8) {
+        $mensaje = "La contraseña debe tener al menos 8 caracteres.";
+    } else {
+        // Hashear la nueva contraseña
+        $nuevaContrasena = password_hash($password, PASSWORD_DEFAULT);
+
+        // Actualizar contraseña del usuario
+        $stmtUpdate = $db->prepare("
+            UPDATE usuario 
+            SET contrasena = :contrasena 
+            WHERE id_usuario = :id_usuario
+        ");
+        $stmtUpdate->bindParam(':contrasena', $nuevaContrasena);
+        $stmtUpdate->bindParam(':id_usuario', $tokenData['id_usuario']);
+        $stmtUpdate->execute();
+
+        // Marcar token como usado
+        $stmtUsed = $db->prepare("
+            UPDATE public.recovery_tokens 
+            SET usado = TRUE 
+            WHERE id = :id
+        ");
+        $stmtUsed->bindParam(':id', $tokenData['id']);
+        $stmtUsed->execute();
+
+        // Mostrar mensaje y redirigir después de 3 segundos
+        $mensaje = "✅ Contraseña cambiada correctamente. Serás redirigido al inicio de sesión...";
+        header("refresh:3;url=/index.php");
+    }
+}
 ?>
 
 <!DOCTYPE html>
