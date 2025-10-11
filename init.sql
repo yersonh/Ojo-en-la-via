@@ -74,7 +74,7 @@ CREATE TABLE reporte (
     latitud DECIMAL(10,8) NOT NULL,
     longitud DECIMAL(11,8) NOT NULL,
     fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(50) DEFAULT 'Pendiente', -- Pendiente, Verificado, Resuelto
+    estado VARCHAR(50) DEFAULT 'Pendiente',
     CONSTRAINT fk_reporte_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
     CONSTRAINT fk_reporte_tipo FOREIGN KEY (id_tipo_incidente) REFERENCES tipo_incidente (id_tipo_incidente) ON DELETE RESTRICT
 );
@@ -103,7 +103,7 @@ CREATE TABLE historial_estado (
     estado_anterior VARCHAR(50),
     estado_nuevo VARCHAR(50),
     fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    id_usuario INT, -- quién realizó el cambio
+    id_usuario INT, 
     CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
     CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
 );

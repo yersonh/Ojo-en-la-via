@@ -288,4 +288,4 @@ function limpiarFormularioGlobal() {
     document.getElementById('lngDisplay').textContent = 'No seleccionada';
     document.getElementById('latitud').value = '';
     document.getElementById('longitud').value = '';
-}
+}w
