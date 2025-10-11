@@ -123,7 +123,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     }
 }
 
-// 4. FUNCIÓN PARA LIMPIAR TOKENS EXPIRADOS (CON MANEJO DE ERRORES)
+//FUNCIÓN PARA LIMPIAR TOKENS EXPIRADOS 
 function limpiarTokensExpirados($db) {
     try {
         $stmt = $db->prepare("DELETE FROM remember_tokens WHERE expiracion < NOW()");
@@ -135,7 +135,7 @@ function limpiarTokensExpirados($db) {
     }
 }
 
-// 5. EJECUTAR LIMPIEZA PERIÓDICA (solo una vez cada cierto tiempo) CON MANEJO DE ERRORES
+// EJECUTAR LIMPIEZA PERIÓDICA 
 if (rand(1, 10) === 1) { // 10% de probabilidad en cada carga
     try {
         limpiarTokensExpirados($db);
@@ -145,7 +145,7 @@ if (rand(1, 10) === 1) { // 10% de probabilidad en cada carga
     }
 }
 
-// Función para procesar recuperación de contraseña (tu código existente)
+// Función para procesar recuperación de contraseña
 function procesarRecuperacion($db, $correoUsuario, $base_url) {
     // Verificar si el correo existe
     $stmt = $db->prepare("SELECT * FROM usuario WHERE correo = :correo LIMIT 1");
@@ -208,15 +208,40 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
             curl_close($ch);
 
             if ($httpCode >= 200 && $httpCode < 300) {
-                return "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
-            } else {
-                return "❌ Error al enviar el correo (Código: $httpCode). Respuesta: $response";
+                // ✅ ÉXITO: Configurar sesión y redirigir
+                $_SESSION['mensaje_recuperacion'] = "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
+                $_SESSION['correo_recuperacion'] = $correoUsuario;
+                $_SESSION['tipo_mensaje'] = 'success';
+                
+                header("Location: views/reset_password.php");
+                exit();
+            } 
+            else {
+                // ❌ ERROR: Configurar sesión y redirigir
+                $_SESSION['mensaje_recuperacion'] = "❌ Error al enviar el correo (Código: $httpCode). Por favor, intenta nuevamente.";
+                $_SESSION['correo_recuperacion'] = $correoUsuario;
+                $_SESSION['tipo_mensaje'] = 'error';
+                
+                header("Location: views/reset_password.php");
+                exit();
             }
         } else {
-            return "❌ Error al generar el enlace de recuperación.";
+            // ❌ ERROR: Configurar sesión y redirigir
+            $_SESSION['mensaje_recuperacion'] = "❌ Error al generar el enlace de recuperación. Por favor, intenta nuevamente.";
+            $_SESSION['correo_recuperacion'] = $correoUsuario;
+            $_SESSION['tipo_mensaje'] = 'error';
+            
+            header("Location: views/reset_password.php");
+            exit();
         }
     } else {
-        return "❌ El correo ingresado no está registrado en nuestro sistema.";
+        // ❌ CORREO NO ENCONTRADO: Configurar sesión y redirigir
+        $_SESSION['mensaje_recuperacion'] = "❌ El correo ingresado no está registrado en nuestro sistema.";
+        $_SESSION['correo_recuperacion'] = $correoUsuario;
+        $_SESSION['tipo_mensaje'] = 'error';
+        
+        header("Location: views/reset_password.php");
+        exit();
     }
 }
 

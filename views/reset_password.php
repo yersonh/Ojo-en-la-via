@@ -1,22 +1,21 @@
 <?php
-require_once _DIR_ . '/../../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 session_start();
 
-// 🔌 Conexión a la base de datos
 $database = new Database();
 $db = $database->conectar();
 
 // Variable para mensajes
 $mensaje = "";
 
-// 🧩 Validar token en la URL
+// Validacion token
 if (!isset($_GET['token']) || empty($_GET['token'])) {
     die("Token no proporcionado o inválido.");
 }
 
 $token = $_GET['token'];
 
-// 🔍 Verificar token válido (no expirado y no usado)
+// Verificar token válido
 $stmt = $db->prepare("
     SELECT * 
     FROM public.recovery_tokens 
@@ -33,7 +32,7 @@ if (!$tokenData) {
     die("Token inválido o expirado.");
 }
 
-// 🔐 Procesar el formulario (POST)
+//Procesar el formulario (POST)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $password = $_POST['password'] ?? '';
 
