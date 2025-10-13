@@ -354,26 +354,49 @@ class AnalyticsManager {
         });
     }
 
-    updateUsuariosTable(usuariosData) {
-        const tbody = document.querySelector('#tablaUsuarios tbody');
-        tbody.innerHTML = '';
+    // En components/admin-analytics.js - Método updateUsuariosTable
+updateUsuariosTable(usuariosData) {
+    const tbody = document.querySelector('#tablaUsuarios tbody');
+    tbody.innerHTML = '';
 
-        usuariosData.forEach(usuario => {
-            const statusClass = usuario.estado === 'Activo' ? 'badge-resuelto' : 'badge-pendiente';
-            const fechaActividad = usuario.ultima_actividad ? 
-                new Date(usuario.ultima_actividad).toLocaleDateString() : 'Nunca';
-            
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${usuario.nombre || usuario.correo}</td>
-                <td>${usuario.total_reportes || 0}</td>
-                <td>${fechaActividad}</td>
-                <td><span class="badge ${statusClass}">${usuario.estado}</span></td>
-            `;
-            
-            tbody.appendChild(row);
-        });
+    if (!usuariosData || usuariosData.length === 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td colspan="4" style="text-align: center; padding: 20px; color: #666;">
+                <i class="fas fa-users"></i> No hay usuarios con reportes en el período seleccionado
+            </td>
+        `;
+        tbody.appendChild(row);
+        return;
     }
+
+    usuariosData.forEach(usuario => {
+        const statusClass = usuario.estado === 'Activo' ? 'badge-resuelto' : 'badge-pendiente';
+        
+        // Formatear fecha de última actividad
+        let fechaActividad = 'Nunca';
+        if (usuario.ultima_actividad && usuario.ultima_actividad !== 'Nunca') {
+            try {
+                const fecha = new Date(usuario.ultima_actividad);
+                if (!isNaN(fecha.getTime())) {
+                    fechaActividad = fecha.toLocaleDateString();
+                }
+            } catch (e) {
+                fechaActividad = usuario.ultima_actividad;
+            }
+        }
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${usuario.nombre || usuario.correo}</td>
+            <td>${usuario.total_reportes || 0}</td>
+            <td>${fechaActividad}</td>
+            <td><span class="badge ${statusClass}">${usuario.estado}</span></td>
+        `;
+        
+        tbody.appendChild(row);
+    });
+}
 
     async loadTimelineData() {
         try {

@@ -1,4 +1,4 @@
-// admin.js - Versión con scroll corregido
+// admin.js - Versión corregida con logout funcional
 class AdminManager {
     constructor() {
         this.map = null;
@@ -8,11 +8,11 @@ class AdminManager {
     }
 
     init() {
-        // Primero asegurar que el scroll funcione
+        console.log('🚀 Inicializando AdminManager...');
         this.fixScrollIssues();
-        
         this.setupNavigation();
         this.setupEventListeners();
+        this.setupLogoutHandler(); // ¡IMPORTANTE! Llamar directamente
         this.initializeMapIfNeeded();
     }
 
@@ -20,7 +20,6 @@ class AdminManager {
     fixScrollIssues() {
         console.log('🔓 Aplicando fix para scroll...');
         
-        // Remover cualquier estilo que bloquee el scroll
         const elementsToFix = [
             document.documentElement,
             document.body,
@@ -42,7 +41,6 @@ class AdminManager {
             }
         });
         
-        // Forzar estilos correctos
         document.body.style.overflow = 'auto';
         document.body.style.height = 'auto';
         document.documentElement.style.overflow = 'auto';
@@ -54,6 +52,11 @@ class AdminManager {
     // Navegación entre pestañas
     setupNavigation() {
         document.querySelectorAll('.sidebar-menu a').forEach(link => {
+            // Excluir el logout de la navegación normal
+            if (link.id === 'logoutLink' || link.classList.contains('logout-item')) {
+                return;
+            }
+            
             link.addEventListener('click', (e) => {
                 e.preventDefault();
                 
@@ -77,201 +80,156 @@ class AdminManager {
         });
     }
 
-    // Inicializar mapa solo si es necesario
-    initializeMapIfNeeded() {
-        if (this.mapInitialized) {
-            console.log('ℹ️ Mapa ya inicializado');
-            return;
-        }
-
-        const mapContainer = document.getElementById('adminMap');
-        if (!mapContainer) {
-            console.error('❌ Contenedor adminMap no encontrado');
-            return;
-        }
-
-        if (!this.isContainerReady(mapContainer)) {
-            console.error('❌ Contenedor no está listo');
-            return;
-        }
-
-        this.initializeMap(mapContainer);
-    }
-
-    // Verificar si el contenedor está listo
-    isContainerReady(container) {
-        if (!container || !container.getBoundingClientRect) return false;
+    // CONFIGURACIÓN DEL LOGOUT - MÉTODO MEJORADO
+    setupLogoutHandler() {
+        console.log('🔍 Configurando logout handler...');
         
-        const rect = container.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0 && document.body.contains(container);
-    }
-
-    // Inicializar el mapa de forma SEGURA
-    initializeMap(container) {
-        try {
-            console.log('🗺️ Inicializando mapa...');
-
-            // Limpiar contenedor
-            this.cleanContainer(container);
-
-            // Crear mapa con configuración básica
-            this.map = L.map('adminMap', {
-                zoomControl: true,
-                attributionControl: true,
-                preferCanvas: true,
-                // Configuración para no interferir con scroll
-                scrollWheelZoom: false,
-                dragging: true,
-                doubleClickZoom: true,
-                boxZoom: true,
-                keyboard: false
-            }).setView([4.142, -73.626], 13);
-
-            // Añadir capa base
-            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                maxZoom: 19,
-                attribution: '© OpenStreetMap contributors'
-            }).addTo(this.map);
-
-            // Prevenir que el mapa interfiera con el scroll
-            this.preventMapScrollInterference();
-
-            this.mapInitialized = true;
-            console.log('✅ Mapa inicializado correctamente');
-
-            // Cargar reportes INMEDIATAMENTE
-            this.cargarReportesEnMapa();
-
-        } catch (error) {
-            console.error('💥 Error inicializando mapa:', error);
-            this.handleMapError();
+        // Buscar el enlace de logout de múltiples formas
+        let logoutLink = document.getElementById('logoutLink');
+        
+        if (!logoutLink) {
+            logoutLink = document.querySelector('.logout-item');
         }
-    }
-
-    // Prevenir interferencia del mapa con el scroll
-    preventMapScrollInterference() {
-        if (!this.map) return;
-
-        // Desactivar scroll wheel zoom
-        this.map.scrollWheelZoom.disable();
-
-        // Prevenir eventos de rueda
-        const mapContainer = this.map.getContainer();
-        mapContainer.addEventListener('wheel', (e) => {
-            e.stopPropagation();
-        }, { passive: false });
-
-        mapContainer.addEventListener('touchmove', (e) => {
-            if (e.touches.length > 1) {
-                e.stopPropagation();
-            }
-        }, { passive: false });
-    }
-
-    // Cargar reportes en el mapa
-    async cargarReportesEnMapa() {
-        if (!this.map || !this.mapInitialized) {
-            console.log('❌ Mapa no disponible para cargar reportes');
-            return;
+        
+        if (!logoutLink) {
+            logoutLink = document.querySelector('a[href*="logout"]');
         }
-
-        console.log('📊 Cargando reportes...');
-
-        try {
-            const response = await fetch('../../controllers/reportecontrolador.php?action=listar');
-            
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const reportes = await response.json();
-            console.log(`📊 ${reportes.length} reportes cargados desde BD`);
-
-            // LIMPIAR MARCADORES EXISTENTES
-            this.clearMarkers();
-
-            // FILTRAR REPORTES VÁLIDOS
-            const validReportes = reportes.filter(reporte => 
-                reporte.latitud && reporte.longitud &&
-                !isNaN(parseFloat(reporte.latitud)) && !isNaN(parseFloat(reporte.longitud))
+        
+        if (!logoutLink) {
+            // Buscar por texto
+            const allLinks = document.querySelectorAll('a');
+            logoutLink = Array.from(allLinks).find(link => 
+                link.textContent.toLowerCase().includes('cerrar sesión') || 
+                link.textContent.toLowerCase().includes('logout') ||
+                link.textContent.toLowerCase().includes('salir')
             );
-
-            console.log(`📍 ${validReportes.length} reportes con coordenadas válidas`);
-
-            // CREAR MARCADORES
-            validReportes.forEach(reporte => {
-                try {
-                    const lat = parseFloat(reporte.latitud);
-                    const lng = parseFloat(reporte.longitud);
-                    
-                    // Crear marcador con icono personalizado
-                    const marker = L.marker([lat, lng], {
-                        icon: L.divIcon({
-                            className: 'custom-marker',
-                            html: '📍',
-                            iconSize: [30, 30],
-                            iconAnchor: [15, 30]
-                        })
-                    }).addTo(this.map);
-                    
-                    // Bind popup con contenido
-                    marker.bindPopup(this.createPopupContent(reporte));
-                    
-                    // Guardar referencia
-                    this.markers.push(marker);
-                    
-                    console.log(`✅ Marcador creado para: ${reporte.tipo_incidente}`);
-                    
-                } catch (markerError) {
-                    console.error('Error creando marcador:', markerError);
-                }
+        }
+        
+        console.log('✅ Logout link encontrado:', logoutLink);
+        
+        if (logoutLink) {
+            // Remover cualquier event listener previo
+            const newLogoutLink = logoutLink.cloneNode(true);
+            logoutLink.parentNode.replaceChild(newLogoutLink, logoutLink);
+            
+            // Agregar el event listener
+            newLogoutLink.addEventListener('click', (e) => {
+                console.log('🖱️ Click en logout detectado!');
+                e.preventDefault();
+                e.stopPropagation();
+                this.showLogoutModal();
             });
-
-            // AJUSTAR VISTA DEL MAPA
-            if (this.markers.length > 0) {
-                const group = L.featureGroup(this.markers);
-                this.map.fitBounds(group.getBounds().pad(0.1));
-                console.log('🎯 Vista ajustada a los marcadores');
-            } else {
-                console.log('ℹ️ No hay marcadores para mostrar');
-                this.showMapMessage('No hay reportes con coordenadas válidas para mostrar', 'info');
-            }
-
-        } catch (error) {
-            console.error('❌ Error cargando reportes:', error);
-            this.showMapMessage('Error al cargar reportes: ' + error.message, 'error');
+            
+            console.log('✅ Event listener de logout agregado correctamente');
+        } else {
+            console.error('❌ No se pudo encontrar el enlace de logout');
         }
     }
 
-    // LIMPIAR MARCADORES
-    clearMarkers() {
-        console.log(`🧹 Limpiando ${this.markers.length} marcadores...`);
+    // MOSTRAR MODAL DE LOGOUT
+    showLogoutModal() {
+        console.log('🎯 Mostrando modal de logout...');
         
-        this.markers.forEach(marker => {
-            if (this.map) {
-                this.map.removeLayer(marker);
-            }
+        // Crear el modal
+        const modal = document.createElement('div');
+        modal.className = 'logout-modal';
+        modal.innerHTML = `
+            <div class="modal-overlay"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</h3>
+                </div>
+                <div class="modal-body">
+                    <p>¿Estás seguro de que quieres cerrar sesión?</p>
+                    <div class="logout-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Serás redirigido a la página de inicio de sesión.</span>
+                    </div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="cancelLogout">
+                        <i class="fas fa-times"></i> Cancelar
+                    </button>
+                    <button class="btn btn-danger" id="confirmLogout">
+                        <i class="fas fa-sign-out-alt"></i> Sí, Cerrar Sesión
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Agregar al DOM
+        document.body.appendChild(modal);
+        
+        // Forzar reflow y luego mostrar
+        setTimeout(() => {
+            modal.classList.add('show');
+        }, 10);
+        
+        // Configurar event listeners del modal
+        this.setupModalEvents(modal);
+    }
+
+    // CONFIGURAR EVENTOS DEL MODAL
+    setupModalEvents(modal) {
+        // Botón Cancelar
+        const cancelBtn = modal.querySelector('#cancelLogout');
+        cancelBtn.addEventListener('click', () => {
+            this.closeLogoutModal(modal);
         });
         
-        this.markers = [];
-        console.log('✅ Marcadores limpiados');
+        // Botón Confirmar
+        const confirmBtn = modal.querySelector('#confirmLogout');
+        confirmBtn.addEventListener('click', () => {
+            this.performLogout(confirmBtn);
+        });
+        
+        // Cerrar al hacer clic fuera
+        const overlay = modal.querySelector('.modal-overlay');
+        overlay.addEventListener('click', () => {
+            this.closeLogoutModal(modal);
+        });
+        
+        // Cerrar con ESC
+        const handleKeydown = (e) => {
+            if (e.key === 'Escape') {
+                this.closeLogoutModal(modal);
+                document.removeEventListener('keydown', handleKeydown);
+            }
+        };
+        document.addEventListener('keydown', handleKeydown);
+        
+        // Guardar referencia para limpiar
+        modal._keydownHandler = handleKeydown;
     }
 
-    // Limpiar contenedor
-    cleanContainer(container) {
-        try {
-            while (container.firstChild) {
-                container.removeChild(container.firstChild);
+    // CERRAR MODAL
+    closeLogoutModal(modal) {
+        modal.classList.remove('show');
+        document.removeEventListener('keydown', modal._keydownHandler);
+        
+        setTimeout(() => {
+            if (modal.parentNode) {
+                modal.parentNode.removeChild(modal);
             }
-            if (container._leaflet_id) {
-                delete container._leaflet_id;
-            }
-        } catch (error) {
-            console.error('Error limpiando contenedor:', error);
-        }
+        }, 300);
     }
 
-    // Configurar event listeners
+    // EJECUTAR LOGOUT
+    performLogout(button) {
+        console.log('🔐 Ejecutando logout...');
+        
+        // Mostrar estado de loading
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Cerrando sesión...';
+        button.disabled = true;
+        
+        // Redirigir después de un breve delay
+        setTimeout(() => {
+            window.location.href = '../../controllers/logoutcontrolador.php';
+        }, 1000);
+    }
+
+    // ... (el resto de tus métodos del mapa se mantienen igual)
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.id === 'refreshMapBtn' || e.target.closest('#refreshMapBtn')) {
@@ -303,15 +261,174 @@ class AdminManager {
         });
     }
 
-    // Refrescar mapa
+    initializeMapIfNeeded() {
+        if (this.mapInitialized) {
+            console.log('ℹ️ Mapa ya inicializado');
+            return;
+        }
+
+        const mapContainer = document.getElementById('adminMap');
+        if (!mapContainer) {
+            console.error('❌ Contenedor adminMap no encontrado');
+            return;
+        }
+
+        if (!this.isContainerReady(mapContainer)) {
+            console.error('❌ Contenedor no está listo');
+            return;
+        }
+
+        this.initializeMap(mapContainer);
+    }
+
+    isContainerReady(container) {
+        if (!container || !container.getBoundingClientRect) return false;
+        const rect = container.getBoundingClientRect();
+        return rect.width > 0 && rect.height > 0 && document.body.contains(container);
+    }
+
+    initializeMap(container) {
+        try {
+            console.log('🗺️ Inicializando mapa...');
+            this.cleanContainer(container);
+
+            this.map = L.map('adminMap', {
+                zoomControl: true,
+                attributionControl: true,
+                preferCanvas: true,
+                scrollWheelZoom: false,
+                dragging: true,
+                doubleClickZoom: true,
+                boxZoom: true,
+                keyboard: false
+            }).setView([4.142, -73.626], 13);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 19,
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(this.map);
+
+            this.preventMapScrollInterference();
+            this.mapInitialized = true;
+            console.log('✅ Mapa inicializado correctamente');
+            this.cargarReportesEnMapa();
+
+        } catch (error) {
+            console.error('💥 Error inicializando mapa:', error);
+            this.handleMapError();
+        }
+    }
+
+    preventMapScrollInterference() {
+        if (!this.map) return;
+        this.map.scrollWheelZoom.disable();
+        
+        const mapContainer = this.map.getContainer();
+        mapContainer.addEventListener('wheel', (e) => {
+            e.stopPropagation();
+        }, { passive: false });
+
+        mapContainer.addEventListener('touchmove', (e) => {
+            if (e.touches.length > 1) {
+                e.stopPropagation();
+            }
+        }, { passive: false });
+    }
+
+    async cargarReportesEnMapa() {
+        if (!this.map || !this.mapInitialized) {
+            console.log('❌ Mapa no disponible para cargar reportes');
+            return;
+        }
+
+        console.log('📊 Cargando reportes...');
+
+        try {
+            const response = await fetch('../../controllers/reportecontrolador.php?action=listar');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            
+            const reportes = await response.json();
+            console.log(`📊 ${reportes.length} reportes cargados desde BD`);
+
+            this.clearMarkers();
+
+            const validReportes = reportes.filter(reporte => 
+                reporte.latitud && reporte.longitud &&
+                !isNaN(parseFloat(reporte.latitud)) && !isNaN(parseFloat(reporte.longitud))
+            );
+
+            console.log(`📍 ${validReportes.length} reportes con coordenadas válidas`);
+
+            validReportes.forEach(reporte => {
+                try {
+                    const lat = parseFloat(reporte.latitud);
+                    const lng = parseFloat(reporte.longitud);
+                    
+                    const marker = L.marker([lat, lng], {
+                        icon: L.divIcon({
+                            className: 'custom-marker',
+                            html: '📍',
+                            iconSize: [30, 30],
+                            iconAnchor: [15, 30]
+                        })
+                    }).addTo(this.map);
+                    
+                    marker.bindPopup(this.createPopupContent(reporte));
+                    this.markers.push(marker);
+                    
+                } catch (markerError) {
+                    console.error('Error creando marcador:', markerError);
+                }
+            });
+
+            if (this.markers.length > 0) {
+                const group = L.featureGroup(this.markers);
+                this.map.fitBounds(group.getBounds().pad(0.1));
+                console.log('🎯 Vista ajustada a los marcadores');
+            } else {
+                console.log('ℹ️ No hay marcadores para mostrar');
+                this.showMapMessage('No hay reportes con coordenadas válidas para mostrar', 'info');
+            }
+
+        } catch (error) {
+            console.error('❌ Error cargando reportes:', error);
+            this.showMapMessage('Error al cargar reportes: ' + error.message, 'error');
+        }
+    }
+
+    clearMarkers() {
+        console.log(`🧹 Limpiando ${this.markers.length} marcadores...`);
+        this.markers.forEach(marker => {
+            if (this.map) {
+                this.map.removeLayer(marker);
+            }
+        });
+        this.markers = [];
+        console.log('✅ Marcadores limpiados');
+    }
+
+    cleanContainer(container) {
+        try {
+            while (container.firstChild) {
+                container.removeChild(container.firstChild);
+            }
+            if (container._leaflet_id) {
+                delete container._leaflet_id;
+            }
+        } catch (error) {
+            console.error('Error limpiando contenedor:', error);
+        }
+    }
+
     refreshMap() {
         console.log('🔁 Refrescando mapa y reportes...');
         
         if (this.map && this.mapInitialized) {
-            // Solo recargar reportes, no el mapa completo
             this.cargarReportesEnMapa();
         } else {
-            // Si el mapa no está inicializado, reinicializar
             this.safeCleanupMap();
             setTimeout(() => {
                 this.initializeMapIfNeeded();
@@ -319,12 +436,8 @@ class AdminManager {
         }
     }
 
-    // Limpieza segura del mapa
     safeCleanupMap() {
-        // Limpiar marcadores primero
         this.clearMarkers();
-        
-        // Luego limpiar mapa
         if (this.map) {
             try {
                 this.map.remove();
@@ -336,7 +449,6 @@ class AdminManager {
         this.mapInitialized = false;
     }
 
-    // Mostrar mensaje en el mapa
     showMapMessage(mensaje, tipo = 'info') {
         const mapContainer = document.getElementById('adminMap');
         if (mapContainer) {
@@ -360,7 +472,6 @@ class AdminManager {
         }
     }
 
-    // Crear contenido del popup
     createPopupContent(reporte) {
         const statusColor = this.getStatusColor(reporte.estado);
         return `
@@ -390,16 +501,13 @@ class AdminManager {
         return colors[estado] || '#95a5a6';
     }
 
-    // Manejar error del mapa
     handleMapError() {
         this.mapInitialized = false;
         this.map = null;
         this.markers = [];
-        
         this.showMapMessage('Error al inicializar el mapa', 'error');
     }
 
-    // Filtrar reportes por estado
     filterReportesByEstado(estado) {
         const filas = document.querySelectorAll('#reportes tbody tr');
         filas.forEach(fila => {
@@ -411,7 +519,6 @@ class AdminManager {
         });
     }
 
-    // Escapar HTML
     escapeHtml(unsafe) {
         if (!unsafe) return '';
         return unsafe.toString()
@@ -464,11 +571,10 @@ AdminManager.enviarAccion = function(accion, datos) {
         });
 };
 
-// Inicialización con fix de scroll
+// Inicialización
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOM cargado - Inicializando AdminManager...');
     
-    // Aplicar fix de scroll inmediatamente
     document.body.style.overflow = 'auto';
     document.documentElement.style.overflow = 'auto';
     

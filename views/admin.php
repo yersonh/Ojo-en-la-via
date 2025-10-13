@@ -95,7 +95,7 @@ $usuarios = $adminControlador->obtenerUsuarios();
     <script src="components/admin-analytics.js"></script>
     
     <script src="components/admin.js"></script>
-    
+    <script src="components/admin-configuracion.js"></script>
     
     
     <!-- REMOVER este script que causa el error -->
