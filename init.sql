@@ -115,6 +115,31 @@ CREATE TABLE remember_tokens (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 );
+-- Tabla para likes en reportes
+CREATE TABLE like_reporte (
+    id_like SERIAL PRIMARY KEY,
+    id_reporte INT NOT NULL,
+    id_usuario INT NOT NULL,
+    fecha_like TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_like_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
+    CONSTRAINT fk_like_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT uq_like UNIQUE (id_reporte, id_usuario)
+);
+
+-- Tabla para notificaciones
+CREATE TABLE notificacion (
+    id_notificacion SERIAL PRIMARY KEY,
+    id_usuario_destino INT NOT NULL,
+    id_usuario_origen INT,
+    id_reporte INT,
+    tipo VARCHAR(50) NOT NULL, -- 'like' | 'comentario' | 'otro'
+    mensaje TEXT,
+    leida BOOLEAN DEFAULT FALSE,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notificacion_destino FOREIGN KEY (id_usuario_destino) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT fk_notificacion_origen FOREIGN KEY (id_usuario_origen) REFERENCES usuario (id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_notificacion_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE
+);
 
 CREATE INDEX idx_token ON remember_tokens(token);
 CREATE INDEX idx_expiracion ON remember_tokens(expiracion);

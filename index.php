@@ -45,7 +45,7 @@ if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
             if ($usuario['id_rol'] == 1) {
                 header("Location: views/admin.php");
             } else {
-                header("Location: views/vermapa.php");
+                header("Location: views/panelInicio.php");
             }
             exit();
         } else {
@@ -110,7 +110,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             if ($usuario['id_rol'] == 1) {
                 header("Location: views/admin.php");
             } else {
-                header("Location: views/vermapa.php");
+                header("Location: views/panelInicio.php");
             }
             exit();
         } else {
