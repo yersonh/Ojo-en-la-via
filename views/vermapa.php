@@ -157,7 +157,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <!-- Nuestros módulos JavaScript -->
     <script src="components/mapa.js"></script>
-    <script src="components/buscador.js"></script>
+    <script src="components/Buscador.js"></script>
     <script src="components/formulario-reporte.js"></script>
     <script src="components/comentarios.js"></script>
     
