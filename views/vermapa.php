@@ -42,7 +42,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <div class="search-container">
         <div class="search-box">
             <input type="text" id="searchInput" placeholder="🔍 Buscar dirección en Colombia..." autocomplete="off">
-            <button type="button" onclick="MapaManager.buscarDireccion()" class="btn-buscar" id="btnBuscar">
+            <button type="button" onclick="BuscadorManager.buscarDireccion()" class="btn-buscar" id="btnBuscar">
                 Buscar
             </button>
         </div>
@@ -80,7 +80,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
                     <!-- Input de archivo oculto -->
                     <!-- Cambia el input de archivo a múltiple -->
-<input type="file" id="foto" name="imagen[]" accept="image/*" capture="environment" multiple style="display: none;">
+                <input type="file" id="foto" name="imagen[]" accept="image/*" capture="environment" multiple style="display: none;">
                     
                     <!-- Previsualización -->
                     <div class="preview">
