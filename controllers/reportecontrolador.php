@@ -59,123 +59,131 @@ try {
     break;
 
         // Registrar reporte 
-        case 'registrar':
-            // Si viene con formulario (multipart/form-data)
-            if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-                // Sanitizar y validar datos
-                $id_usuario = filter_var($_POST['id_usuario'], FILTER_VALIDATE_INT);
-                $id_tipo_incidente = filter_var($_POST['id_tipo_incidente'], FILTER_VALIDATE_INT);
-                $descripcion = filter_var($_POST['descripcion'], FILTER_SANITIZE_STRING);
-                $latitud = filter_var($_POST['latitud'], FILTER_VALIDATE_FLOAT);
-                $longitud = filter_var($_POST['longitud'], FILTER_VALIDATE_FLOAT);
+        // Registrar reporte 
+case 'registrar':
+    // Si viene con formulario (multipart/form-data)
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        // Sanitizar y validar datos (tu código igual)
+        $id_usuario = filter_var($_POST['id_usuario'], FILTER_VALIDATE_INT);
+        $id_tipo_incidente = filter_var($_POST['id_tipo_incidente'], FILTER_VALIDATE_INT);
+        $descripcion = filter_var($_POST['descripcion'], FILTER_SANITIZE_STRING);
+        $latitud = filter_var($_POST['latitud'], FILTER_VALIDATE_FLOAT);
+        $longitud = filter_var($_POST['longitud'], FILTER_VALIDATE_FLOAT);
 
-                // Validar datos requeridos
-                if (empty($id_usuario) || empty($id_tipo_incidente) || empty($descripcion) || empty($latitud) || empty($longitud)) {
-                    throw new Exception("Todos los campos son obligatorios");
-                }
+        // Validar datos requeridos (tu código igual)
+        if (empty($id_usuario) || empty($id_tipo_incidente) || empty($descripcion) || empty($latitud) || empty($longitud)) {
+            throw new Exception("Todos los campos son obligatorios");
+        }
 
-                // Validar coordenadas
-                if ($latitud < -90 || $latitud > 90 || $longitud < -180 || $longitud > 180) {
-                    throw new Exception("Coordenadas no válidas");
-                }
+        // Validar coordenadas (tu código igual)
+        if ($latitud < -90 || $latitud > 90 || $longitud < -180 || $longitud > 180) {
+            throw new Exception("Coordenadas no válidas");
+        }
 
-                // Validar que el usuario existe y está activo
-                $queryUser = "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario";
-                $stmtUser = $db->prepare($queryUser);
-                $stmtUser->execute([':id_usuario' => $id_usuario]);
+        // Validar que el usuario existe (tu código igual)
+        $queryUser = "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario";
+        $stmtUser = $db->prepare($queryUser);
+        $stmtUser->execute([':id_usuario' => $id_usuario]);
+        
+        if (!$stmtUser->fetch()) {
+            throw new Exception("Usuario no válido");
+        }
+
+        // Iniciar transacción
+        $db->beginTransaction();
+
+        try {
+            // Insertar reporte (tu código igual)
+            $query = "
+                INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
+                VALUES (:id_usuario, :id_tipo_incidente, :descripcion, :latitud, :longitud)
+            ";
+            $stmt = $db->prepare($query);
+            $stmt->execute([
+                ':id_usuario' => $id_usuario,
+                ':id_tipo_incidente' => $id_tipo_incidente,
+                ':descripcion' => $descripcion,
+                ':latitud' => $latitud,
+                ':longitud' => $longitud
+            ]);
+
+            $id_reporte = $db->lastInsertId();
+            error_log("✅ Reporte insertado con ID: " . $id_reporte);
+
+            // 🆕 CORRECCIÓN COMPLETA: Manejo de MÚLTIPLES IMÁGENES
+            $imagenes_subidas = 0;
+            $urls_imagenes = [];
+            
+            // Verificar si hay imágenes (con soporte para múltiples)
+            if (!empty($_FILES['imagen']['name'][0])) {
+                error_log("📸 Procesando " . count($_FILES['imagen']['name']) . " imágenes...");
                 
-                if (!$stmtUser->fetch()) {
-                    throw new Exception("Usuario no válido");
+                $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
+                
+                // Crear directorio si no existe
+                if (!is_dir($directorio)) {
+                    if (!mkdir($directorio, 0755, true)) {
+                        throw new Exception("No se pudo crear el directorio para imágenes");
+                    }
+                    error_log("📁 Directorio creado: " . $directorio);
                 }
 
-                // Iniciar transacción para asegurar consistencia
-                $db->beginTransaction();
+                // Procesar cada imagen
+                for ($i = 0; $i < count($_FILES['imagen']['name']); $i++) {
+                    // Verificar que no hay error en este archivo específico
+                    if ($_FILES['imagen']['error'][$i] !== UPLOAD_ERR_OK) {
+                        if ($_FILES['imagen']['error'][$i] !== UPLOAD_ERR_NO_FILE) {
+                            error_log("⚠️ Error en archivo $i: " . $_FILES['imagen']['error'][$i]);
+                        }
+                        continue; // Saltar este archivo pero continuar con los demás
+                    }
 
-                try {
-                    // Insertar reporte
-                    $query = "
-                        INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
-                        VALUES (:id_usuario, :id_tipo_incidente, :descripcion, :latitud, :longitud)
-                    ";
-                    $stmt = $db->prepare($query);
-                    $stmt->execute([
-                        ':id_usuario' => $id_usuario,
-                        ':id_tipo_incidente' => $id_tipo_incidente,
-                        ':descripcion' => $descripcion,
-                        ':latitud' => $latitud,
-                        ':longitud' => $longitud
-                    ]);
+                    // ✅ Validación de tipo de archivo (CON ÍNDICE [$i])
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mime_type = finfo_file($finfo, $_FILES['imagen']['tmp_name'][$i]); // ← CORREGIDO
+                    finfo_close($finfo);
 
-                    $id_reporte = $db->lastInsertId();
-                    error_log("✅ Reporte insertado con ID: " . $id_reporte);
-
-                    // Manejo de imagen - CÓDIGO CORREGIDO
-                    $imagen_subida = false;
-                    $id_imagen = null;
+                    $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
                     
-                    if (!empty($_FILES['imagen']['name']) && $_FILES['imagen']['error'] === UPLOAD_ERR_OK) {
-                        error_log("📸 Iniciando procesamiento de imagen...");
+                    if (!in_array($mime_type, $allowed_types)) {
+                        error_log("❌ Tipo de archivo no permitido: " . $mime_type);
+                        continue; // Saltar este archivo pero continuar
+                    }
+
+                    // ✅ Validar que sea una imagen real (CON ÍNDICE [$i])
+                    $image_info = getimagesize($_FILES['imagen']['tmp_name'][$i]); // ← CORREGIDO
+                    if (!$image_info) {
+                        error_log("❌ Archivo no es imagen válida: " . $_FILES['imagen']['name'][$i]);
+                        continue;
+                    }
+
+                    // Validar tamaño (máximo 5MB) (CON ÍNDICE [$i])
+                    if ($_FILES['imagen']['size'][$i] > 5 * 1024 * 1024) { // ← CORREGIDO
+                        error_log("❌ Imagen muy grande: " . $_FILES['imagen']['name'][$i]);
+                        continue;
+                    }
+
+                    // Generar nombre seguro (CON ÍNDICE [$i])
+                    $extension = pathinfo($_FILES['imagen']['name'][$i], PATHINFO_EXTENSION); // ← CORREGIDO
+                    $nombreArchivo = uniqid('reporte_') . '.' . $extension;
+                    
+                    // Ruta para guardar en servidor
+                    $rutaDestino = $directorio . $nombreArchivo;
+                    
+                    // Crear URL absoluta
+                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+                    $host = $_SERVER['HTTP_HOST'];
+                    $urlImagen = $protocol . '://' . $host . '/imagenes/reportes/' . $nombreArchivo;
+
+                    error_log("🖼️ Procesando imagen $i: " . $_FILES['imagen']['name'][$i] . " -> " . $rutaDestino);
+
+                    // Mover archivo (CON ÍNDICE [$i])
+                    if (move_uploaded_file($_FILES['imagen']['tmp_name'][$i], $rutaDestino)) { // ← CORREGIDO
+                        error_log("✅ Imagen $i guardada físicamente");
                         
-                        // Directorio para imágenes (usando documento raíz)
-                        $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
-                        
-                        // Crear directorio si no existe
-                        if (!is_dir($directorio)) {
-                            if (!mkdir($directorio, 0755, true)) {
-                                throw new Exception("No se pudo crear el directorio para imágenes");
-                            }
-                            error_log("📁 Directorio creado: " . $directorio);
-                        }
-
-                        // ✅ Validación robusta de tipo de archivo
-                        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-                        $mime_type = finfo_file($finfo, $_FILES['imagen']['tmp_name']);
-                        finfo_close($finfo);
-
-                        $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                        
-                        if (!in_array($mime_type, $allowed_types)) {
-                            throw new Exception("Solo se permiten imágenes JPEG, PNG, GIF o WebP. Tipo recibido: " . $mime_type);
-                        }
-
-                        // ✅ Validar que sea una imagen real
-                        $image_info = getimagesize($_FILES['imagen']['tmp_name']);
-                        if (!$image_info) {
-                            throw new Exception("El archivo no es una imagen válida");
-                        }
-
-                        // Validar tamaño (máximo 5MB)
-                        if ($_FILES['imagen']['size'] > 5 * 1024 * 1024) {
-                            throw new Exception("La imagen no debe superar los 5MB");
-                        }
-
-                        // Generar nombre seguro
-                        $extension = pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION);
-                        $nombreArchivo = uniqid('reporte_') . '.' . $extension;
-                        
-                        // Ruta para guardar en servidor
-                        $rutaDestino = $directorio . $nombreArchivo;
-                        
-                        // ✅ CORREGIDO: Crear URL absoluta para la BD
-                        $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
-                        $host = $_SERVER['HTTP_HOST'];
-                        $urlImagen = $protocol . '://' . $host . '/imagenes/reportes/' . $nombreArchivo;
-
-                        error_log("🖼️ Ruta destino: " . $rutaDestino);
-                        error_log("🌐 URL para BD: " . $urlImagen);
-                        error_log("📊 Tamaño archivo: " . $_FILES['imagen']['size'] . " bytes");
-
-                        if (move_uploaded_file($_FILES['imagen']['tmp_name'], $rutaDestino)) {
-                            error_log("✅ Imagen guardada físicamente en: " . $rutaDestino);
-                            
-                            // Verificar que el archivo existe después de moverlo
-                            if (file_exists($rutaDestino)) {
-                                error_log("✅ Archivo verificado en servidor, tamaño: " . filesize($rutaDestino) . " bytes");
-                            } else {
-                                throw new Exception("Error: La imagen no se guardó correctamente en el servidor");
-                            }
-
-                            // ✅ Insertar en base de datos con URL absoluta
+                        // Verificar que el archivo existe
+                        if (file_exists($rutaDestino)) {
+                            // Insertar en base de datos
                             $queryImg = "INSERT INTO imagen_reporte (id_reporte, url_imagen) VALUES (:id_reporte, :url_imagen)";
                             $stmtImg = $db->prepare($queryImg);
                             $resultado = $stmtImg->execute([
@@ -184,69 +192,57 @@ try {
                             ]);
 
                             if ($resultado) {
-                                $id_imagen = $db->lastInsertId();
-                                $imagen_subida = true;
-                                error_log("✅ Imagen insertada en BD con ID: " . $id_imagen . ", URL: " . $urlImagen);
+                                $imagenes_subidas++;
+                                $urls_imagenes[] = $urlImagen;
+                                error_log("✅ Imagen $i insertada en BD: " . $urlImagen);
                             } else {
-                                error_log("❌ Error al insertar imagen en BD");
-                                // Eliminar archivo físico si falla la BD
-                                unlink($rutaDestino);
-                                throw new Exception("Error al guardar la imagen en la base de datos");
+                                error_log("❌ Error al insertar imagen $i en BD");
+                                unlink($rutaDestino); // Limpiar archivo físico
                             }
                         } else {
-                            $error = error_get_last();
-                            throw new Exception("Error al subir la imagen: " . ($error['message'] ?? 'Error desconocido'));
+                            error_log("❌ Archivo no encontrado después de mover: " . $rutaDestino);
                         }
                     } else {
-                        $upload_error = $_FILES['imagen']['error'] ?? 'No file';
-                        error_log("📸 Información de imagen - Error: " . $upload_error . ", Nombre: " . ($_FILES['imagen']['name'] ?? 'No name'));
-                        
-                        if ($upload_error !== UPLOAD_ERR_NO_FILE) {
-                            $upload_errors = [
-                                UPLOAD_ERR_INI_SIZE => 'El archivo excede el tamaño máximo permitido',
-                                UPLOAD_ERR_FORM_SIZE => 'El archivo excede el tamaño máximo del formulario',
-                                UPLOAD_ERR_PARTIAL => 'El archivo fue solo parcialmente subido',
-                                UPLOAD_ERR_NO_FILE => 'No se seleccionó ningún archivo',
-                                UPLOAD_ERR_NO_TMP_DIR => 'Falta el directorio temporal',
-                                UPLOAD_ERR_CANT_WRITE => 'No se pudo escribir el archivo en el disco',
-                                UPLOAD_ERR_EXTENSION => 'Una extensión de PHP detuvo la subida del archivo'
-                            ];
-                            throw new Exception("Error al subir imagen: " . ($upload_errors[$upload_error] ?? 'Error desconocido'));
-                        }
+                        $error = error_get_last();
+                        error_log("❌ Error al mover imagen $i: " . ($error['message'] ?? 'Error desconocido'));
                     }
-
-                    // Confirmar transacción
-                    $db->commit();
-
-                    // Verificar output accidental antes de enviar respuesta
-                    $unexpected_output = ob_get_contents();
-                    if (!empty($unexpected_output)) {
-                        error_log("⚠️ Output inesperado en registrar: " . $unexpected_output);
-                        ob_clean(); // Limpiar solo el output accidental
-                    }
-
-                    $respuesta = [
-                        "success" => true,
-                        "mensaje" => "Reporte registrado correctamente" . ($imagen_subida ? " con imagen" : ""),
-                        "id_reporte" => $id_reporte
-                    ];
-                    
-                    if ($imagen_subida) {
-                        $respuesta["id_imagen"] = $id_imagen;
-                        $respuesta["url_imagen"] = $urlImagen;
-                    }
-                    
-                    echo json_encode($respuesta);
-
-                } catch (Exception $e) {
-                    // Revertir transacción en caso de error
-                    $db->rollBack();
-                    throw $e;
                 }
             } else {
-                throw new Exception("Método no permitido");
+                error_log("📸 No se recibieron imágenes o array vacío");
             }
-            break;
+
+            // Confirmar transacción
+            $db->commit();
+
+            // Limpiar output accidental
+            $unexpected_output = ob_get_contents();
+            if (!empty($unexpected_output)) {
+                error_log("⚠️ Output inesperado: " . $unexpected_output);
+                ob_clean();
+            }
+
+            $respuesta = [
+                "success" => true,
+                "mensaje" => "Reporte registrado correctamente" . 
+                ($imagenes_subidas > 0 ? " con $imagenes_subidas imagen(es)" : ""),
+                "id_reporte" => $id_reporte
+            ];
+            
+            if ($imagenes_subidas > 0) {
+                $respuesta["imagenes"] = $urls_imagenes;
+                $respuesta["total_imagenes"] = $imagenes_subidas;
+            }
+            
+            echo json_encode($respuesta);
+
+        } catch (Exception $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    } else {
+        throw new Exception("Método no permitido");
+    }
+    break;
 
         case 'listar_comentarios':
             $id_reporte = $_GET['id_reporte'] ?? '';

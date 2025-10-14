@@ -741,6 +741,60 @@ mejorarUIFormulario() {
         }
         
         return esValido;
+    }, limpiarErrorCampo(campoId) {
+        const campo = document.getElementById(campoId);
+        const grupo = campo.closest('.form-group') || campo.parentElement;
+        const mensajeError = grupo.querySelector('.mensaje-error');
+        
+        if (mensajeError) {
+            mensajeError.remove();
+        }
+        
+        campo.classList.remove('campo-error');
+    },
+
+    // 🆕 AGREGAR ESTA FUNCIÓN FALTANTE
+    validarCampo(campoId) {
+        const campo = document.getElementById(campoId);
+        if (!campo) return false;
+        
+        let esValido = true;
+        let mensajeError = '';
+        
+        switch(campoId) {
+            case 'tipo':
+                if (!campo.value) {
+                    mensajeError = 'Por favor selecciona un tipo de incidente';
+                    esValido = false;
+                }
+                break;
+                
+            case 'descripcion':
+                const descripcion = campo.value.trim();
+                if (!descripcion) {
+                    mensajeError = 'La descripción es obligatoria';
+                    esValido = false;
+                } else if (descripcion.length < 10) {
+                    mensajeError = 'La descripción debe tener al menos 10 caracteres';
+                    esValido = false;
+                } else if (descripcion.length > 500) {
+                    mensajeError = 'La descripción no puede exceder 500 caracteres';
+                    esValido = false;
+                }
+                break;
+        }
+        
+        if (!esValido) {
+            this.mostrarErrorCampo(campoId, mensajeError);
+        } else {
+            this.mostrarExitoCampo(campoId);
+        }
+        
+        return esValido;
+    },
+
+    configurarEfectosVisuales() {
+        // ... el resto de tu código ...
     },
 
     limpiarFormulario() {

@@ -243,7 +243,7 @@ const MapaManager = {
                                                     "
                                                     onmouseover="this.style.background='#e8eaed'"
                                                     onmouseout="this.style.background='#f1f3f4'">
-                                                Cerrar
+                                                
                                             </button>
                                         </div>
                                     </div>
@@ -495,29 +495,29 @@ crearPopupContent(reporte) {
                         ${totalImagenes} ${totalImagenes === 1 ? 'imagen' : 'imágenes'}
                     </span>
                 </div>
-                <div style="padding: 10px;">
+                <div style="padding: 10px; display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;">
         `;
         
-        // Mostrar miniaturas (máximo 4 imágenes en el popup)
-        const imagenesAMostrar = reporte.imagenes.slice(0, 4);
+        // Mostrar miniaturas 
+        const imagenesAMostrar = reporte.imagenes.slice(0, 6);
         
         imagenesAMostrar.forEach((urlImagen, index) => {
-            const esUltima = index === 3 && totalImagenes > 4;
+            const esUltima = index === 5 && totalImagenes > 6;
             
             if (esUltima) {
                 // Mostrar contador de imágenes restantes
                 imagenesHTML += `
-                    <div style="position: relative; display: inline-block; margin: 2px; cursor: pointer;" 
-                         onclick="MapaManager.mostrarGaleriaImagenes(${reporte.id_reporte})">
+                    <div style="position: relative; display: inline-block; cursor: pointer;" 
+                        onclick="MapaManager.mostrarGaleriaImagenes(${reporte.id_reporte})">
                         <div style="width: 80px; height: 80px; background: #6c757d; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: bold;">
-                            +${totalImagenes - 3}
+                            +${totalImagenes - 5}
                         </div>
                     </div>
                 `;
             } else {
-                // Mostrar miniatura normal
+                // Mostrar miniatura normal MEJORADA
                 imagenesHTML += `
-                    <div style="position: relative; display: inline-block; margin: 2px;">
+                    <div style="position: relative; display: inline-block;">
                         <img 
                             src="${urlImagen}" 
                             alt="Imagen ${index + 1}"
@@ -529,12 +529,17 @@ crearPopupContent(reporte) {
                                 cursor: pointer;
                                 border: 2px solid transparent;
                                 transition: all 0.3s ease;
+                                background: #f8f9fa;
                             "
                             onerror="this.style.display='none'"
                             onclick="MapaManager.mostrarGaleriaImagenes(${reporte.id_reporte}, ${index})"
                             onmouseover="this.style.borderColor='#3498db'; this.style.transform='scale(1.05)'"
                             onmouseout="this.style.borderColor='transparent'; this.style.transform='scale(1)'"
+                            loading="lazy"
                         />
+                        <div style="position: absolute; bottom: 2px; right: 2px; background: rgba(0,0,0,0.7); color: white; padding: 1px 4px; border-radius: 3px; font-size: 9px;">
+                            ${index + 1}
+                        </div>
                     </div>
                 `;
             }
@@ -544,7 +549,7 @@ crearPopupContent(reporte) {
                 </div>
                 <div style="background: #f8f9fa; padding: 8px 10px; text-align: center; border-top: 1px solid #e0e0e0;">
                     <small style="color: #666; font-size: 11px;">
-                        ${totalImagenes > 4 ? `Haz clic para ver las ${totalImagenes} imágenes` : 'Haz clic en las imágenes para ampliar'}
+                        ${totalImagenes > 6 ? `Haz clic para ver las ${totalImagenes} imágenes` : 'Haz clic en las imágenes para ampliar'}
                     </small>
                 </div>
             </div>
@@ -806,17 +811,59 @@ async mostrarGaleriaImagenes(idReporte, indiceInicial = 0) {
             padding: 20px;
             background: #000;
             cursor: default;
+            overflow: hidden;
         `;
         
         const imgPrincipal = document.createElement('img');
         imgPrincipal.src = imagenes[indiceInicial];
         imgPrincipal.style.cssText = `
-            max-width: 100%;
-            max-height: 100%;
+            max-width: 95%;
+            max-height: 95%;
             object-fit: contain;
             border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+            transition: transform 0.3s ease;
         `;
-        
+        let scale = 1;
+        let isDragging = false;
+        let startX, startY, translateX = 0, translateY = 0;
+        // Función para resetear zoom
+        const resetZoom = () => {
+            scale = 1;
+            translateX = 0;
+            translateY = 0;
+            imgPrincipal.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+        };
+        // Zoom con rueda del mouse
+        imagenContainer.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            const delta = -e.deltaY / 100;
+            scale += delta * 0.1;
+            scale = Math.min(Math.max(0.5, scale), 3); // Límites de zoom
+            imgPrincipal.style.transform = `scale(${scale}) translate(${translateX}px, ${translateY}px)`;
+        });
+        // Doble clic para resetear zoom
+        imgPrincipal.addEventListener('dblclick', resetZoom);
+        // Agregar botón de reset zoom
+        const resetZoomBtn = document.createElement('button');
+        resetZoomBtn.innerHTML = '🔄';
+        resetZoomBtn.style.cssText = `
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.7);
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 16px;
+            z-index: 1001;
+            transition: all 0.3s ease;
+        `;
+        resetZoomBtn.addEventListener('click', resetZoom);
+        overlay.appendChild(resetZoomBtn);
         // Controles de navegación
         const controles = document.createElement('div');
         controles.style.cssText = `
