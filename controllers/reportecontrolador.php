@@ -18,33 +18,45 @@ try {
 
         // Listar los reportes
         case 'listar':
-            $query = "
-                SELECT 
-                    r.id_reporte,
-                    t.nombre AS tipo_incidente,
-                    r.descripcion,
-                    r.latitud,
-                    r.longitud,
-                    r.fecha_reporte,
-                    u.correo AS usuario,
-                    r.estado
-                FROM reporte r
-                INNER JOIN tipo_incidente t ON r.id_tipo_incidente = t.id_tipo_incidente
-                INNER JOIN usuario u ON r.id_usuario = u.id_usuario
-                ORDER BY r.fecha_reporte DESC
-            ";
-            $stmt = $db->query($query);
-            $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
-            // Verificar si hay output accidental antes del JSON
-            $unexpected_output = ob_get_contents();
-            if (!empty($unexpected_output)) {
-                error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
-                ob_clean(); // Limpiar solo el output accidental
-            }
-            
-            echo json_encode($reportes);
-            break;
+    // Primero obtener los reportes
+    $query = "
+        SELECT 
+            r.id_reporte,
+            t.nombre AS tipo_incidente,
+            r.descripcion,
+            r.latitud,
+            r.longitud,
+            r.fecha_reporte,
+            u.correo AS usuario,
+            r.estado
+        FROM reporte r
+        INNER JOIN tipo_incidente t ON r.id_tipo_incidente = t.id_tipo_incidente
+        INNER JOIN usuario u ON r.id_usuario = u.id_usuario
+        ORDER BY r.fecha_reporte DESC
+    ";
+    
+    $stmt = $db->query($query);
+    $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Obtener TODAS las imágenes para cada reporte
+    foreach ($reportes as &$reporte) {
+        $queryImg = "SELECT url_imagen FROM imagen_reporte WHERE id_reporte = :id_reporte ORDER BY id_imagen";
+        $stmtImg = $db->prepare($queryImg);
+        $stmtImg->execute([':id_reporte' => $reporte['id_reporte']]);
+        $imagenes = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
+        
+        $reporte['imagenes'] = array_column($imagenes, 'url_imagen');
+    }
+    unset($reporte);
+    
+    $unexpected_output = ob_get_contents();
+    if (!empty($unexpected_output)) {
+        error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
+        ob_clean();
+    }
+    
+    echo json_encode($reportes);
+    break;
 
         // Registrar reporte 
         case 'registrar':

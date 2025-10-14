@@ -39,6 +39,15 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <!-- Panel de formulario -->
         <div id="panel">
             <h2>Registrar Reporte</h2>
+            <div class="search-container">
+        <div class="search-box">
+            <input type="text" id="searchInput" placeholder="🔍 Buscar dirección en Colombia..." autocomplete="off">
+            <button type="button" onclick="MapaManager.buscarDireccion()" class="btn-buscar" id="btnBuscar">
+                Buscar
+            </button>
+        </div>
+        <div id="searchResults" class="search-results"></div>
+        </div>
 
             <div id="alertSuccess" class="alert alert-success"></div>
             <div id="alertError" class="alert alert-error"></div>
@@ -64,14 +73,14 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                         <button type="button" id="btnTomarFoto" class="btn-camara">
                             📸 Tomar Foto
                         </button>
-                        <span class="separador">o</span>
                         <button type="button" id="btnSeleccionarArchivo" class="btn-archivo">
                             📁 Seleccionar Archivo
                         </button>
                     </div>
 
                     <!-- Input de archivo oculto -->
-                    <input type="file" id="foto" name="imagen" accept="image/*" capture="environment" style="display: none;">
+                    <!-- Cambia el input de archivo a múltiple -->
+<input type="file" id="foto" name="imagen[]" accept="image/*" capture="environment" multiple style="display: none;">
                     
                     <!-- Previsualización -->
                     <div class="preview">
@@ -99,7 +108,6 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 </div>
 
                 <label>🗺️ Seleccione ubicación en el mapa:</label>
-                <small style="color:#777;">(Haga clic en el mapa para elegir las coordenadas)</small>
 
                 <div class="coordenadas">
                     Latitud: <span id="latDisplay">No seleccionada</span><br>
@@ -149,6 +157,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
     <!-- Nuestros módulos JavaScript -->
     <script src="components/mapa.js"></script>
+    <script src="components/buscador.js"></script>
     <script src="components/formulario-reporte.js"></script>
     <script src="components/comentarios.js"></script>
     

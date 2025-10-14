@@ -614,3 +614,317 @@
 .leaflet-popup-tip {
     background: #4285f4 !important;
 }
+/* ===== ESTILOS PARA EL BUSCADOR DE DIRECCIONES ===== */
+
+.search-container {
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.search-box {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+#searchInput {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+    font-family: Arial, sans-serif;
+}
+
+#searchInput:focus {
+    outline: none;
+    border-color: #4264fb;
+}
+
+.btn-buscar {
+    background: #4264fb;
+    color: white;
+    border: none;
+    padding: 12px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: bold;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.btn-buscar:hover {
+    background: #3151e0;
+    transform: translateY(-1px);
+}
+
+.btn-buscar:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.search-results {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    max-height: 300px;
+    overflow-y: auto;
+    display: none;
+    z-index: 1000;
+    border: 1px solid #eee;
+    position: absolute;
+    width: 100%;
+    top: 100%;
+    left: 0;
+    margin-top: 5px;
+}
+
+.search-result-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.search-result-item:hover {
+    background: #f5f7ff;
+}
+
+.search-result-item:last-child {
+    border-bottom: none;
+}
+
+.result-name {
+    font-weight: bold;
+    color: #333;
+    font-size: 14px;
+    margin-bottom: 4px;
+}
+
+.result-address {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.4;
+}
+
+.relevance-badge {
+    float: right;
+    background: #4264fb;
+    color: white;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.no-results {
+    padding: 20px;
+    text-align: center;
+    color: #666;
+    font-style: italic;
+    background: #f8f9fa;
+}
+
+/* Marcador de búsqueda especial */
+.search-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Loading para búsqueda */
+.search-loading {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #4264fb;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Animaciones para el buscador */
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.search-results.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+/* ===== RESPONSIVE PARA EL BUSCADOR ===== */
+
+@media (max-width: 768px) {
+    .search-box {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .btn-buscar {
+        padding: 14px;
+        font-size: 16px;
+    }
+    
+    .search-results {
+        position: fixed;
+        top: auto;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        max-height: 50vh;
+        border-radius: 15px 15px 0 0;
+        z-index: 3000;
+    }
+    
+    #panel.active .search-results {
+        bottom: calc(70vh - 50px);
+    }
+}
+
+@media (max-width: 480px) {
+    .search-container {
+        margin-bottom: 15px;
+    }
+    
+    #searchInput {
+        padding: 14px;
+        font-size: 16px;
+    }
+    
+    .search-result-item {
+        padding: 15px;
+    }
+    
+    .result-name {
+        font-size: 15px;
+    }
+    
+    .result-address {
+        font-size: 13px;
+    }
+}
+
+/* ===== MEJORAS PARA LOS MARCADORES DEL BUSCADOR ===== */
+
+.marker-selected {
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        box-shadow: 0 0 0 0 rgba(66, 100, 251, 0.7);
+    }
+    70% {
+        box-shadow: 0 0 0 15px rgba(66, 100, 251, 0);
+    }
+    100% {
+        box-shadow: 0 0 0 0 rgba(66, 100, 251, 0);
+    }
+}
+
+/* Efecto de éxito en búsqueda */
+.search-success {
+    background: #d4edda !important;
+    border-color: #c3e6cb !important;
+    transition: all 0.5s ease;
+}
+
+/* Contraste mejorado para accesibilidad */
+@media (prefers-contrast: high) {
+    .search-result-item:hover {
+        background: #e0e0e0;
+        border: 2px solid #4264fb;
+    }
+    
+    #searchInput {
+        border-width: 2px;
+    }
+}
+/* ESTILOS PARA LA VISUALIZACIÓN DE IMÁGENES EN REPORTES */
+
+/* Overlay de imagen grande */
+.image-overlay {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Efectos hover para imágenes en popup */
+.leaflet-popup-content img {
+    transition: all 0.3s ease;
+}
+
+.leaflet-popup-content img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Indicador de que hay imagen */
+.reporte-con-imagen::after {
+    content: ' 📸';
+    font-size: 12px;
+}
+/* ESTILOS PARA MÚLTIPLES IMÁGENES EN FORMULARIO */
+
+/* Contenedor de previsualización múltiple */
+.preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+    min-height: 90px;
+    align-items: flex-start;
+}
+
+/* Miniaturas de imágenes */
+.imagen-previa {
+    transition: all 0.3s ease;
+}
+
+.imagen-previa:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+/* Indicador de múltiples archivos */
+.multiples-archivos {
+    background: #10b981 !important;
+    color: white !important;
+}
+
+/* Efectos para el área de imagen cuando hay múltiples archivos */
+.campo-imagen.con-archivos {
+    border-color: #10b981;
+    background: #f0fdf4;
+}
+
+/* Contador de imágenes */
+.contador-imagenes {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #3b82f6;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    font-size: 11px;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+}

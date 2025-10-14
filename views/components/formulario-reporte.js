@@ -140,42 +140,6 @@ const FormularioManager = {
         });
     },
 
-    validarCampo(campoId) {
-        const campo = document.getElementById(campoId);
-        let esValido = true;
-        let mensaje = '';
-        
-        switch(campoId) {
-            case 'tipo':
-                if (!campo.value) {
-                    esValido = false;
-                    mensaje = 'Por favor selecciona un tipo de incidente';
-                }
-                break;
-                
-            case 'descripcion':
-                if (!campo.value.trim()) {
-                    esValido = false;
-                    mensaje = 'La descripción es obligatoria';
-                } else if (campo.value.trim().length < 10) {
-                    esValido = false;
-                    mensaje = 'La descripción debe tener al menos 10 caracteres';
-                } else if (campo.value.trim().length > 500) {
-                    esValido = false;
-                    mensaje = 'La descripción no puede exceder los 500 caracteres';
-                }
-                break;
-        }
-        
-        if (!esValido) {
-            this.mostrarErrorCampo(campoId, mensaje);
-        } else {
-            this.mostrarExitoCampo(campoId);
-        }
-        
-        return esValido;
-    },
-
     mostrarErrorCampo(campoId, mensaje) {
         const campo = document.getElementById(campoId);
         const grupo = campo.closest('.form-group') || campo.parentElement;
@@ -405,53 +369,315 @@ const FormularioManager = {
         }, 300);
     },
 
-    previsualizarImagen(e) {
-        const file = e.target.files[0];
-        const previewImg = document.getElementById('previewImg');
-        const sinImagen = document.getElementById('sinImagen');
+    // 🆕 FUNCIÓN MEJORADA PARA PREVISUALIZAR MÚLTIPLES IMÁGENES
+previsualizarImagen(e) {
+    const files = e.target.files;
+    const previewContainer = document.querySelector('.preview');
+    const sinImagen = document.getElementById('sinImagen');
+    
+    // Limpiar previsualizaciones anteriores
+    previewContainer.querySelectorAll('.imagen-previa').forEach(img => img.remove());
+    document.getElementById('previewImg').style.display = 'none';
+    
+    if (files && files.length > 0) {
+        sinImagen.style.display = 'none';
         
-        if (file) {
+        let archivosValidos = 0;
+        const maxArchivos = 10; // Límite máximo de imágenes
+        
+        // Validar número de archivos
+        if (files.length > maxArchivos) {
+            this.mostrarErrorArchivo(`Máximo ${maxArchivos} imágenes permitidas`);
+            e.target.value = '';
+            sinImagen.style.display = 'block';
+            return;
+        }
+        
+        // Procesar cada archivo
+        for (let i = 0; i < files.length; i++) {
+            const file = files[i];
+            
             // Validar tamaño
             if (file.size > 5 * 1024 * 1024) {
-                this.mostrarErrorArchivo('La imagen no debe superar los 5MB');
-                e.target.value = '';
-                previewImg.style.display = 'none';
-                sinImagen.style.display = 'block';
-                return;
+                this.mostrarErrorArchivo(`La imagen "${file.name}" supera los 5MB`);
+                continue;
             }
             
             // Validar tipo
             if (!file.type.startsWith('image/')) {
-                this.mostrarErrorArchivo('Por favor selecciona una imagen válida');
-                e.target.value = '';
-                return;
+                this.mostrarErrorArchivo(`"${file.name}" no es una imagen válida`);
+                continue;
             }
             
-            // Mostrar loading
-            previewImg.style.display = 'block';
-            previewImg.style.opacity = '0.5';
-            sinImagen.style.display = 'none';
+            archivosValidos++;
             
             const reader = new FileReader();
             reader.onload = (ev) => {
-                previewImg.src = ev.target.result;
-                previewImg.style.opacity = '0';
-                previewImg.style.transform = 'scale(0.8)';
+                const imgContainer = document.createElement('div');
+                imgContainer.className = 'imagen-previa';
+                imgContainer.style.cssText = `
+                    position: relative;
+                    display: inline-block;
+                    margin: 5px;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    border: 2px solid #e5e7eb;
+                    transition: all 0.3s ease;
+                `;
                 
+                const img = document.createElement('img');
+                img.src = ev.target.result;
+                img.style.cssText = `
+                    width: 80px;
+                    height: 80px;
+                    object-fit: cover;
+                    display: block;
+                `;
+                
+                // Botón para eliminar imagen
+                const btnEliminar = document.createElement('button');
+                btnEliminar.innerHTML = '×';
+                btnEliminar.style.cssText = `
+                    position: absolute;
+                    top: 2px;
+                    right: 2px;
+                    background: rgba(239, 68, 68, 0.9);
+                    color: white;
+                    border: none;
+                    width: 20px;
+                    height: 20px;
+                    border-radius: 50%;
+                    font-size: 12px;
+                    font-weight: bold;
+                    cursor: pointer;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                `;
+                
+                btnEliminar.addEventListener('click', (event) => {
+                    event.stopPropagation();
+                    imgContainer.remove();
+                    this.actualizarInputArchivos();
+                    
+                    // Mostrar "sin imagen" si no quedan imágenes
+                    if (previewContainer.querySelectorAll('.imagen-previa').length === 0) {
+                        sinImagen.style.display = 'block';
+                    }
+                });
+                
+                imgContainer.addEventListener('mouseenter', () => {
+                    btnEliminar.style.opacity = '1';
+                    imgContainer.style.borderColor = '#3b82f6';
+                    imgContainer.style.transform = 'scale(1.05)';
+                });
+                
+                imgContainer.addEventListener('mouseleave', () => {
+                    btnEliminar.style.opacity = '0';
+                    imgContainer.style.borderColor = '#e5e7eb';
+                    imgContainer.style.transform = 'scale(1)';
+                });
+                
+                imgContainer.appendChild(img);
+                imgContainer.appendChild(btnEliminar);
+                previewContainer.insertBefore(imgContainer, sinImagen);
+                
+                // Animación de entrada
+                imgContainer.style.opacity = '0';
+                imgContainer.style.transform = 'scale(0.8)';
                 setTimeout(() => {
-                    previewImg.style.opacity = '1';
-                    previewImg.style.transform = 'scale(1)';
+                    imgContainer.style.opacity = '1';
+                    imgContainer.style.transform = 'scale(1)';
                 }, 10);
-                
-                this.mostrarConfirmacionArchivo();
             };
             reader.readAsDataURL(file);
-        } else {
-            previewImg.style.display = 'none';
-            sinImagen.style.display = 'block';
-            previewImg.src = '';
         }
-    },
+        
+        if (archivosValidos > 0) {
+            this.mostrarConfirmacionArchivo(archivosValidos);
+        } else {
+            sinImagen.style.display = 'block';
+        }
+        
+    } else {
+        sinImagen.style.display = 'block';
+    }
+},
+
+// 🆕 FUNCIÓN PARA ACTUALIZAR EL INPUT DE ARCHIVOS AL ELIMINAR
+actualizarInputArchivos() {
+    const inputFile = document.getElementById('foto');
+    const files = inputFile.files;
+    const dataTransfer = new DataTransfer();
+    
+    // Mantener solo los archivos que aún están en previsualización
+    const previewContainer = document.querySelector('.preview');
+    const imagenesPrevia = Array.from(previewContainer.querySelectorAll('.imagen-previa img'));
+    
+    Array.from(files).forEach(file => {
+        // Verificar si esta imagen todavía está en previsualización
+        const sigueEnPrevia = imagenesPrevia.some(img => 
+            img.src.startsWith('data:') && img.src.includes(btoa(file.name).slice(0, 20))
+        );
+        
+        if (sigueEnPrevia) {
+            dataTransfer.items.add(file);
+        }
+    });
+    
+    inputFile.files = dataTransfer.files;
+},
+
+// 🆕 FUNCIÓN MEJORADA PARA CAPTURAR FOTO (agregar a las existentes)
+capturarFoto() {
+    try {
+        const video = document.getElementById('videoCamara');
+        const canvas = document.getElementById('canvasCaptura');
+        const previewContainer = document.querySelector('.preview');
+        const sinImagen = document.getElementById('sinImagen');
+        
+        // Efecto de captura
+        video.style.opacity = '0.7';
+        setTimeout(() => {
+            video.style.opacity = '1';
+        }, 200);
+        
+        // Configurar canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Dibujar frame actual
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convertir a blob
+        canvas.toBlob((blob) => {
+            // Crear archivo
+            const archivo = new File([blob], `foto_${Date.now()}.jpg`, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+            
+            // Agregar al input file existente (no reemplazar)
+            const inputFile = document.getElementById('foto');
+            const dataTransfer = new DataTransfer();
+            
+            // Mantener archivos existentes
+            for (let i = 0; i < inputFile.files.length; i++) {
+                dataTransfer.items.add(inputFile.files[i]);
+            }
+            
+            // Agregar nuevo archivo
+            dataTransfer.items.add(archivo);
+            inputFile.files = dataTransfer.files;
+            
+            // Disparar evento change para previsualizar
+            const event = new Event('change', { bubbles: true });
+            inputFile.dispatchEvent(event);
+            
+            // Limpiar cámara
+            this.desactivarCamara();
+            
+            // Mostrar confirmación
+            this.mostrarConfirmacionFoto();
+            
+        }, 'image/jpeg', 0.8);
+        
+    } catch (error) {
+        console.error('❌ Error al capturar foto:', error);
+        MapaManager.mostrarAlerta('Error al capturar la foto', 'error');
+    }
+},
+
+// 🆕 FUNCIÓN MEJORADA PARA LIMPIAR FORMULARIO
+limpiarFormulario() {
+    document.getElementById('formReporte').reset();
+    
+    // Limpiar previsualizaciones de imágenes
+    const previewContainer = document.querySelector('.preview');
+    previewContainer.querySelectorAll('.imagen-previa').forEach(img => img.remove());
+    document.getElementById('previewImg').style.display = 'none';
+    document.getElementById('previewImg').src = '';
+    document.getElementById('sinImagen').style.display = 'block';
+    
+    document.getElementById('latDisplay').textContent = 'No seleccionada';
+    document.getElementById('lngDisplay').textContent = 'No seleccionada';
+    document.getElementById('latitud').value = '';
+    document.getElementById('longitud').value = '';
+    
+    // Limpiar contador de caracteres
+    const contador = document.querySelector('.contador-caracteres');
+    if (contador) {
+        contador.querySelector('.contador-actual').textContent = '0';
+        contador.style.color = '#6b7280';
+    }
+    
+    // Limpiar cámara
+    this.desactivarCamara();
+    
+    // Limpiar errores
+    this.limpiarErrores();
+    
+    console.log('🧹 Formulario limpiado (múltiples imágenes)');
+},
+
+// 🆕 FUNCIÓN MEJORADA PARA CONFIRMACIÓN DE ARCHIVOS
+mostrarConfirmacionArchivo(cantidad) {
+    const mensaje = cantidad === 1 ? '✅ Imagen cargada correctamente' : `✅ ${cantidad} imágenes cargadas correctamente`;
+    MapaManager.mostrarAlerta(mensaje);
+    
+    // Actualizar texto del botón de selección de archivo
+    const btnArchivo = document.getElementById('btnSeleccionarArchivo');
+    if (cantidad > 1) {
+        btnArchivo.innerHTML = `📁 ${cantidad} archivos seleccionados`;
+        btnArchivo.style.background = '#10b981';
+        btnArchivo.style.color = 'white';
+        
+        setTimeout(() => {
+            btnArchivo.innerHTML = '📁 Seleccionar Archivos';
+            btnArchivo.style.background = '';
+            btnArchivo.style.color = '';
+        }, 3000);
+    }
+},
+
+// 🆕 ACTUALIZAR MEJORARUIFormulario PARA MÚLTIPLES ARCHIVOS
+mejorarUIFormulario() {
+    console.log('🎨 Mejorando UI del formulario...');
+    
+    // Agregar clases CSS para los nuevos estilos
+    const form = document.getElementById('formReporte');
+    form.classList.add('formulario-moderno');
+    
+    // Mejorar el select de tipo de incidente
+    const selectTipo = document.getElementById('tipo');
+    if (selectTipo) {
+        selectTipo.classList.add('select-moderno');
+    }
+    
+    // Mejorar el textarea de descripción
+    const textareaDesc = document.getElementById('descripcion');
+    if (textareaDesc) {
+        textareaDesc.classList.add('textarea-moderno');
+        textareaDesc.setAttribute('placeholder', 'Describe detalladamente el incidente...');
+    }
+    
+    // 🆕 Actualizar texto del botón de archivo para múltiples
+    const btnArchivo = document.getElementById('btnSeleccionarArchivo');
+    if (btnArchivo) {
+        btnArchivo.innerHTML = '📁 Seleccionar Archivos';
+    }
+    
+    // Agregar contador de caracteres a la descripción
+    this.agregarContadorCaracteres();
+    
+    // Mejorar botones
+    this.mejorarBotones();
+    
+    console.log('✅ UI del formulario mejorada (soporte múltiples imágenes)');
+},
 
     mostrarErrorArchivo(mensaje) {
         MapaManager.mostrarAlerta(mensaje, 'error');
@@ -662,4 +888,4 @@ document.head.appendChild(style);
 // Función auxiliar independiente como respaldo
 function limpiarFormularioGlobal() {
     FormularioManager.limpiarFormulario();
-}
+}   
