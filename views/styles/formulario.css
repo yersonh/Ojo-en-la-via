@@ -630,7 +630,7 @@
 /* Asegurar que el select mantenga su z-index cuando está abierto */
 #tipo {
     position: relative !important;
-    z-index: 1000 !important;
+    z-index: 10 !important;
 }
 
 /* Forzar que el dropdown use los estilos del sistema cuando sea necesario */
