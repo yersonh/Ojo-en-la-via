@@ -59,23 +59,23 @@ const MapaManager = {
     agregarControlGeolocalizacionManual() {
         const LocateControl = L.Control.extend({
             options: {
-                position: 'topright'
+                position: 'bottomright'
             },
             
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
                 
                 container.innerHTML = `
-                    <a href="#" title="Mostrar mi ubicación actual" 
-                       style="display: block; width: 40px; height: 40px; 
-                              background: white; border: none; 
-                              border-radius: 2px; text-align: center; line-height: 40px;
-                              font-size: 18px; text-decoration: none; color: #555;
-                              box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                              transition: all 0.3s ease;">
-                        <span style="display: inline-block; transition: transform 0.3s ease;">📍</span>
-                    </a>
-                `;
+                <a href="#" title="Mostrar mi ubicación actual" 
+                style="display: block; width: 45px; height: 45px; 
+                        background: white; border: none; 
+                        border-radius: 50%; text-align: center; line-height: 45px;
+                        font-size: 20px; text-decoration: none; color: #555;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                        transition: all 0.3s ease;">
+                    <span style="display: inline-block; transition: transform 0.3s ease;">📍</span>
+                </a>
+            `;
                 
                 const link = container.querySelector('a');
                 
