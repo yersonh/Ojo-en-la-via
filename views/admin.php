@@ -1,7 +1,6 @@
 <?php
 session_start();
 
-// Verificar que el usuario esté logueado y sea administrador
 if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] != 1) {
     header("Location: ../index.php");
     exit();

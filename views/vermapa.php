@@ -25,6 +25,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
     
     <link rel="stylesheet" href="styles/mapa.css">
+    <link rel="stylesheet" href="styles/formulario.css">
 </head>
 <body>
     <!-- Botón móvil para alternar panel -->
@@ -144,6 +145,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <!-- Scripts externos -->
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    
     
     <!-- Nuestros módulos JavaScript -->
     <script src="components/mapa.js"></script>
