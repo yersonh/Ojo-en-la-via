@@ -928,3 +928,15 @@
     justify-content: center;
     z-index: 5;
 }
+/* Posición específica para móviles */
+@media (max-width: 768px) {
+    .geolocation-btn {
+        z-index: 1001 !important;
+        margin-bottom: 120px !important; /* Espacio extra para el formulario */
+    }
+    
+    /* Cuando el formulario está activo, mover el botón más arriba */
+    #panel.active ~ .leaflet-control-container .geolocation-btn {
+        margin-bottom: 300px !important;
+    }
+}

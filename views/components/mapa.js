@@ -65,6 +65,8 @@ const MapaManager = {
             onAdd: function(map) {
                 const container = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-custom');
                 
+                container.classList.add('geolocation-btn');
+
                 container.innerHTML = `
                 <a href="#" title="Mostrar mi ubicación actual" 
                 style="display: block; width: 45px; height: 45px; 
