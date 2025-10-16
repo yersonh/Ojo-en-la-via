@@ -40,14 +40,14 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         <div id="panel">
             <h2>Registrar Reporte</h2>
             <div class="search-container">
-        <div class="search-box">
-            <input type="text" id="searchInput" placeholder="🔍 Buscar dirección en Colombia..." autocomplete="off">
-            <button type="button" onclick="BuscadorManager.buscarDireccion()" class="btn-buscar" id="btnBuscar">
-                Buscar
-            </button>
-        </div>
-        <div id="searchResults" class="search-results"></div>
-        </div>
+                <div class="search-box">
+                    <input type="text" id="searchInput" placeholder="🔍 Buscar dirección en Colombia..." autocomplete="off">
+                    <button type="button" id="btnBuscar" class="btn-buscar">
+                        Buscar
+                    </button>
+                </div>
+                <div id="searchResults" class="search-results"></div>
+            </div>
 
             <div id="alertSuccess" class="alert alert-success"></div>
             <div id="alertError" class="alert alert-error"></div>
@@ -79,8 +79,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                     </div>
 
                     <!-- Input de archivo oculto -->
-                    <!-- Cambia el input de archivo a múltiple -->
-                <input type="file" id="foto" name="imagen[]" accept="image/*" capture="environment" multiple style="display: none;">
+                    <input type="file" id="foto" name="imagen[]" accept="image/*" capture="environment" multiple style="display: none;">
                     
                     <!-- Previsualización -->
                     <div class="preview">
@@ -154,47 +153,65 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     
-    
     <!-- Nuestros módulos JavaScript -->
-    <script src="components/mapa.js"></script>
-    <script src="components/Buscador.js"></script>
-    <script src="components/formulario-reporte.js"></script>
-    <script src="components/comentarios.js"></script>
+    <script type="module">
+    import { mapaSistema } from './components/mapa/index.js';
+    import { formularioSistema } from './components/formulario/index.js';
     
-    <!-- Script de inicialización -->
-    <script>
-        // Inicializar la aplicación cuando el DOM esté listo
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar módulos
-            MapaManager.inicializar();
-            FormularioManager.inicializar();
-            ComentariosManager.inicializar();
+    // Hacer disponibles globalmente
+    window.mapaSistema = mapaSistema;
+    window.formularioSistema = formularioSistema;
+    // Backward compatibility
+    window.FormularioManager = formularioSistema;
+
+    document.addEventListener('DOMContentLoaded', async function() {
+        try {
+            console.log('🚀 Inicializando aplicación...');
             
-            // Cargar reportes iniciales
-            MapaManager.cargarReportes();
+            // Inicializar sistema de mapas
+            await mapaSistema.inicializar();
+            console.log('✅ Sistema de mapas inicializado');
             
-            // Control del panel móvil
-            const panelToggle = document.getElementById('panelToggle');
-            const panel = document.getElementById('panel');
+            // Inicializar sistema de formularios
+            await formularioSistema.initialize();
+            console.log('✅ Sistema de formularios inicializado');
             
-            panelToggle.addEventListener('click', function() {
-                panel.classList.toggle('active');
-                panelToggle.textContent = panel.classList.contains('active') ? '🗺️ Mapa' : '📋 Formulario';
-            });
+            // Inicializar otros módulos
+            if (typeof ComentariosManager !== 'undefined') {
+                ComentariosManager.inicializar();
+                console.log('✅ ComentariosManager inicializado');
+            }
+
+            if (typeof BuscadorManager !== 'undefined') {
+                BuscadorManager.inicializar(mapaSistema.getMap());
+                console.log('✅ BuscadorManager inicializado');
+            }
             
-            // Cerrar panel al hacer clic fuera en móviles
-            document.addEventListener('click', function(event) {
-                if (window.innerWidth <= 768) {
-                    const isClickInsidePanel = panel.contains(event.target);
-                    const isClickOnToggle = panelToggle.contains(event.target);
-                    
-                    if (!isClickInsidePanel && !isClickOnToggle && panel.classList.contains('active')) {
-                        panel.classList.remove('active');
-                        panelToggle.textContent = '📋 Formulario';
-                    }
-                }
-            });
-        });
-    </script>
+            // Integrar con connection manager si existe
+            if (window.connectionManager) {
+                window.connectionManager.addListener((online) => {
+                    formularioSistema.handleConnectionChange(online);
+                });
+            }
+
+            console.log('🎉 Aplicación completamente inicializada');
+            
+        } catch (error) {
+            console.error('❌ Error al inicializar la aplicación:', error);
+            
+            const alertError = document.getElementById('alertError');
+            if (alertError) {
+                alertError.textContent = 'Error al cargar la aplicación. Por favor, recarga la página.';
+                alertError.style.display = 'block';
+            }
+        }
+    });
+</script>
+
+    <!-- Scripts tradicionales (asegúrate de que sean compatibles) -->
+    <script src="components/Buscador.js"></script>
+    <script src="components/comentarios.js"></script>
+    <script src="components/ConnectionManager.js"></script>
+
 </body>
 </html>

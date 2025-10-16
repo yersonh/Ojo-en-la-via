@@ -255,80 +255,110 @@ const FormularioManager = {
     },
 
     mostrarErrorCamara(mensaje) {
-        MapaManager.mostrarAlerta(mensaje, 'error');
+    this.mostrarAlerta(mensaje, 'error');
+    
+    // Efecto visual de error en el botón de cámara
+    const btnCamara = document.getElementById('btnTomarFoto');
+    btnCamara.style.background = '#ef4444';
+    btnCamara.style.color = 'white';
+    
+    setTimeout(() => {
+        btnCamara.style.background = '';
+        btnCamara.style.color = '';
+    }, 2000);
+},
+    capturarFoto() {
+    try {
+        const video = document.getElementById('videoCamara');
+        const canvas = document.getElementById('canvasCaptura');
+        const previewImg = document.getElementById('previewImg');
         
-        // Efecto visual de error en el botón de cámara
-        const btnCamara = document.getElementById('btnTomarFoto');
-        btnCamara.style.background = '#ef4444';
-        btnCamara.style.color = 'white';
+        // Efecto de captura
+        video.style.opacity = '0.7';
+        setTimeout(() => {
+            video.style.opacity = '1';
+        }, 200);
+        
+        // Configurar canvas
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        
+        // Dibujar frame actual
+        const context = canvas.getContext('2d');
+        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        
+        // Convertir a blob
+        canvas.toBlob((blob) => {
+            // Crear archivo
+            const archivo = new File([blob], `foto_${Date.now()}.jpg`, {
+                type: 'image/jpeg',
+                lastModified: Date.now()
+            });
+            
+            // Asignar al input file
+            const dataTransfer = new DataTransfer();
+            dataTransfer.items.add(archivo);
+            const inputFile = document.getElementById('foto');
+            inputFile.files = dataTransfer.files;
+            
+            // Mostrar previsualización con efecto
+            previewImg.src = URL.createObjectURL(blob);
+            previewImg.style.display = 'block';
+            previewImg.style.opacity = '0';
+            previewImg.style.transform = 'scale(0.8)';
+            
+            setTimeout(() => {
+                previewImg.style.opacity = '1';
+                previewImg.style.transform = 'scale(1)';
+            }, 10);
+            
+            document.getElementById('sinImagen').style.display = 'none';
+            
+            // Limpiar cámara
+            this.desactivarCamara();
+            
+            // Mostrar confirmación
+            this.mostrarConfirmacionFoto();
+            
+        }, 'image/jpeg', 0.8);
+        
+    } catch (error) {
+        console.error('❌ Error al capturar foto:', error);
+        this.mostrarAlerta('Error al capturar la foto', 'error');
+    }
+},
+// AGREGAR ESTOS MÉTODOS AL FormularioManager:
+
+mostrarAlerta(mensaje, tipo = 'success') {
+    const alertSuccess = document.getElementById('alertSuccess');
+    const alertError = document.getElementById('alertError');
+    
+    if (tipo === 'success') {
+        alertSuccess.textContent = mensaje;
+        alertSuccess.style.display = 'block';
+        alertError.style.display = 'none';
         
         setTimeout(() => {
-            btnCamara.style.background = '';
-            btnCamara.style.color = '';
-        }, 2000);
-    },
+            alertSuccess.style.display = 'none';
+        }, 5000);
+    } else {
+        alertError.textContent = mensaje;
+        alertError.style.display = 'block';
+        alertSuccess.style.display = 'none';
+    }
+},
 
-    capturarFoto() {
-        try {
-            const video = document.getElementById('videoCamara');
-            const canvas = document.getElementById('canvasCaptura');
-            const previewImg = document.getElementById('previewImg');
-            
-            // Efecto de captura
-            video.style.opacity = '0.7';
-            setTimeout(() => {
-                video.style.opacity = '1';
-            }, 200);
-            
-            // Configurar canvas
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
-            
-            // Dibujar frame actual
-            const context = canvas.getContext('2d');
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-            
-            // Convertir a blob
-            canvas.toBlob((blob) => {
-                // Crear archivo
-                const archivo = new File([blob], `foto_${Date.now()}.jpg`, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now()
-                });
-                
-                // Asignar al input file
-                const dataTransfer = new DataTransfer();
-                dataTransfer.items.add(archivo);
-                const inputFile = document.getElementById('foto');
-                inputFile.files = dataTransfer.files;
-                
-                // Mostrar previsualización con efecto
-                previewImg.src = URL.createObjectURL(blob);
-                previewImg.style.display = 'block';
-                previewImg.style.opacity = '0';
-                previewImg.style.transform = 'scale(0.8)';
-                
-                setTimeout(() => {
-                    previewImg.style.opacity = '1';
-                    previewImg.style.transform = 'scale(1)';
-                }, 10);
-                
-                document.getElementById('sinImagen').style.display = 'none';
-                
-                // Limpiar cámara
-                this.desactivarCamara();
-                
-                // Mostrar confirmación
-                this.mostrarConfirmacionFoto();
-                
-            }, 'image/jpeg', 0.8);
-            
-        } catch (error) {
-            console.error('❌ Error al capturar foto:', error);
-            MapaManager.mostrarAlerta('Error al capturar la foto', 'error');
-        }
-    },
+limpiarMarcadorTemporal() {
+    if (window.mapaSistema) {
+        window.mapaSistema.mapaManager.limpiarMarcadorTemporal();
+    }
+},
 
+async cargarReportes() {
+    if (window.mapaSistema) {
+        await window.mapaSistema.recargarReportes();
+    }
+},
     mostrarConfirmacionFoto() {
         const previewContainer = document.querySelector('.preview');
         const confirmacion = document.createElement('div');
@@ -587,7 +617,7 @@ capturarFoto() {
         
     } catch (error) {
         console.error('❌ Error al capturar foto:', error);
-        MapaManager.mostrarAlerta('Error al capturar la foto', 'error');
+        this.mostrarAlerta('Error al capturar la foto', 'error');
     }
 },
 
@@ -626,7 +656,7 @@ limpiarFormulario() {
 // 🆕 FUNCIÓN MEJORADA PARA CONFIRMACIÓN DE ARCHIVOS
 mostrarConfirmacionArchivo(cantidad) {
     const mensaje = cantidad === 1 ? '✅ Imagen cargada correctamente' : `✅ ${cantidad} imágenes cargadas correctamente`;
-    MapaManager.mostrarAlerta(mensaje);
+    this.mostrarAlerta(mensaje);
     
     // Actualizar texto del botón de selección de archivo
     const btnArchivo = document.getElementById('btnSeleccionarArchivo');
@@ -680,21 +710,21 @@ mejorarUIFormulario() {
 },
 
     mostrarErrorArchivo(mensaje) {
-        MapaManager.mostrarAlerta(mensaje, 'error');
-        
-        // Efecto visual en el área de imagen
-        const campoImagen = document.querySelector('.campo-imagen');
-        campoImagen.style.borderColor = '#ef4444';
-        campoImagen.style.background = '#fef2f2';
-        
-        setTimeout(() => {
-            campoImagen.style.borderColor = '';
-            campoImagen.style.background = '';
-        }, 2000);
-    },
+    this.mostrarAlerta(mensaje, 'error');
+    
+    // Efecto visual en el área de imagen
+    const campoImagen = document.querySelector('.campo-imagen');
+    campoImagen.style.borderColor = '#ef4444';
+    campoImagen.style.background = '#fef2f2';
+    
+    setTimeout(() => {
+        campoImagen.style.borderColor = '';
+        campoImagen.style.background = '';
+    }, 2000);
+},
 
     mostrarConfirmacionArchivo() {
-        MapaManager.mostrarAlerta('✅ Imagen cargada correctamente');
+        this.mostrarAlerta('✅ Imagen cargada correctamente');
     },
 
     actualizarCoordenadas(lat, lng) {
@@ -721,27 +751,28 @@ mejorarUIFormulario() {
         }, 2000);
     },
 
-    validarFormulario() {
-        const campos = ['tipo', 'descripcion'];
-        let esValido = true;
-        
-        // Validar cada campo
-        campos.forEach(campoId => {
-            if (!this.validarCampo(campoId)) {
-                esValido = false;
-            }
-        });
-        
-        // Validar ubicación
-        const lat = document.getElementById('latitud').value;
-        const lng = document.getElementById('longitud').value;
-        if (!lat || !lng) {
-            MapaManager.mostrarAlerta('Debe seleccionar una ubicación en el mapa', 'error');
+validarFormulario() {
+    const campos = ['tipo', 'descripcion'];
+    let esValido = true;
+    
+    // Validar cada campo
+    campos.forEach(campoId => {
+        if (!this.validarCampo(campoId)) {
             esValido = false;
         }
-        
-        return esValido;
-    }, limpiarErrorCampo(campoId) {
+    });
+    
+    // Validar ubicación
+    const lat = document.getElementById('latitud').value;
+    const lng = document.getElementById('longitud').value;
+    if (!lat || !lng) {
+        this.mostrarAlerta('Debe seleccionar una ubicación en el mapa', 'error');
+        esValido = false;
+    }
+    
+    return esValido;
+}, 
+    limpiarErrorCampo(campoId) {
         const campo = document.getElementById(campoId);
         const grupo = campo.closest('.form-group') || campo.parentElement;
         const mensajeError = grupo.querySelector('.mensaje-error');
@@ -875,8 +906,8 @@ mejorarUIFormulario() {
             if (result.success) {
                 this.mostrarExitoEnvio(result.mensaje);
                 this.limpiarFormulario();
-                MapaManager.limpiarMarcadorTemporal();
-                await MapaManager.cargarReportes();
+                this.limpiarMarcadorTemporal();
+                await this.cargarReportes();
             } else {
                 throw new Error(result.mensaje || result.error || 'Error desconocido');
             }
@@ -894,26 +925,26 @@ mejorarUIFormulario() {
     },
 
     mostrarExitoEnvio(mensaje) {
-        MapaManager.mostrarAlerta('✅ ' + mensaje);
-        
-        // Efecto visual adicional
-        const form = document.getElementById('formReporte');
-        form.style.transform = 'scale(0.98)';
-        setTimeout(() => {
-            form.style.transform = 'scale(1)';
-        }, 300);
-    },
+    this.mostrarAlerta('✅ ' + mensaje);
+    
+    // Efecto visual adicional
+    const form = document.getElementById('formReporte');
+    form.style.transform = 'scale(0.98)';
+    setTimeout(() => {
+        form.style.transform = 'scale(1)';
+    }, 300);
+},
 
     mostrarErrorEnvio(mensaje) {
-        MapaManager.mostrarAlerta('❌ ' + mensaje, 'error');
-        
-        // Efecto visual de error
-        const form = document.getElementById('formReporte');
-        form.style.animation = 'shake 0.5s ease-in-out';
-        setTimeout(() => {
-            form.style.animation = '';
-        }, 500);
-    }
+    this.mostrarAlerta('❌ ' + mensaje, 'error');
+    
+    // Efecto visual de error
+    const form = document.getElementById('formReporte');
+    form.style.animation = 'shake 0.5s ease-in-out';
+    setTimeout(() => {
+        form.style.animation = '';
+    }, 500);
+}
 };
 
 // Animación CSS para el efecto shake
