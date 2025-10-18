@@ -1,4 +1,4 @@
-// ConnectionManager - Versión SIN ERRORES CORS
+// ConnectionManager - Versión CORREGIDA
 class ConnectionManager {
     constructor() {
         this.isOnline = true;
@@ -19,7 +19,7 @@ class ConnectionManager {
         window.addEventListener('online', () => this.handleOnline());
         window.addEventListener('offline', () => this.handleOffline());
         
-        // Verificación cada 10 segundos (menos frecuente)
+        // Verificación cada 10 segundos
         this.startActiveChecking();
         
         setTimeout(() => this.checkConnection(), 1000);
@@ -36,11 +36,14 @@ class ConnectionManager {
     }
 
     async checkConnection() {
+        if (!this.isOnline && this.consecutiveFailures > 5) {
+        console.log('🔴 Ya en modo offline, reduciendo verificaciones...');
+        return;
+    }
         if (this.isChecking) return;
         this.isChecking = true;
         
         try {
-            // 🎯 SOLO 2 métodos para evitar CORS
             const isActuallyOnline = await this.simpleReliableCheck();
             
             if (isActuallyOnline) {
@@ -72,7 +75,6 @@ class ConnectionManager {
     }
 
     async simpleReliableCheck() {
-        // 🎯 SOLO métodos que no generan CORS
         const checks = [
             this.checkWithFetchNoCors(),
             this.checkWithImage()
@@ -86,19 +88,17 @@ class ConnectionManager {
         
         console.log(`🔍 Resultados: ${onlineCount}/2 métodos dicen ONLINE`);
         
-        return onlineCount >= 1; // Solo 1 de 2 necesita funcionar
+        return onlineCount >= 1;
     }
 
     async checkWithFetchNoCors() {
         try {
-            // Usar modo no-cors para evitar errores
             const response = await fetch('https://www.google.com/favicon.ico?t=' + Date.now(), {
                 method: 'HEAD',
                 cache: 'no-cache',
-                mode: 'no-cors', // 🎯 Importante: evitar CORS
+                mode: 'no-cors',
                 headers: { 'Cache-Control': 'no-cache' }
             });
-            // En modo no-cors, si no hay error = hay conexión
             return true;
         } catch (error) {
             return false;
@@ -110,15 +110,12 @@ class ConnectionManager {
             const img = new Image();
             img.onload = () => resolve(true);
             img.onerror = () => resolve(false);
-            
             setTimeout(() => resolve(false), 3000);
-            
             img.src = 'https://www.google.com/images/branding/googlelogo/1x/googlelogo_color_272x92dp.png?t=' + Date.now();
         });
     }
 
     startActiveChecking() {
-        // Verificación cada 10 segundos (menos spam)
         this.checkInterval = setInterval(() => {
             this.checkConnection();
         }, 10000);
@@ -146,43 +143,70 @@ class ConnectionManager {
         }
     }
 
+    // 🆕 MÉTODO ÚNICO PARA UI OFFLINE
     showOfflineUI() {
         console.log('🔴 Activando modo offline');
         this.hideOfflineUI();
         
+        // Banner mejorado
+        this.mostrarBannerOffline();
+        
+        // Deshabilitar funciones online (PERO NO EL BOTÓN DE ENVIAR)
+        this.disableOnlineFeatures();
+        
+        // Mensaje en mapa
+        this.mostrarMensajeMapaOffline();
+    }
+
+    // 🆕 BANNER OFFLINE MEJORADO
+    mostrarBannerOffline() {
         const banner = document.createElement('div');
         banner.id = 'connection-status-message';
         banner.innerHTML = `
             <div style="
-                position: fixed; top: 0; left: 0; right: 0; 
-                background: #dc2626; color: white; padding: 12px 20px; 
-                text-align: center; font-weight: bold; z-index: 10000; 
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                background: #f59e0b;
+                color: white;
+                padding: 12px 20px;
+                text-align: center;
+                font-weight: bold;
+                z-index: 10000;
                 box-shadow: 0 2px 10px rgba(0,0,0,0.3);
                 animation: slideDown 0.5s ease;
                 font-size: 14px;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 10px;
             ">
-                ⚠️ SIN CONEXIÓN - Modo offline activado 📶
+                <span>📶</span>
+                MODO OFFLINE - Los reportes se guardan localmente y se enviarán automáticamente
+                <span>💾</span>
             </div>
+            <style>
+                @keyframes slideDown {
+                    from { transform: translateY(-100%); opacity: 0; }
+                    to { transform: translateY(0); opacity: 1; }
+                }
+            </style>
         `;
         document.body.appendChild(banner);
-        this.disableOnlineFeatures();
     }
 
-    hideOfflineUI() {
-        console.log('🟢 Desactivando modo offline');
-        const banner = document.getElementById('connection-status-message');
-        if (banner) banner.remove();
-        this.enableOnlineFeatures();
-    }
-
+    // 🆕 DESHABILITAR FUNCIONES ONLINE (PERMITIR ENVÍO OFFLINE)
     disableOnlineFeatures() {
         const submitBtn = document.querySelector('button[type="submit"]');
         const searchBtn = document.getElementById('btnBuscar');
         
         if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.5';
-            submitBtn.innerHTML = '📶 Sin Conexión';
+            // 🆕 IMPORTANTE: NO DESHABILITAR EL BOTÓN DE ENVIAR
+            submitBtn.disabled = false;
+            submitBtn.style.opacity = '1';
+            submitBtn.innerHTML = '💾 Guardar Localmente';
+            submitBtn.title = 'El reporte se guardará localmente y se enviará cuando haya conexión';
         }
         
         if (searchBtn) {
@@ -192,6 +216,7 @@ class ConnectionManager {
         }
     }
 
+    // 🆕 HABILITAR FUNCIONES ONLINE
     enableOnlineFeatures() {
         const submitBtn = document.querySelector('button[type="submit"]');
         const searchBtn = document.getElementById('btnBuscar');
@@ -199,7 +224,8 @@ class ConnectionManager {
         if (submitBtn) {
             submitBtn.disabled = false;
             submitBtn.style.opacity = '1';
-            submitBtn.innerHTML = 'Registrar Reporte';
+            submitBtn.innerHTML = '📝 Registrar Reporte';
+            submitBtn.title = '';
         }
         
         if (searchBtn) {
@@ -207,6 +233,54 @@ class ConnectionManager {
             searchBtn.style.opacity = '1';
             searchBtn.innerHTML = 'Buscar';
         }
+    }
+
+    // 🆕 LIMPIAR UI OFFLINE
+    hideOfflineUI() {
+        // Remover banner
+        const banner = document.getElementById('connection-status-message');
+        if (banner) banner.remove();
+        
+        // Remover overlay del mapa
+        if (this.offlineMapOverlay && window.mapaSistema) {
+            window.mapaSistema.getMap().removeLayer(this.offlineMapOverlay);
+            this.offlineMapOverlay = null;
+        }
+        
+        // Habilitar funciones
+        this.enableOnlineFeatures();
+    }
+
+    // 🆕 MENSAJE EN MAPA
+    mostrarMensajeMapaOffline() {
+        if (!window.mapaSistema) return;
+        
+        const map = window.mapaSistema.getMap();
+        
+        if (this.offlineMapOverlay) {
+            map.removeLayer(this.offlineMapOverlay);
+        }
+        
+        this.offlineMapOverlay = L.rectangle(map.getBounds(), {
+            color: '#6b7280',
+            fillColor: '#f3f4f6',
+            fillOpacity: 0.5,
+            weight: 1,
+            interactive: false
+        }).addTo(map);
+        
+        this.offlineMapOverlay.bindPopup(`
+            <div style="text-align: center; padding: 15px; min-width: 250px;">
+                <div style="font-size: 32px; margin-bottom: 10px;">📶</div>
+                <strong style="color: #dc2626; font-size: 16px;">Mapa no disponible</strong>
+                <p style="margin: 10px 0; color: #6b7280; font-size: 14px;">
+                    Sin conexión a internet<br>
+                    <strong>Los reportes se guardan localmente</strong><br>
+                    y se enviarán automáticamente<br>
+                    cuando recuperes conexión
+                </p>
+            </div>
+        `).openPopup();
     }
 
     onConnectionRestored() {
@@ -234,16 +308,6 @@ class ConnectionManager {
 
     getStatus() {
         return this.isOnline;
-    }
-
-    simulateConnectionChange(online) {
-        console.log('🧪 Simulando:', online ? 'ONLINE' : 'OFFLINE');
-        this.setOnlineState(online);
-    }
-
-    async forceCheck() {
-        console.log('🔍 Forzando verificación...');
-        await this.checkConnection();
     }
 
     destroy() {

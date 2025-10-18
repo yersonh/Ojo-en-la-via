@@ -154,29 +154,31 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     
     <!-- Nuestros módulos JavaScript -->
-    <script type="module">
+    <script src="components/offline-manager.js"></script>
+<script src="components/background-sync-manager.js"></script>
+
+<script type="module">
     import { mapaSistema } from './components/mapa/index.js';
     import { formularioSistema } from './components/formulario/index.js';
     
     // Hacer disponibles globalmente
     window.mapaSistema = mapaSistema;
     window.formularioSistema = formularioSistema;
-    // Backward compatibility
     window.FormularioManager = formularioSistema;
 
     document.addEventListener('DOMContentLoaded', async function() {
         try {
-            console.log('🚀 Inicializando aplicación...');
+            console.log('🚀 Inicializando aplicación con soporte offline...');
             
-            // Inicializar sistema de mapas
+            // 1. Inicializar sistema de mapas
             await mapaSistema.inicializar();
             console.log('✅ Sistema de mapas inicializado');
             
-            // Inicializar sistema de formularios
+            // 2. Inicializar sistema de formularios
             await formularioSistema.initialize();
             console.log('✅ Sistema de formularios inicializado');
             
-            // Inicializar otros módulos
+            // 3. Inicializar otros módulos
             if (typeof ComentariosManager !== 'undefined') {
                 ComentariosManager.inicializar();
                 console.log('✅ ComentariosManager inicializado');
@@ -187,14 +189,25 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('✅ BuscadorManager inicializado');
             }
             
-            // Integrar con connection manager si existe
+            // 4. Inicializar Background Sync Manager
+            await backgroundSyncManager.initialize();
+            console.log('✅ Background Sync Manager inicializado');
+            
+            // 5. Integrar Connection Manager con Offline Manager
             if (window.connectionManager) {
                 window.connectionManager.addListener((online) => {
                     formularioSistema.handleConnectionChange(online);
+                    
+                    // Si se recupera conexión, sincronizar
+                    if (online) {
+                        setTimeout(() => {
+                            backgroundSyncManager.sincronizarSilenciosamente();
+                        }, 2000);
+                    }
                 });
             }
 
-            console.log('🎉 Aplicación completamente inicializada');
+            console.log('🎉 Aplicación completamente inicializada con soporte offline');
             
         } catch (error) {
             console.error('❌ Error al inicializar la aplicación:', error);

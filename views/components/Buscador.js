@@ -283,7 +283,6 @@ const BuscadorManager = {
             this.searchMarker.closePopup();
         }
         
-        this.mostrarAlerta('📍 Ubicación seleccionada para el reporte', 'success');
     },
 
     // GESTIÓN DE UBICACIÓN DEL USUARIO

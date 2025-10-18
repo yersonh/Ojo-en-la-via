@@ -1,11 +1,14 @@
-// Módulo para manejar reportes offline
+// Módulo mejorado para manejar reportes offline con resiliencia
 const OfflineManager = {
     dbName: 'ReportesOfflineDB',
-    dbVersion: 1,
+    dbVersion: 2, // Versión incrementada
     db: null,
+    initialized: false,
 
-    // Inicializar la base de datos
+    // Inicialización mejorada
     async inicializar() {
+        if (this.initialized) return this.db;
+        
         return new Promise((resolve, reject) => {
             const request = indexedDB.open(this.dbName, this.dbVersion);
 
@@ -16,7 +19,11 @@ const OfflineManager = {
 
             request.onsuccess = () => {
                 this.db = request.result;
+                this.initialized = true;
                 console.log('✅ Base de datos offline inicializada');
+                
+                // Verificar pendientes al inicializar
+                this.verificarEstadoInicial();
                 resolve(this.db);
             };
 
@@ -30,12 +37,11 @@ const OfflineManager = {
                         autoIncrement: true 
                     });
                     
-                    // Crear índices para búsquedas
                     store.createIndex('fecha', 'fecha', { unique: false });
                     store.createIndex('estado', 'estado', { unique: false });
+                    store.createIndex('intentos', 'intentos', { unique: false });
                 }
 
-                // Crear almacén para imágenes offline
                 if (!db.objectStoreNames.contains('imagenes_offline')) {
                     db.createObjectStore('imagenes_offline', { 
                         keyPath: 'id', 
@@ -46,12 +52,232 @@ const OfflineManager = {
         });
     },
 
-    // Verificar conexión a internet
+    // 🆕 MÉTODO PRINCIPAL MEJORADO - Estrategia híbrida
+    async procesarReporteConResiliencia(formData) {
+    // 🆕 VERIFICACIÓN MÁS ROBUSTA DE CONEXIÓN
+    const tieneConexion = await this.verificarConexionReal();
+    
+    console.log(`🔍 Verificación conexión: ${tieneConexion ? 'ONLINE' : 'OFFLINE'}`);
+    
+    if (tieneConexion) {
+        // 🟢 INTENTAR ENVÍO INMEDIATO
+        try {
+            console.log('🟢 Intentando envío inmediato ONLINE...');
+            const resultado = await this.enviarReporteOnline(formData);
+            return { 
+                success: true, 
+                modo: 'online',
+                data: resultado 
+            };
+        } catch (error) {
+            console.log('🟡 Falló envío online, guardando offline:', error.message);
+            // Continuar con flujo offline
+        }
+    }
+
+    // 🔴 MODO OFFLINE - GUARDADO INMEDIATO
+    console.log('🔴 Guardando en modo OFFLINE...');
+    const idOffline = await this.guardarReporteYProgramarSync(formData);
+    
+    return {
+        success: true,
+        modo: 'offline', 
+        idOffline: idOffline,
+        mensaje: 'Reporte guardado localmente'
+    };
+},
+async verificarConexionReal() {
+    // 1. Verificar estado nativo del navegador
+    if (!navigator.onLine) {
+        console.log('📡 Navigator reporta: OFFLINE');
+        return false;
+    }
+    
+    // 2. Verificar nuestro ConnectionManager si existe
+    if (window.connectionManager && !window.connectionManager.getStatus()) {
+        console.log('📡 ConnectionManager reporta: OFFLINE');
+        return false;
+    }
+    
+    // 3. Verificación activa con timeout corto
+    try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 3000);
+        
+        const response = await fetch(window.location.origin + '/?connection-test=' + Date.now(), {
+            method: 'HEAD',
+            signal: controller.signal,
+            cache: 'no-cache'
+        });
+        
+        clearTimeout(timeoutId);
+        
+        const estaOnline = response.ok;
+        console.log('📡 Verificación activa:', estaOnline ? 'ONLINE' : 'OFFLINE');
+        return estaOnline;
+        
+    } catch (error) {
+        console.log('📡 Verificación activa falló: OFFLINE');
+        return false;
+    }
+},
+
+    // 🆕 ENVÍO ONLINE CON TIMEOUT Y RECUPERACIÓN
+    async enviarReporteOnline(formData) {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 segundos timeout
+
+        try {
+            console.log('🌐 Enviando reporte online...');
+            const respuesta = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
+                method: 'POST',
+                body: formData,
+                signal: controller.signal
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!respuesta.ok) {
+                throw new Error(`Error HTTP: ${respuesta.status}`);
+            }
+            
+            const resultado = await respuesta.json();
+            if (!resultado.success) {
+                throw new Error(resultado.mensaje || resultado.error);
+            }
+
+            console.log('✅ Reporte enviado online correctamente');
+            return resultado;
+
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error.name === 'AbortError') {
+                throw new Error('Tiempo de espera agotado. Guardando localmente...');
+            }
+            throw error;
+        }
+    },
+
+    // 🆕 VERIFICACIÓN ROBUSTA DE CONEXIÓN
+    async verificarConexionRobusta() {
+        // Verificación básica
+        if (!navigator.onLine) return false;
+        
+        // Verificación de conexión real (no solo "conectado" sino con internet)
+        try {
+            const response = await fetch('/?connection-test=' + Date.now(), {
+                method: 'HEAD',
+                cache: 'no-cache'
+            });
+            return response.ok;
+        } catch {
+            return false;
+        }
+    },
+
     verificarConexion() {
         return navigator.onLine;
     },
 
-    // Guardar reporte offline
+    // 🆕 GUARDADO RÁPIDO + BACKGROUND SYNC MEJORADO
+    async guardarReporteOffline(formData) {
+    if (!this.db) await this.inicializar();
+
+    return new Promise((resolve, reject) => {
+        const transaction = this.db.transaction(['reportes_pendientes'], 'readwrite');
+        const store = transaction.objectStore('reportes_pendientes');
+
+        // 🆕 CREAR HASH ÚNICO PARA EVITAR DUPLICADOS
+        const datosReporte = {
+            id_tipo_incidente: formData.get('id_tipo_incidente'),
+            descripcion: formData.get('descripcion'),
+            latitud: formData.get('latitud'),
+            longitud: formData.get('longitud'),
+            id_usuario: formData.get('id_usuario')
+        };
+        
+        const hash = this.crearHashReporte(datosReporte);
+        
+        const reporte = {
+            datos: datosReporte,
+            imagenes: [],
+            fecha: new Date().toISOString(),
+            estado: 'pendiente',
+            intentos: 0,
+            timestamp: Date.now(),
+            hash: hash // 🆕 ID único para evitar duplicados
+        };
+
+        // 🆕 VERIFICAR SI YA EXISTE UN REPORTE SIMILAR
+        const verificarRequest = store.index('hash').get(hash);
+        
+        verificarRequest.onsuccess = () => {
+            if (verificarRequest.result) {
+                console.log('⚠️ Reporte similar ya existe, actualizando...');
+                // Actualizar timestamp del reporte existente
+                const reporteExistente = verificarRequest.result;
+                reporteExistente.timestamp = Date.now();
+                reporteExistente.intentos = 0;
+                
+                const updateRequest = store.put(reporteExistente);
+                updateRequest.onsuccess = () => {
+                    console.log('✅ Reporte existente actualizado:', reporteExistente.id);
+                    resolve(reporteExistente.id);
+                };
+                updateRequest.onerror = () => reject(updateRequest.error);
+            } else {
+                // Proceder con guardado normal
+                this.procesarImagenesYGuardar(store, reporte, formData, resolve, reject);
+            }
+        };
+        
+        verificarRequest.onerror = () => reject(verificarRequest.error);
+    });
+},
+crearHashReporte(datos) {
+    const str = `${datos.id_tipo_incidente}-${datos.descripcion}-${datos.latitud}-${datos.longitud}-${datos.id_usuario}`;
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+        const char = str.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Convert to 32bit integer
+    }
+    return hash.toString();
+},
+procesarImagenesYGuardar(store, reporte, formData, resolve, reject) {
+    const imagenes = formData.getAll('imagen[]');
+    if (imagenes && imagenes.length > 0) {
+        const imagenPromises = Array.from(imagenes).map((imagen, index) => {
+            return this.guardarImagenOffline(imagen);
+        });
+
+        Promise.all(imagenPromises)
+            .then(imagenIds => {
+                reporte.imagenes = imagenIds;
+                const request = store.add(reporte);
+                
+                request.onsuccess = () => {
+                    console.log('✅ Nuevo reporte guardado offline con ID:', request.result);
+                    resolve(request.result);
+                };
+                
+                request.onerror = () => reject(request.error);
+            })
+            .catch(reject);
+    } else {
+        const request = store.add(reporte);
+        
+        request.onsuccess = () => {
+            console.log('✅ Nuevo reporte guardado offline con ID:', request.result);
+            resolve(request.result);
+        };
+        
+        request.onerror = () => reject(request.error);
+    }
+},
+
+    // Guardar reporte offline (existente pero mejorado)
     async guardarReporteOffline(formData) {
         if (!this.db) await this.inicializar();
 
@@ -70,10 +296,11 @@ const OfflineManager = {
                 imagenes: [],
                 fecha: new Date().toISOString(),
                 estado: 'pendiente',
-                intentos: 0
+                intentos: 0,
+                timestamp: Date.now()
             };
 
-            // Guardar imágenes en almacén separado
+            // Procesar imágenes
             const imagenes = formData.getAll('imagen[]');
             if (imagenes && imagenes.length > 0) {
                 const imagenPromises = Array.from(imagenes).map((imagen, index) => {
@@ -106,56 +333,67 @@ const OfflineManager = {
         });
     },
 
-    // 🆕 GUARDADO RÁPIDO + BACKGROUND SYNC
-    async guardarReporteYProgramarSync(formData) {
-        try {
-            // 1. Guardar rápidamente en IndexedDB
-            const idOffline = await this.guardarReporteOffline(formData);
-            console.log('💾 Reporte guardado localmente:', idOffline);
-            
-            // 2. Programar sincronización para cuando haya conexión
-            if ('serviceWorker' in navigator && 'SyncManager' in window) {
+    // 🆕 PROGRAMAR SINCRONIZACIÓN MEJORADA
+    async programarSincronizacion() {
+        // Intentar Background Sync si está disponible
+        if ('serviceWorker' in navigator && 'SyncManager' in window) {
+            try {
                 const registration = await navigator.serviceWorker.ready;
                 await registration.sync.register('sincronizar-reportes');
                 console.log('🔄 Background Sync registrado');
-            } else {
-                // Fallback: Sincronización tradicional
-                this.programarSincronizacion();
+                return;
+            } catch (error) {
+                console.log('❌ Background Sync no disponible:', error);
             }
-            
-            // 3. Mostrar confirmación inmediata al usuario
-            this.mostrarConfirmacionOffline(idOffline);
-            
-            return idOffline;
-            
-        } catch (error) {
-            console.error('❌ Error guardando offline:', error);
-            throw error;
         }
+
+        // Fallback: Sincronización programada
+        console.log('⏰ Programando sincronización tradicional...');
+        this.programarSincronizacionTradicional();
     },
 
-    // 🆕 CONFIRMACIÓN QUE FUNCIONA INMEDIATAMENTE
+    programarSincronizacionTradicional() {
+        // Sincronizar cada 2 minutos cuando haya conexión
+        setInterval(() => {
+            if (this.verificarConexion()) {
+                this.sincronizarReportesPendientes();
+            }
+        }, 2 * 60 * 1000);
+    },
+
+    // 🆕 CONFIRMACIÓN INMEDIATA MEJORADA
     mostrarConfirmacionOffline(idOffline) {
-        // Guardar en localStorage para persistir entre sesiones
+        // Guardar en localStorage para persistencia entre sesiones
         const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
         pendientes.push({
             id: idOffline,
             fecha: new Date().toISOString(),
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            estado: 'pendiente'
         });
         localStorage.setItem('reportes_pendientes', JSON.stringify(pendientes));
         
-        // Mostrar alerta inmediata
-        MapaManager.mostrarAlerta(
-            `✅ Reporte guardado (ID: ${idOffline}). Se enviará automáticamente cuando tengas conexión.`,
-            'success'
-        );
+        // Mostrar notificación visual
+        this.mostrarNotificacionOffline(idOffline);
         
-        // Mostrar badge de pendientes
+        // Actualizar UI
         this.actualizarBadgePendientes();
     },
 
-    // 🆕 BADGE PARA SABER CUÁNTOS REPORTES PENDIENTES HAY
+    mostrarNotificacionOffline(idOffline) {
+        // Usar el sistema de alertas existente
+        if (window.formularioSistema) {
+            window.formularioSistema.showAlert(
+                `✅ Reporte guardado (ID: ${idOffline}). Se enviará automáticamente cuando recuperes conexión.`,
+                'success'
+            );
+        } else {
+            // Fallback
+            alert(`✅ Reporte guardado (ID: ${idOffline}). Se enviará automáticamente cuando recuperes conexión.`);
+        }
+    },
+
+    // 🆕 BADGE MEJORADO
     actualizarBadgePendientes() {
         const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
         const badge = document.getElementById('badge-pendientes') || this.crearBadgePendientes();
@@ -164,63 +402,178 @@ const OfflineManager = {
         badge.style.display = pendientes.length > 0 ? 'flex' : 'none';
         
         // Actualizar título de la página
-        if (pendientes.length > 0) {
-            document.title = `(${pendientes.length}) Ojo en la Vía - Villavicencio`;
-        } else {
-            document.title = 'Ojo en la Vía - Villavicencio';
-        }
+        this.actualizarTituloPagina(pendientes.length);
     },
 
     crearBadgePendientes() {
         const badge = document.createElement('div');
         badge.id = 'badge-pendientes';
-        badge.innerHTML = `
-            <div style="
-                position: fixed;
-                top: 10px;
-                left: 10px;
-                background: #ef4444;
-                color: white;
-                border-radius: 50%;
-                width: 24px;
-                height: 24px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-size: 12px;
-                font-weight: bold;
-                z-index: 10000;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-            "></div>
+        badge.style.cssText = `
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            background: #ef4444;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+            z-index: 10000;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+            cursor: pointer;
         `;
+        
+        badge.addEventListener('click', () => {
+            this.mostrarPanelPendientes();
+        });
+        
         document.body.appendChild(badge);
         return badge;
     },
 
-    // 🆕 VERIFICAR ESTADO AL CARGAR LA PÁGINA
+    actualizarTituloPagina(cantidadPendientes) {
+        if (cantidadPendientes > 0) {
+            document.title = `(${cantidadPendientes}) Ojo en la Vía - Villavicencio`;
+        } else {
+            document.title = 'Ojo en la Vía - Villavicencio';
+        }
+    },
+
+    // 🆕 PANEL DE PENDIENTES
+    mostrarPanelPendientes() {
+        const panel = document.getElementById('panel-pendientes') || this.crearPanelPendientes();
+        this.actualizarContenidoPanelPendientes();
+        panel.style.display = 'block';
+    },
+
+    crearPanelPendientes() {
+        const panel = document.createElement('div');
+        panel.id = 'panel-pendientes';
+        panel.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 50px;
+                left: 15px;
+                background: white;
+                border-radius: 8px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                z-index: 10001;
+                min-width: 280px;
+                max-width: 350px;
+                display: none;
+                border: 1px solid #e5e7eb;
+            ">
+                <div style="padding: 15px; border-bottom: 1px solid #e5e7eb; display: flex; justify-content: space-between; align-items: center;">
+                    <strong>📋 Reportes Pendientes</strong>
+                    <button id="cerrar-panel" style="background: none; border: none; font-size: 18px; cursor: pointer; color: #6b7280;">×</button>
+                </div>
+                <div id="lista-pendientes" style="max-height: 300px; overflow-y: auto; padding: 10px;">
+                    <div style="text-align: center; color: #6b7280; padding: 20px;">
+                        Cargando...
+                    </div>
+                </div>
+                <div style="padding: 12px; border-top: 1px solid #e5e7eb; text-align: center; background: #f8f9fa;">
+                    <button id="btn-sincronizar" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 500;">
+                        🔄 Sincronizar Ahora
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(panel);
+        
+        // Event listeners
+        document.getElementById('cerrar-panel').addEventListener('click', () => {
+            panel.style.display = 'none';
+        });
+        
+        document.getElementById('btn-sincronizar').addEventListener('click', async () => {
+            await this.sincronizarManual();
+        });
+        
+        // Cerrar al hacer clic fuera
+        document.addEventListener('click', (e) => {
+            if (!panel.contains(e.target) && e.target.id !== 'badge-pendientes') {
+                panel.style.display = 'none';
+            }
+        });
+        
+        return panel;
+    },
+
+    async actualizarContenidoPanelPendientes() {
+        const lista = document.getElementById('lista-pendientes');
+        if (!lista) return;
+
+        try {
+            const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
+            
+            if (pendientes.length === 0) {
+                lista.innerHTML = '<div style="text-align: center; color: #6b7280; padding: 20px;">No hay reportes pendientes</div>';
+                return;
+            }
+
+            lista.innerHTML = pendientes.map(pendiente => `
+                <div style="padding: 10px; border-bottom: 1px solid #f3f4f6; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <div style="font-weight: 500;">ID: ${pendiente.id}</div>
+                        <div style="font-size: 12px; color: #6b7280;">
+                            ${new Date(pendiente.fecha).toLocaleDateString()} 
+                            ${new Date(pendiente.fecha).toLocaleTimeString()}
+                        </div>
+                    </div>
+                    <div style="background: #fef3c7; color: #d97706; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: 500;">
+                        Pendiente
+                    </div>
+                </div>
+            `).join('');
+        } catch (error) {
+            lista.innerHTML = '<div style="text-align: center; color: #ef4444; padding: 20px;">Error al cargar pendientes</div>';
+        }
+    },
+
+    // 🆕 SINCRONIZACIÓN MANUAL
+    async sincronizarManual() {
+        const btnSincronizar = document.getElementById('btn-sincronizar');
+        const originalText = btnSincronizar.innerHTML;
+        
+        btnSincronizar.innerHTML = '⏳ Sincronizando...';
+        btnSincronizar.disabled = true;
+        
+        try {
+            await this.sincronizarReportesPendientes();
+            btnSincronizar.innerHTML = '✅ Sincronizado';
+        } catch (error) {
+            btnSincronizar.innerHTML = '❌ Error';
+            console.error('Error en sincronización manual:', error);
+        } finally {
+            setTimeout(() => {
+                btnSincronizar.innerHTML = originalText;
+                btnSincronizar.disabled = false;
+            }, 2000);
+        }
+    },
+
+    // 🆕 VERIFICAR ESTADO INICIAL MEJORADO
     async verificarEstadoInicial() {
-        // Verificar si hay reportes pendientes de sesiones anteriores
         const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
         
-        if (pendientes.length > 0 && this.verificarConexion()) {
+        if (pendientes.length > 0 && await this.verificarConexionRobusta()) {
             console.log(`🔄 Hay ${pendientes.length} reportes pendientes de sesiones anteriores`);
-            await this.sincronizarReportesPendientes();
+            // Sincronizar después de 3 segundos (dar tiempo a que cargue la app)
+            setTimeout(() => {
+                this.sincronizarReportesPendientes();
+            }, 3000);
         }
         
         this.actualizarBadgePendientes();
     },
 
-    // 🆕 PROGRAMAR SINCRONIZACIÓN PERIÓDICA
-    programarSincronizacion() {
-        // Intentar sincronizar cada 5 minutos cuando haya conexión
-        setInterval(() => {
-            if (this.verificarConexion()) {
-                this.sincronizarReportesPendientes();
-            }
-        }, 5 * 60 * 1000); // 5 minutos
-    },
-
-    // Guardar imagen en IndexedDB
+    // ... (MÉTODOS EXISTENTES - mantener igual)
     async guardarImagenOffline(archivoImagen) {
         if (!this.db) await this.inicializar();
 
@@ -246,7 +599,6 @@ const OfflineManager = {
         });
     },
 
-    // Obtener imagen de IndexedDB
     async obtenerImagenOffline(id) {
         if (!this.db) await this.inicializar();
 
@@ -260,7 +612,6 @@ const OfflineManager = {
         });
     },
 
-    // Obtener todos los reportes pendientes
     async obtenerReportesPendientes() {
         if (!this.db) await this.inicializar();
 
@@ -274,7 +625,6 @@ const OfflineManager = {
         });
     },
 
-    // Eliminar reporte sincronizado
     async eliminarReporteOffline(id) {
         if (!this.db) await this.inicializar();
 
@@ -288,9 +638,9 @@ const OfflineManager = {
         });
     },
 
-    // Sincronizar reportes pendientes cuando haya conexión
+    // SINCRONIZACIÓN MEJORADA
     async sincronizarReportesPendientes() {
-        if (!this.verificarConexion()) {
+        if (!await this.verificarConexionRobusta()) {
             console.log('📡 Sin conexión, no se puede sincronizar');
             return;
         }
@@ -299,40 +649,44 @@ const OfflineManager = {
             const reportesPendientes = await this.obtenerReportesPendientes();
             console.log(`🔄 Sincronizando ${reportesPendientes.length} reportes pendientes...`);
 
+            let sincronizadosExitosos = 0;
+            let errores = 0;
+
             for (const reporte of reportesPendientes) {
                 try {
+                    // No intentar sincronizar reportes con muchos intentos fallidos
+                    if (reporte.intentos >= 3) {
+                        console.log(`⏭️ Saltando reporte ${reporte.id} (demasiados intentos)`);
+                        continue;
+                    }
+
                     await this.enviarReporteOffline(reporte);
                     await this.eliminarReporteOffline(reporte.id);
-                    
-                    // 🆕 ACTUALIZAR LOCALSTORAGE también
                     this.actualizarLocalStorageDespuesSync(reporte.id);
+                    sincronizadosExitosos++;
                     
                     console.log(`✅ Reporte ${reporte.id} sincronizado correctamente`);
                 } catch (error) {
                     console.error(`❌ Error sincronizando reporte ${reporte.id}:`, error);
-                    // Incrementar intentos y actualizar
                     await this.actualizarIntentoReporte(reporte.id, reporte.intentos + 1);
+                    errores++;
                 }
             }
 
-            // Mostrar notificación de éxito
-            if (reportesPendientes.length > 0) {
-                this.mostrarNotificacionSincronizacion(reportesPendientes.length);
+            // Mostrar resumen
+            if (sincronizadosExitosos > 0) {
+                this.mostrarNotificacionSincronizacion(sincronizadosExitosos);
             }
+            
+            if (errores > 0) {
+                console.log(`⚠️ ${errores} reportes no pudieron sincronizarse`);
+            }
+
         } catch (error) {
             console.error('❌ Error en sincronización:', error);
         }
     },
 
-    // 🆕 ACTUALIZAR LOCALSTORAGE DESPUÉS DE SINCRONIZAR
-    actualizarLocalStorageDespuesSync(idReporte) {
-        const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
-        const nuevosPendientes = pendientes.filter(p => p.id !== idReporte);
-        localStorage.setItem('reportes_pendientes', JSON.stringify(nuevosPendientes));
-        this.actualizarBadgePendientes();
-    },
-
-    // Enviar reporte offline al servidor
     async enviarReporteOffline(reporte) {
         const formData = new FormData();
         
@@ -345,7 +699,6 @@ const OfflineManager = {
         for (const imagenId of reporte.imagenes) {
             const imagenData = await this.obtenerImagenOffline(imagenId);
             if (imagenData) {
-                // Convertir dataURL a Blob
                 const response = await fetch(imagenData.datos);
                 const blob = await response.blob();
                 formData.append('imagen[]', blob, imagenData.nombre);
@@ -369,7 +722,6 @@ const OfflineManager = {
         return resultado;
     },
 
-    // Actualizar número de intentos
     async actualizarIntentoReporte(id, intentos) {
         if (!this.db) await this.inicializar();
 
@@ -392,23 +744,42 @@ const OfflineManager = {
         });
     },
 
-    // Mostrar notificación de sincronización
+    actualizarLocalStorageDespuesSync(idReporte) {
+        const pendientes = JSON.parse(localStorage.getItem('reportes_pendientes') || '[]');
+        const nuevosPendientes = pendientes.filter(p => p.id !== idReporte);
+        localStorage.setItem('reportes_pendientes', JSON.stringify(nuevosPendientes));
+        this.actualizarBadgePendientes();
+    },
+
     mostrarNotificacionSincronizacion(cantidad) {
+        // Notificación del sistema
         if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Reportes Sincronizados', {
-                body: `${cantidad} reporte(s) se subieron correctamente`,
+            new Notification('✅ Reportes Sincronizados', {
+                body: `${cantidad} reporte(s) se enviaron correctamente`,
                 icon: '/icon.png'
             });
         }
 
-        // También mostrar alerta en la interfaz
-        MapaManager.mostrarAlerta(`✅ ${cantidad} reporte(s) pendientes se sincronizaron`, 'success');
+        // Notificación en la interfaz
+        if (window.formularioSistema) {
+            window.formularioSistema.showAlert(`✅ ${cantidad} reporte(s) pendientes se sincronizaron`, 'success');
+        }
     },
 
-    // Solicitar permisos para notificaciones
     async solicitarPermisosNotificaciones() {
         if ('Notification' in window && Notification.permission === 'default') {
             await Notification.requestPermission();
         }
     }
 };
+
+// Inicialización automática
+document.addEventListener('DOMContentLoaded', async () => {
+    try {
+        await OfflineManager.inicializar();
+        console.log('🎯 OfflineManager listo');
+    } catch (error) {
+        console.error('❌ Error inicializando OfflineManager:', error);
+    }
+});
+window.OfflineManager = OfflineManager;

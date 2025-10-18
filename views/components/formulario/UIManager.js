@@ -73,7 +73,94 @@ export class UIManager {
             });
         });
     }
-
+showOfflineSuccessAnimation() {
+    const submitBtn = document.querySelector('button[type="submit"]');
+    if (submitBtn) {
+        submitBtn.classList.add('offline-success-animation');
+        setTimeout(() => {
+            submitBtn.classList.remove('offline-success-animation');
+        }, 600);
+    }
+}
+showAlert(message, type = 'success') {
+    console.log('📢 Mostrando alerta:', message, 'Tipo:', type);
+    
+    let alertElement;
+    
+    if (type === 'offline-success') {
+        // Usar alertSuccess pero con estilo diferente
+        alertElement = document.getElementById('alertSuccess');
+        if (alertElement) {
+            alertElement.textContent = message;
+            alertElement.className = 'alert alert-success alert-offline';
+            alertElement.style.display = 'block';
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+    } else if (type === 'success') {
+        alertElement = document.getElementById('alertSuccess');
+        if (alertElement) {
+            alertElement.textContent = message;
+            alertElement.className = 'alert alert-success';
+            alertElement.style.display = 'block';
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+    } else if (type === 'error') {
+        alertElement = document.getElementById('alertError');
+        if (alertElement) {
+            alertElement.textContent = message;
+            alertElement.className = 'alert alert-error';
+            alertElement.style.display = 'block';
+            
+            setTimeout(() => {
+                alertElement.style.display = 'none';
+            }, 5000);
+        }
+    }
+    
+    // 🆕 FALLBACK SI NO HAY ELEMENTOS DE ALERTA
+    if (!alertElement) {
+        console.warn('⚠️ No se encontraron elementos de alerta, usando fallback');
+        this.showFallbackAlert(message, type);
+    }
+}
+showFallbackAlert(message, type) {
+    // Crear alerta temporal
+    const alertDiv = document.createElement('div');
+    alertDiv.textContent = message;
+    alertDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 20px;
+        border-radius: 8px;
+        color: white;
+        font-weight: bold;
+        z-index: 10000;
+        max-width: 300px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideInRight 0.5s ease;
+    `;
+    
+    if (type === 'offline-success') {
+        alertDiv.style.background = 'linear-gradient(135deg, #f59e0b, #d97706)';
+    } else if (type === 'success') {
+        alertDiv.style.background = 'linear-gradient(135deg, #10b981, #059669)';
+    } else {
+        alertDiv.style.background = 'linear-gradient(135deg, #ef4444, #dc2626)';
+    }
+    
+    document.body.appendChild(alertDiv);
+    
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
     setupMobilePanel() {
         const panelToggle = document.getElementById('panelToggle');
         const panel = document.getElementById('panel');
@@ -99,36 +186,34 @@ export class UIManager {
     }
 
     showLoadingState() {
-        const submitBtn = document.querySelector(FormConstants.SELECTORS.SUBMIT_BTN);
-        const loading = document.querySelector(FormConstants.SELECTORS.LOADING);
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.style.opacity = '0.7';
         
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.style.opacity = '0.7';
-            submitBtn.querySelector('.btn-text').style.display = 'none';
-            submitBtn.querySelector('.btn-loading').style.display = 'block';
-        }
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
         
-        if (loading) {
-            FormHelpers.showElement(loading, false);
-        }
+        if (btnText) btnText.style.display = 'none';
+        if (btnLoading) btnLoading.style.display = 'block';
     }
+}
 
     hideLoadingState() {
-        const submitBtn = document.querySelector(FormConstants.SELECTORS.SUBMIT_BTN);
-        const loading = document.querySelector(FormConstants.SELECTORS.LOADING);
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.style.opacity = '1';
         
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.style.opacity = '1';
-            submitBtn.querySelector('.btn-text').style.display = 'block';
-            submitBtn.querySelector('.btn-loading').style.display = 'none';
-        }
+        const btnText = submitBtn.querySelector('.btn-text');
+        const btnLoading = submitBtn.querySelector('.btn-loading');
         
-        if (loading) {
-            FormHelpers.hideElement(loading, false);
-        }
+        if (btnText) btnText.style.display = 'block';
+        if (btnLoading) btnLoading.style.display = 'none';
     }
+}
 
     showSuccessAnimation() {
         const form = document.querySelector(FormConstants.SELECTORS.FORM);
@@ -155,38 +240,56 @@ export class UIManager {
     const lngDisplay = document.querySelector(FormConstants.SELECTORS.LNG_DISPLAY);
     
     if (latInput && lngInput && latDisplay && lngDisplay) {
-        // Actualizar inputs hidden
-        latInput.value = lat;
-        lngInput.value = lng;
-        
-        // Actualizar displays
-        latDisplay.textContent = typeof lat === 'number' ? lat.toFixed(6) : lat;
-        lngDisplay.textContent = typeof lng === 'number' ? lng.toFixed(6) : lng;
-        
-        console.log('✅ Coordenadas actualizadas en formulario:', lat, lng);
-        
-        // Efecto visual al actualizar coordenadas
-        FormHelpers.addTemporaryStyle(
-            latDisplay,
-            {
-                color: FormConstants.STYLES.SUCCESS_COLOR,
-                fontWeight: '600'
-            },
-            2000
-        );
-        
-        FormHelpers.addTemporaryStyle(
-            lngDisplay,
-            {
-                color: FormConstants.STYLES.SUCCESS_COLOR,
-                fontWeight: '600'
-            },
-            2000
-        );
+        try {
+            // 🆕 CONVERTIR A NÚMEROS Y VALIDAR
+            const latNum = typeof lat === 'string' ? parseFloat(lat) : lat;
+            const lngNum = typeof lng === 'string' ? parseFloat(lng) : lng;
+            
+            // Validar que sean números válidos
+            if (isNaN(latNum) || isNaN(lngNum)) {
+                console.error('❌ Coordenadas inválidas:', lat, lng);
+                return false;
+            }
+            
+            // Actualizar inputs hidden
+            latInput.value = latNum;
+            lngInput.value = lngNum;
+            
+            // Actualizar displays
+            latDisplay.textContent = latNum.toFixed(6);
+            lngDisplay.textContent = lngNum.toFixed(6);
+            
+            console.log('✅ Coordenadas actualizadas:', latNum, lngNum);
+            
+            // 🆕 GUARDAR EN LOCALSTORAGE SOLO PARA PERSISTENCIA ONLINE/OFFLINE
+            // No para restaurar automáticamente al cargar la página
+            localStorage.setItem('ultimaLatitud', latNum);
+            localStorage.setItem('ultimaLongitud', lngNum);
+            
+            return true;
+            
+        } catch (error) {
+            console.error('❌ Error actualizando coordenadas:', error);
+            return false;
+        }
     } else {
         console.error('❌ No se encontraron elementos para actualizar coordenadas');
+        return false;
     }
 }
+// En UIManager.js - ELIMINAR este método si no es necesario
+// restaurarCoordenadas() {
+//     const latGuardada = localStorage.getItem('ultimaLatitud');
+//     const lngGuardada = localStorage.getItem('ultimaLongitud');
+//     
+//     if (latGuardada && lngGuardada) {
+//         console.log('🔄 Restaurando coordenadas guardadas:', latGuardada, lngGuardada);
+//         this.updateCoordinates(parseFloat(latGuardada), parseFloat(lngGuardada));
+//         return true;
+//     }
+//     console.log('📭 No hay coordenadas guardadas para restaurar');
+//     return false;
+// }
 // En UIManager.js, agrega este método:
 setupMapIntegration() {
     // Escuchar eventos de ubicación del mapa

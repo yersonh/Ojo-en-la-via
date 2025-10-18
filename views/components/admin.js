@@ -1,3 +1,4 @@
+// admin.js - Versión corregida con logout funcional
 class AdminManager {
     constructor() {
         this.map = null;
