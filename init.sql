@@ -74,7 +74,7 @@ CREATE TABLE reporte (
     latitud DECIMAL(10,8) NOT NULL,
     longitud DECIMAL(11,8) NOT NULL,
     fecha_reporte TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    estado VARCHAR(50) DEFAULT 'Pendiente', -- Pendiente, Verificado, Resuelto
+    estado VARCHAR(50) DEFAULT 'Pendiente',
     CONSTRAINT fk_reporte_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
     CONSTRAINT fk_reporte_tipo FOREIGN KEY (id_tipo_incidente) REFERENCES tipo_incidente (id_tipo_incidente) ON DELETE RESTRICT
 );
@@ -103,10 +103,46 @@ CREATE TABLE historial_estado (
     estado_anterior VARCHAR(50),
     estado_nuevo VARCHAR(50),
     fecha_cambio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    id_usuario INT, -- quién realizó el cambio
+    id_usuario INT, 
     CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
     CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
 );
+CREATE TABLE remember_tokens (
+    id_token INT AUTO_INCREMENT PRIMARY KEY,
+    id_usuario INT NOT NULL,
+    token VARCHAR(64) NOT NULL UNIQUE,
+    expiracion DATETIME NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
+);
+-- Tabla para likes en reportes
+CREATE TABLE like_reporte (
+    id_like SERIAL PRIMARY KEY,
+    id_reporte INT NOT NULL,
+    id_usuario INT NOT NULL,
+    fecha_like TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_like_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
+    CONSTRAINT fk_like_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT uq_like UNIQUE (id_reporte, id_usuario)
+);
+
+-- Tabla para notificaciones
+CREATE TABLE notificacion (
+    id_notificacion SERIAL PRIMARY KEY,
+    id_usuario_destino INT NOT NULL,
+    id_usuario_origen INT,
+    id_reporte INT,
+    tipo VARCHAR(50) NOT NULL, -- 'like' | 'comentario' | 'otro'
+    mensaje TEXT,
+    leida BOOLEAN DEFAULT FALSE,
+    fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_notificacion_destino FOREIGN KEY (id_usuario_destino) REFERENCES usuario (id_usuario) ON DELETE CASCADE,
+    CONSTRAINT fk_notificacion_origen FOREIGN KEY (id_usuario_origen) REFERENCES usuario (id_usuario) ON DELETE SET NULL,
+    CONSTRAINT fk_notificacion_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_token ON remember_tokens(token);
+CREATE INDEX idx_expiracion ON remember_tokens(expiracion);
 -- Insertar un reporte de prueba
 INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
 VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);

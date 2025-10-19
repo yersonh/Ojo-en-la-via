@@ -1,8 +1,8 @@
 <?php
+
 session_start();
 
 require_once __DIR__ . '/config/config.php';
-
 require_once BASE_PATH . 'config/database.php';
 require_once BASE_PATH . 'controllers/sesioncontrolador.php';
 require_once BASE_PATH . 'models/persona.php';
@@ -23,13 +23,53 @@ $database = new Database();
 $db = $database->conectar();
 $sesionControlador = new SesionControlador($db);
 
-// Manejo del login
+// 1. VERIFICAR SI HAY COOKIE DE "RECUÉRDAME" AL CARGAR LA PÁGINA
+if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
+    $token = $_COOKIE['remember_token'];
+    
+    try {
+        // Buscar el token en la base de datos
+        $stmt = $db->prepare("SELECT u.* FROM usuario u 
+                             INNER JOIN remember_tokens rt ON u.id_usuario = rt.id_usuario 
+                             WHERE rt.token = :token AND rt.expiracion > NOW()");
+        $stmt->bindParam(':token', $token);
+        $stmt->execute();
+        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
+        
+        if ($usuario) {
+            // Iniciar sesión automáticamente
+            $_SESSION['usuario_id'] = $usuario['id_usuario'];
+            $_SESSION['rol'] = $usuario['id_rol'];
+            $_SESSION['nombres'] = $usuario['nombres'];
+            $_SESSION['correo'] = $usuario['correo'];
+            
+            // Redirección según el rol
+            if ($usuario['id_rol'] == 1) {
+                header("Location: views/admin.php");
+            } else {
+                header("Location: views/panelInicio.php");
+            }
+            exit();
+        } else {
+            // Token inválido, eliminar cookie
+            setcookie('remember_token', '', time() - 3600, '/');
+        }
+    } catch (PDOException $e) {
+        // Si hay error con la tabla, simplemente ignorar y continuar
+        error_log("Error al verificar token de recordar: " . $e->getMessage());
+        // Eliminar cookie problemática
+        setcookie('remember_token', '', time() - 3600, '/');
+    }
+}
+
+// 2. MANEJO DEL LOGIN
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     // Verificar si es login normal o recuperación
     if (isset($_POST['password'])) {
        
         $correo = trim($_POST['email']);
         $password = $_POST['password'];
+        $remember = isset($_POST['remember']) && $_POST['remember'] == 'on';
 
         $usuario = $sesionControlador->login($correo, $password);
 
@@ -39,22 +79,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
             
+            // 3. CREAR COOKIE DE "RECUÉRDAME" SI EL USUARIO LO SOLICITÓ
+            if ($remember) {
+                try {
+                    $token = bin2hex(random_bytes(32));
+                    $expiracion = date("Y-m-d H:i:s", strtotime("+30 days")); // 30 días
+                    
+                    // Guardar token en la base de datos
+                    $stmt = $db->prepare("INSERT INTO remember_tokens (id_usuario, token, expiracion) 
+                                         VALUES (:id_usuario, :token, :expiracion)");
+                    $stmt->bindParam(':id_usuario', $usuario['id_usuario']);
+                    $stmt->bindParam(':token', $token);
+                    $stmt->bindParam(':expiracion', $expiracion);
+                    $stmt->execute();
+                    
+                    // Crear cookie segura (30 días)
+                    setcookie('remember_token', $token, [
+                        'expires' => time() + (30 * 24 * 60 * 60),
+                        'path' => '/',
+                        'domain' => $_SERVER['HTTP_HOST'],
+                        'secure' => ($protocol === 'https'),
+                        'httponly' => true,
+                        'samesite' => 'Strict'
+                    ]);
+                } catch (PDOException $e) {
+                    // Si hay error al insertar, simplemente continuar sin recordar
+                    error_log("Error al crear token de recordar: " . $e->getMessage());
+                }
+            }
+            
             // Redirección según el rol del usuario
             if ($usuario['id_rol'] == 1) {
-                // Administrador
                 header("Location: views/admin.php");
             } else {
-                // Usuario normal
-                header("Location: views/vermapa.php");
+                header("Location: views/panelInicio.php");
             }
             exit();
         } else {
             $error_message = "Credenciales incorrectas o cuenta inactiva.";
         }
     } else {
-        
+         // Procesar recuperación de contraseña
         $correoRecuperacion = trim($_POST['email']);
         $mensaje_recuperacion = procesarRecuperacion($db, $correoRecuperacion, $base_url);
+        
+        // ✅ CORRECIÓN: Guardar mensaje en sesión para mostrarlo después
+        $_SESSION['mensaje_recuperacion'] = $mensaje_recuperacion;
+        
+        // ✅ Redirigir al mismo index para mostrar el mensaje
+        header("Location: index.php");
+        exit();
+    }
+}
+
+//FUNCIÓN PARA LIMPIAR TOKENS EXPIRADOS 
+function limpiarTokensExpirados($db) {
+    try {
+        $stmt = $db->prepare("DELETE FROM remember_tokens WHERE expiracion < NOW()");
+        $stmt->execute();
+        return true;
+    } catch (PDOException $e) {
+        error_log("Error al limpiar tokens expirados: " . $e->getMessage());
+        return false;
+    }
+}
+
+// EJECUTAR LIMPIEZA PERIÓDICA 
+if (rand(1, 10) === 1) { // 10% de probabilidad en cada carga
+    try {
+        limpiarTokensExpirados($db);
+    } catch (Exception $e) {
+        // Ignorar errores de limpieza
+        error_log("Error en limpieza periódica: " . $e->getMessage());
     }
 }
 
@@ -67,18 +163,15 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
     $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($usuario) {
-        
         $token = bin2hex(random_bytes(32));
         $expiracion = date("Y-m-d H:i:s", strtotime("+1 hour"));
 
-        
         $stmtToken = $db->prepare("INSERT INTO recovery_tokens (id_usuario, token, expiracion) VALUES (:id_usuario, :token, :expiracion)");
         $stmtToken->bindParam(':id_usuario', $usuario['id_usuario']);
         $stmtToken->bindParam(':token', $token);
         $stmtToken->bindParam(':expiracion', $expiracion);
 
         if ($stmtToken->execute()) {
-            
             $link = "{$base_url}/views/manage/nueva_contraseña.php?token={$token}";
 
             $payload = [
@@ -125,7 +218,8 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
 
             if ($httpCode >= 200 && $httpCode < 300) {
                 return "✅ Se ha enviado un enlace de recuperación a: $correoUsuario";
-            } else {
+            } 
+            else {
                 return "❌ Error al enviar el correo (Código: $httpCode). Respuesta: $response";
             }
         } else {
@@ -264,6 +358,27 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       left: 10px;
       transform: translateY(-50%);
       color: white;
+      z-index: 2;
+    }
+
+    /* Botón para mostrar/ocultar contraseña */
+    .toggle-password {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 16px;
+      z-index: 2;
+      padding: 5px;
+      transition: color 0.3s;
+    }
+
+    .toggle-password:hover {
+      color: #1e8ee9;
     }
 
     .options {
@@ -354,6 +469,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       margin-bottom: 20px;
       text-align: center;
       border-left: 4px solid #4CAF50;
+      display:block;
     }
 
     /* Modal de recuperación */
@@ -408,6 +524,15 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       margin-bottom: 20px;
       color: #ddd;
       line-height: 1.5;
+    }
+
+    /* Mejorar el autocompletar del navegador */
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover, 
+    input:-webkit-autofill:focus {
+      -webkit-text-fill-color: white !important;
+      -webkit-box-shadow: 0 0 0px 1000px transparent inset !important;
+      transition: background-color 5000s ease-in-out 0s !important;
     }
 
     /* Responsive */
@@ -495,15 +620,33 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         <div class="alert-success"><?php echo $mensaje_recuperacion; ?></div>
       <?php endif; ?>
 
-      <form method="POST" action="" id="loginForm">
+      <form method="POST" action="" id="loginForm" autocomplete="on">
         <div class="input-box">
-          <i class="fa-solid fa-envelope"></i>
-          <input type="email" name="email" placeholder="Email" required value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>">
+            <i class="fa-solid fa-envelope"></i>
+            <input 
+                type="email" 
+                name="email" 
+                placeholder="Email" 
+                required 
+                value="<?php echo isset($_POST['email']) ? htmlspecialchars($_POST['email']) : ''; ?>"
+                autocomplete="email"           
+                id="email-field"              
+            >
         </div>
         
         <div class="input-box">
-          <i class="fa-solid fa-lock"></i>
-          <input type="password" name="password" placeholder="Contraseña" required>
+            <i class="fa-solid fa-lock"></i>
+            <input 
+                type="password" 
+                name="password" 
+                placeholder="Contraseña" 
+                required
+                autocomplete="current-password" 
+                id="password-field"             
+            >
+            <button type="button" class="toggle-password" id="togglePassword">
+                <i class="fa-solid fa-eye"></i>
+            </button>
         </div>
 
         <div class="options">
@@ -535,7 +678,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       <form method="POST" action="" id="recoveryForm">
         <div class="input-box">
           <i class="fa-solid fa-envelope"></i>
-          <input type="email" name="email" placeholder="Tu correo electrónico" required>
+          <input type="email" name="email" placeholder="Tu correo electrónico" required autocomplete="email">
         </div>
         <button class="btn" type="submit">Enviar Enlace</button>
       </form>
@@ -545,23 +688,23 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
   <script>
     // Validación básica del formulario de login
     document.getElementById('loginForm').addEventListener('submit', function(e) {
-      const email = document.querySelector('#loginForm input[name="email"]').value;
-      const password = document.querySelector('#loginForm input[name="password"]').value;
-      
-      if (!email || !password) {
-        e.preventDefault();
-        alert('Por favor, completa todos los campos.');
-        return false;
-      }
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        e.preventDefault();
-        alert('Por favor, ingresa un email válido.');
-        return false;
-      }
-      
-      return true;
+        const email = document.querySelector('#loginForm input[name="email"]').value;
+        const password = document.querySelector('#loginForm input[name="password"]').value;
+        
+        if (!email || !password) {
+            e.preventDefault();
+            alert('Por favor, completa todos los campos.');
+            return false;
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            e.preventDefault();
+            alert('Por favor, ingresa un email válido.');
+            return false;
+        }
+        
+        return true;
     });
 
     // Manejo del modal de recuperación
@@ -570,36 +713,124 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
     const closeBtn = document.querySelector('.close');
 
     openBtn.addEventListener('click', function() {
-      modal.style.display = 'block';
+        modal.style.display = 'block';
     });
 
     closeBtn.addEventListener('click', function() {
-      modal.style.display = 'none';
+        modal.style.display = 'none';
     });
 
     window.addEventListener('click', function(event) {
-      if (event.target === modal) {
-        modal.style.display = 'none';
-      }
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
     });
 
     document.getElementById('recoveryForm').addEventListener('submit', function(e) {
-      const email = document.querySelector('#recoveryForm input[name="email"]').value;
-      
-      if (!email) {
-        e.preventDefault();
-        alert('Por favor, ingresa tu correo electrónico.');
-        return false;
-      }
-      
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
-        e.preventDefault();
-        alert('Por favor, ingresa un email válido.');
-        return false;
-      }
-      
-      return true;
+        const email = document.querySelector('#recoveryForm input[name="email"]').value;
+        
+        if (!email) {
+            e.preventDefault();
+            alert('Por favor, ingresa tu correo electrónico.');
+            return false;
+        }
+        
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            e.preventDefault();
+            alert('Por favor, ingresa un email válido.');
+            return false;
+        }
+        
+        return true;
+    });
+
+    // NUEVO CÓDIGO PARA MOSTRAR/OCULTAR CONTRASEÑA Y MEJORAS
+    document.addEventListener('DOMContentLoaded', function() {
+        // Función para mostrar/ocultar contraseña
+        const togglePassword = document.getElementById('togglePassword');
+        const passwordField = document.getElementById('password-field');
+        const toggleIcon = togglePassword.querySelector('i');
+        
+        togglePassword.addEventListener('click', function() {
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.className = 'fa-solid fa-eye-slash';
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.className = 'fa-solid fa-eye';
+            }
+        });
+
+        // Prevenir envío múltiple del formulario
+        const loginForm = document.getElementById('loginForm');
+        let isSubmitting = false;
+        
+        loginForm.addEventListener('submit', function(e) {
+            if (isSubmitting) {
+                e.preventDefault();
+                return;
+            }
+            
+            isSubmitting = true;
+            const submitBtn = loginForm.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingresando...';
+            
+            // Re-enable after 5 seconds in case of error
+            setTimeout(() => {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }, 5000);
+        });
+
+        // Mejora: Recordar el email localmente
+        const emailInput = document.querySelector('input[name="email"]');
+        const rememberCheckbox = document.querySelector('input[name="remember"]');
+        
+        // Cargar email guardado si existe
+        const savedEmail = localStorage.getItem('remembered_email');
+        if (savedEmail && emailInput.value === '') {
+            emailInput.value = savedEmail;
+            rememberCheckbox.checked = true;
+        }
+        
+        // Guardar email cuando el usuario marque "Recuérdame"
+        rememberCheckbox.addEventListener('change', function() {
+            if (this.checked && emailInput.value) {
+                localStorage.setItem('remembered_email', emailInput.value);
+            } else {
+                localStorage.removeItem('remembered_email');
+            }
+        });
+
+        // Enfocar automáticamente el campo de contraseña después de email
+        emailInput.addEventListener('input', function() {
+            if (this.value.length > 3) {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (emailRegex.test(this.value)) {
+                    passwordField.focus();
+                }
+            }
+        });
+    });
+
+    // Mejora para el botón de recuperación
+    document.getElementById('recoveryForm').addEventListener('submit', function(e) {
+        const submitBtn = this.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+        
+        // Re-enable after 5 seconds
+        setTimeout(() => {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+        }, 5000);
     });
 
     // Detectar y mostrar tamaño de pantalla (solo para debug)

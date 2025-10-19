@@ -28,7 +28,7 @@ services:
     container_name: postgres-db
     restart: always
     environment:
-      # USANDO TUS CREDENCIALES DE RAILWAY PARA CONSISTENCIA
+      
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: VdQIFsxyyydFBXocPZixREthKPSXCVKe
       POSTGRES_DB: railway
@@ -36,7 +36,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql  # Para crear tablas automáticamente
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql 
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d railway"]
       interval: 5s
