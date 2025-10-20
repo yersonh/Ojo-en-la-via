@@ -12,7 +12,11 @@ if (!isset($_SESSION['usuario_id'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Ojo en la Vía - Inicio</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css" />
     <link rel="stylesheet" href="styles/mapa.css">
+    <link rel="stylesheet" href="styles/formulario.css">
     <style>
         /* Reset y variables CSS */
         :root {
@@ -104,10 +108,56 @@ if (!isset($_SESSION['usuario_id'])) {
 
         /* Main content */
         .main { 
-            flex: 1 1 auto; 
             overflow-y: auto; 
             padding: 16px;
             padding-bottom: 80px; /* Espacio para la navegación inferior */
+            position: relative;
+        }
+
+        /* Mapa view - Pantalla completa - POSICIONAR FUERA DEL FLUJO */
+        #mapView {
+            position: fixed !important;
+            top: 56px !important; /* Altura del header */
+            bottom: 70px !important; /* Altura del bottom nav */
+            left: 0 !important;
+            right: 0 !important;
+            width: 100vw !important;
+            height: calc(100vh - 56px - 70px) !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            max-width: none !important;
+            z-index: 50 !important;
+        }
+        
+        /* Asegurar que body y html permitan ancho completo */
+        body.map-active {
+            overflow: hidden !important;
+        }
+        
+        .main.map-active {
+            max-width: none !important;
+            padding: 0 !important;
+            margin: 0 !important;
+        }
+
+        .map-container {
+            width: 100% !important;
+            height: 100% !important;
+            background: var(--white);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            margin: 0 !important;
+            padding: 0 !important;
+        }
+
+        .map-container iframe {
+            width: 100% !important;
+            height: 100% !important;
+            border: none;
+            display: block;
+            margin: 0 !important;
+            padding: 0 !important;
         }
 
         /* Feed mejorado */
@@ -447,20 +497,6 @@ if (!isset($_SESSION['usuario_id'])) {
             100% { transform: rotate(360deg); }
         }
 
-        /* Mapa view */
-        .map-container {
-            background: var(--white);
-            border-radius: var(--border-radius);
-            overflow: hidden;
-            box-shadow: var(--shadow);
-        }
-
-        .map-container iframe {
-            width: 100%;
-            height: 60vh;
-            border: none;
-        }
-
         /* Responsive */
         @media (max-width: 768px) {
             .main {
@@ -489,13 +525,6 @@ if (!isset($_SESSION['usuario_id'])) {
             .avatar {
                 width: 42px;
                 height: 42px;
-            }
-        }
-
-        @media (min-width: 900px) {
-            .main { 
-                max-width: 900px; 
-                margin: 0 auto; 
             }
         }
 
@@ -557,7 +586,7 @@ if (!isset($_SESSION['usuario_id'])) {
                 <span>Ojo en la Vía</span>
             </div>
             <div class="user-menu">
-                <img id="headerAvatar" class="user-avatar" src="/imagenes/fiveicon.png" alt="Avatar" 
+                <img id="headerAvatar" class="user-avatar" src="../imagenes/fiveicon.png" alt="Avatar" 
                      onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()">
             </div>
         </header>
@@ -590,11 +619,6 @@ if (!isset($_SESSION['usuario_id'])) {
                 <div class="map-container">
                     <iframe src="vermapa.php" title="Mapa de reportes"></iframe>
                 </div>
-                <div style="text-align: center; margin-top: 16px;">
-                    <button class="btn btn-primary" onclick="window.open('vermapa.php', '_blank')">
-                        <i class="fas fa-expand"></i> Abrir mapa en pantalla completa
-                    </button>
-                </div>
             </div>
 
             <!-- Perfil -->
@@ -602,7 +626,7 @@ if (!isset($_SESSION['usuario_id'])) {
                 <div class="profile">
                     <div class="profile-header">
                         <div class="edit-pencil">
-                            <img id="profileAvatar" class="avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
+                            <img id="profileAvatar" class="avatar" src="../imagenes/fiveicon.png" alt="Avatar del usuario">
                             <div class="pencil" id="editAvatarBtn" title="Cambiar foto de perfil">
                                 <i class="fas fa-camera"></i>
                             </div>
@@ -707,6 +731,24 @@ if (!isset($_SESSION['usuario_id'])) {
 
         // Mejorar la experiencia en móviles
         document.addEventListener('touchstart', function() {}, { passive: true });
+
+        // Lógica para ajustar el padding cuando se muestra/oculta el mapa
+        document.querySelectorAll('.nav-item').forEach(item => {
+            item.addEventListener('click', () => {
+                const mainContent = document.getElementById('mainContent');
+                const mapView = document.getElementById('mapView');
+                
+                if (item.getAttribute('data-target') === 'mapView') {
+                    mainContent.classList.add('map-active');
+                    document.body.classList.add('map-active');
+                    mainContent.style.overflow = 'hidden';
+                } else {
+                    mainContent.classList.remove('map-active');
+                    document.body.classList.remove('map-active');
+                    mainContent.style.overflow = 'auto';
+                }
+            });
+        });
     </script>
 
     <script src="components/panel.js"></script>

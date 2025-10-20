@@ -1,5 +1,8 @@
 <!-- Header -->
 <div class="header">
+    <button class="sidebar-toggle" id="sidebarToggle">
+        <i class="fas fa-bars"></i>
+    </button>
     <h1>Panel de Administración</h1>
     <div class="user-info">
         <div class="user-avatar">

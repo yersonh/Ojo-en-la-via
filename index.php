@@ -570,7 +570,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       }
 
       .modal-content {
-        margin: 20% auto;
+        margin: 20%;
         width: 95%;
       }
     }
