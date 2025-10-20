@@ -1,6 +1,6 @@
 <?php
 header('Content-Type: application/json; charset=utf-8');
-require_once _DIR_ . '/../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 $action = $_GET['action'] ?? '';
 session_start();

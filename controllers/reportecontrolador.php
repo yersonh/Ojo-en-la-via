@@ -6,6 +6,8 @@ ini_set('display_errors', 0);
 
 header('Content-Type: application/json; charset=utf-8');
 
+session_start();
+$currentUserId = $_SESSION['usuario_id'] ?? null;
 $action = $_GET['action'] ?? '';
 
 try {
@@ -18,49 +20,169 @@ try {
 
         // Listar los reportes
         case 'listar':
-    // Primero obtener los reportes
-    $query = "
-        SELECT 
-            r.id_reporte,
-            t.nombre AS tipo_incidente,
-            r.descripcion,
-            r.latitud,
-            r.longitud,
-            r.fecha_reporte,
-            u.correo AS usuario,
-            r.estado
-        FROM reporte r
-        INNER JOIN tipo_incidente t ON r.id_tipo_incidente = t.id_tipo_incidente
-        INNER JOIN usuario u ON r.id_usuario = u.id_usuario
-        ORDER BY r.fecha_reporte DESC
-    ";
-    
-    $stmt = $db->query($query);
-    $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Obtener TODAS las imágenes para cada reporte
-    foreach ($reportes as &$reporte) {
-        $queryImg = "SELECT url_imagen FROM imagen_reporte WHERE id_reporte = :id_reporte ORDER BY id_imagen";
-        $stmtImg = $db->prepare($queryImg);
-        $stmtImg->execute([':id_reporte' => $reporte['id_reporte']]);
-        $imagenes = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
-        
-        $reporte['imagenes'] = array_column($imagenes, 'url_imagen');
-    }
-    unset($reporte);
-    
-    $unexpected_output = ob_get_contents();
-    if (!empty($unexpected_output)) {
-        error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
-        ob_clean();
-    }
-    
-    echo json_encode($reportes);
-    break;
+            $usuarioId = $currentUserId ? (int) $currentUserId : null;
+            $userLikedSelect = $usuarioId ? 'COALESCE(ul.user_liked, 0)' : '0';
+            $userLikedJoin = '';
+            if ($usuarioId) {
+                $userLikedJoin = "LEFT JOIN (
+                    SELECT id_reporte, 1 AS user_liked
+                    FROM like_reporte
+                    WHERE id_usuario = :usuario_id
+                ) ul ON ul.id_reporte = r.id_reporte";
+            }
+
+            $query = "
+                SELECT 
+                    r.id_reporte,
+                    r.descripcion,
+                    r.latitud,
+                    r.longitud,
+                    r.fecha_reporte,
+                    r.estado,
+                    t.nombre AS tipo_incidente,
+                    u.correo AS usuario_correo,
+                    p.nombres,
+                    p.apellidos,
+                    p.foto_perfil,
+                    COALESCE(l.total_likes, 0) AS total_likes,
+                    $userLikedSelect AS user_liked
+                FROM reporte r
+                INNER JOIN tipo_incidente t ON r.id_tipo_incidente = t.id_tipo_incidente
+                INNER JOIN usuario u ON r.id_usuario = u.id_usuario
+                INNER JOIN persona p ON u.id_persona = p.id_persona
+                LEFT JOIN (
+                    SELECT id_reporte, COUNT(*) AS total_likes
+                    FROM like_reporte
+                    GROUP BY id_reporte
+                ) l ON l.id_reporte = r.id_reporte
+                {$userLikedJoin}
+                ORDER BY r.fecha_reporte DESC
+            ";
+
+            $stmt = $db->prepare($query);
+            if ($usuarioId) {
+                $stmt->bindValue(':usuario_id', $usuarioId, PDO::PARAM_INT);
+            }
+            $stmt->execute();
+            $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            foreach ($reportes as &$reporte) {
+                $stmtImg = $db->prepare("SELECT url_imagen FROM imagen_reporte WHERE id_reporte = :id_reporte ORDER BY id_imagen");
+                $stmtImg->execute([':id_reporte' => $reporte['id_reporte']]);
+                $imagenes = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
+                $reporte['imagenes'] = array_column($imagenes, 'url_imagen');
+                $reporte['total_likes'] = isset($reporte['total_likes']) ? (int) $reporte['total_likes'] : 0;
+                $reporte['user_liked'] = isset($reporte['user_liked']) ? (int) $reporte['user_liked'] : 0;
+                $reporte['usuario'] = $reporte['usuario_correo'] ?? '';
+            }
+            unset($reporte);
+
+            $unexpected_output = ob_get_contents();
+            if (!empty($unexpected_output)) {
+                error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
+                ob_clean();
+            }
+
+            echo json_encode($reportes);
+            break;
+
+        case 'toggle_like':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['success' => false, 'mensaje' => 'Método no permitido']);
+                break;
+            }
+
+            if (!$currentUserId) {
+                http_response_code(401);
+                echo json_encode(['success' => false, 'mensaje' => 'No autenticado']);
+                break;
+            }
+
+            $idReporte = filter_input(INPUT_POST, 'id_reporte', FILTER_VALIDATE_INT);
+            if (!$idReporte) {
+                http_response_code(400);
+                echo json_encode(['success' => false, 'mensaje' => 'ID de reporte inválido']);
+                break;
+            }
+
+            try {
+                $db->beginTransaction();
+
+                $stmtOwner = $db->prepare('SELECT id_usuario FROM reporte WHERE id_reporte = :id');
+                $stmtOwner->execute([':id' => $idReporte]);
+                $idPropietario = $stmtOwner->fetchColumn();
+
+                if (!$idPropietario) {
+                    throw new Exception('Reporte no encontrado');
+                }
+
+                $stmtLike = $db->prepare('SELECT id_like FROM like_reporte WHERE id_reporte = :id_reporte AND id_usuario = :id_usuario');
+                $stmtLike->execute([
+                    ':id_reporte' => $idReporte,
+                    ':id_usuario' => $currentUserId
+                ]);
+                $likeExistente = $stmtLike->fetchColumn();
+
+                $accion = 'liked';
+                if ($likeExistente) {
+                    $stmtDelete = $db->prepare('DELETE FROM like_reporte WHERE id_reporte = :id_reporte AND id_usuario = :id_usuario');
+                    $stmtDelete->execute([
+                        ':id_reporte' => $idReporte,
+                        ':id_usuario' => $currentUserId
+                    ]);
+                    $accion = 'unliked';
+                } else {
+                    $stmtInsert = $db->prepare('INSERT INTO like_reporte (id_reporte, id_usuario) VALUES (:id_reporte, :id_usuario)');
+                    $stmtInsert->execute([
+                        ':id_reporte' => $idReporte,
+                        ':id_usuario' => $currentUserId
+                    ]);
+
+                    if ((int) $idPropietario !== (int) $currentUserId) {
+                        $stmtNombre = $db->prepare('SELECT p.nombres, p.apellidos FROM usuario u INNER JOIN persona p ON u.id_persona = p.id_persona WHERE u.id_usuario = :id');
+                        $stmtNombre->execute([':id' => $currentUserId]);
+                        $persona = $stmtNombre->fetch(PDO::FETCH_ASSOC);
+                        $autorNombre = trim(($persona['nombres'] ?? '') . ' ' . ($persona['apellidos'] ?? ''));
+                        $mensaje = $autorNombre ? $autorNombre . ' dio me gusta a tu reporte.' : 'Un usuario dio me gusta a tu reporte.';
+
+                        $stmtNotif = $db->prepare('INSERT INTO notificacion (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje) VALUES (:destino, :origen, :reporte, :tipo, :mensaje)');
+                        $stmtNotif->execute([
+                            ':destino' => $idPropietario,
+                            ':origen' => $currentUserId,
+                            ':reporte' => $idReporte,
+                            ':tipo' => 'like',
+                            ':mensaje' => $mensaje
+                        ]);
+                    }
+                }
+
+                $stmtTotal = $db->prepare('SELECT COUNT(*) FROM like_reporte WHERE id_reporte = :id_reporte');
+                $stmtTotal->execute([':id_reporte' => $idReporte]);
+                $totalLikes = (int) $stmtTotal->fetchColumn();
+
+                $db->commit();
+
+                echo json_encode([
+                    'success' => true,
+                    'action' => $accion,
+                    'total_likes' => $totalLikes
+                ]);
+            } catch (Exception $ex) {
+                if ($db->inTransaction()) {
+                    $db->rollBack();
+                }
+                http_response_code(500);
+                echo json_encode([
+                    'success' => false,
+                    'mensaje' => $ex->getMessage()
+                ]);
+            }
+            break;
 
         // Registrar reporte 
         // Registrar reporte 
-case 'registrar':
+        case 'registrar':
     // Si viene con formulario (multipart/form-data)
     if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Sanitizar y validar datos (tu código igual)

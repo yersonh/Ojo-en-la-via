@@ -236,6 +236,12 @@ if (!isset($_SESSION['usuario_id'])) {
             border-top: 1px solid var(--gray-200);
         }
 
+        #feedPosts {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
         .btn { 
             padding: 8px 16px; 
             border: none;
@@ -290,6 +296,75 @@ if (!isset($_SESSION['usuario_id'])) {
             border-color: var(--primary);
         }
 
+        .notifications-preview {
+            display: none;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .notifications-preview.active {
+            display: flex;
+        }
+
+        .notifications-preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--white);
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--gray-200);
+        }
+
+        .notifications-preview-header h4 {
+            margin: 0;
+            font-size: 16px;
+            color: var(--gray-800);
+        }
+
+        .notifications-preview-header span {
+            font-size: 13px;
+            color: var(--gray-600);
+        }
+
+        .notifications-preview-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .notifications-preview-item {
+            background: var(--white);
+            border-left: 4px solid var(--primary);
+            border-radius: var(--border-radius);
+            padding: 12px 16px;
+            box-shadow: var(--shadow);
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+        }
+
+        .notifications-preview-item.unread {
+            border-left-color: var(--warning);
+            background: #fffbf0;
+        }
+
+        .notifications-preview-empty {
+            background: var(--white);
+            padding: 16px;
+            border-radius: var(--border-radius);
+            box-shadow: var(--shadow);
+            color: var(--gray-600);
+            text-align: center;
+        }
+
+        .notifications-preview button {
+            white-space: nowrap;
+        }
+
         /* Bottom nav mejorada */
         .bottom-nav { 
             height: 70px; 
@@ -318,6 +393,7 @@ if (!isset($_SESSION['usuario_id'])) {
             flex-direction: column;
             align-items: center;
             gap: 4px;
+            position: relative;
         }
 
         .nav-item i {
@@ -332,6 +408,20 @@ if (!isset($_SESSION['usuario_id'])) {
 
         .nav-item:hover {
             color: var(--primary);
+        }
+
+        .nav-badge {
+            position: absolute;
+            top: 6px;
+            right: 22px;
+            min-width: 18px;
+            padding: 2px 6px;
+            background: var(--danger);
+            color: var(--white);
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 600;
+            display: none;
         }
 
         /* Perfil mejorado */
@@ -600,9 +690,12 @@ if (!isset($_SESSION['usuario_id'])) {
 
             <!-- Inicio por defecto -->
             <div id="feedView">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>Cargando publicaciones...</p>
+                <section id="notificationsPreview" class="notifications-preview"></section>
+                <div id="feedPosts">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando publicaciones...</p>
+                    </div>
                 </div>
             </div>
 
@@ -709,6 +802,7 @@ if (!isset($_SESSION['usuario_id'])) {
             <div class="nav-item" data-target="notificationsView">
                 <i class="fas fa-bell"></i>
                 <span>Alertas</span>
+                <span class="nav-badge" id="notificationsBadge"></span>
             </div>
             <div class="nav-item" data-target="mapView">
                 <i class="fas fa-map"></i>
