@@ -28,7 +28,7 @@ export class FormManager {
     this.setupFormSubmit();
     this.validationManager.setupCharacterCounter();
     
-    // 🆕 REGISTRARSE PARA CAMBIOS DE CONEXIÓN (SOLO UNA VEZ)
+    // REGISTRARSE PARA CAMBIOS DE CONEXIÓN (SOLO UNA VEZ)
     if (window.connectionManager) {
         window.connectionManager.addListener((online) => {
             this.handleConnectionChange(online);
@@ -47,29 +47,17 @@ export class FormManager {
             });
         }
     }
-// En FormManager.js - AGREGAR método para forzar coordenadas
-forzarCoordenadasActuales() {
-    const latInput = document.getElementById('latitud');
-    const lngInput = document.getElementById('longitud');
-    
-    if (latInput && lngInput && latInput.value && lngInput.value) {
-        console.log('📍 Coordenadas actuales forzadas:', latInput.value, lngInput.value);
-        return true;
-    } else {
-        console.error('❌ No hay coordenadas para forzar');
-        return false;
-    }
-}
    async handleFormSubmit(e) {
     e.preventDefault();
 
-    if (!this.validationManager.validateForm()) return;
+    // Validación básica del formulario
+    if (!this.validationManager.validateForm()) {
+        console.log('❌ Validación de formulario falló');
+        return;
+    }
 
-    // 🆕 FORZAR VERIFICACIÓN DE COORDENADAS ACTUALES
-    this.forzarCoordenadasActuales();
-
-    const coordenadasValidas = this.verificarCoordenadas();
-    if (!coordenadasValidas) {
+    // Verificación de coordenadas
+    if (!this.verificarCoordenadas()) {
         this.handleSubmitError('Por favor, selecciona una ubicación en el mapa');
         return;
     }
@@ -77,29 +65,27 @@ forzarCoordenadasActuales() {
     this.uiManager.showLoadingState();
 
     try {
-        console.log('📤 Procesando reporte con estrategia resiliente...');
+        console.log('📤 Procesando reporte...');
         
         const formData = new FormData(e.target);
         
-        // 🆕 FORZAR INCLUSIÓN DE COORDENADAS ACTUALES
-        this.actualizarCoordenadasEnFormData(formData);
-        
+        // 🆕 DELEGAR TODO AL OFFLINE MANAGER
         const resultado = await OfflineManager.procesarReporteConResiliencia(formData);
         
         if (resultado.modo === 'online') {
             this.handleSubmitSuccess(resultado.data.mensaje);
-            await this.recargarMapa();
         } else {
             this.handleSubmitOfflineSuccess(resultado.idOffline);
         }
 
     } catch (error) {
         console.error('💥 Error en envío:', error);
-        this.handleSubmitError(error.message);
+        this.handleSubmitError(error.message || 'Error al procesar el reporte');
     } finally {
         this.uiManager.hideLoadingState();
     }
 }
+
 verificarCoordenadas() {
     const latInput = document.getElementById('latitud');
     const lngInput = document.getElementById('longitud');
@@ -125,56 +111,78 @@ verificarCoordenadas() {
     console.log('✅ Coordenadas válidas:', lat, lng);
     return true;
 }
-
-actualizarCoordenadasEnFormData(formData) {
-    const latInput = document.getElementById('latitud');
-    const lngInput = document.getElementById('longitud');
+    // 🆕 MANEJADOR DE ÉXITO OFFLINE
+   handleSubmitOfflineSuccess(idOffline) {
+    const mensaje = `✅ Reporte guardado localmente (ID: ${idOffline}). Se enviará automáticamente cuando recuperes conexión.`;
     
-    if (latInput && lngInput && latInput.value && lngInput.value) {
-        // Eliminar valores existentes y agregar los actuales
-        formData.delete('latitud');
-        formData.delete('longitud');
-        formData.append('latitud', latInput.value);
-        formData.append('longitud', lngInput.value);
+    console.log('💾 Reporte offline guardado exitosamente');
+
+    this.showAlert(mensaje, 'success');
+    
+    // Limpiar formulario
+    setTimeout(() => {
+        this.clearForm();
+    }, 2000);
+}
+
+// 🆕 MÉTODO PARA AGREGAR SOLO EL NUEVO REPORTE OFFLINE
+async agregarMarkerOfflineAlMapa(idOffline) {
+    if (!window.mapaSistema || !window.mapaSistema.markerManager) {
+        console.log('❌ No se puede agregar marker - mapa o markerManager no disponible');
+        return;
+    }
+    
+    try {
+        console.log('📍 Intentando agregar marker offline al mapa:', idOffline);
         
-        console.log('📍 Coordenadas actualizadas en FormData:', latInput.value, lngInput.value);
+        // Obtener el reporte recién guardado
+        const reportes = await OfflineManager.obtenerReportesPendientes();
+        const nuevoReporte = reportes.find(r => r.id === idOffline);
+        
+        if (nuevoReporte) {
+            console.log('✅ Encontrado reporte para agregar como marker:', nuevoReporte);
+            
+            // Agregar solo este marker al mapa
+            const lat = parseFloat(nuevoReporte.datos.latitud);
+            const lng = parseFloat(nuevoReporte.datos.longitud);
+            
+            // Usar el MarkerManager para agregar el marker
+            window.mapaSistema.markerManager.agregarMarkerOffline({
+                id: idOffline,
+                latitud: lat,
+                longitud: lng,
+                tipo_incidente: nuevoReporte.datos.id_tipo_incidente,
+                descripcion: nuevoReporte.datos.descripcion,
+                fecha: nuevoReporte.fecha
+            });
+            
+        } else {
+            console.log('❌ No se encontró el reporte recién guardado');
+        }
+    } catch (error) {
+        console.error('❌ Error agregando marker offline:', error);
     }
 }
-    // 🆕 MANEJADOR DE ÉXITO OFFLINE
-    handleSubmitOfflineSuccess(idOffline) {
-        const mensaje = `✅ Reporte guardado localmente (ID: ${idOffline}). Se enviará automáticamente cuando recuperes conexión.`;
-        
-        console.log('💾 Reporte offline guardado exitosamente - ID:', idOffline);
-
-        this.showAlert(mensaje, 'offline-success');
-        
-        // Efecto visual diferente para offline
-        this.uiManager.showOfflineSuccessAnimation();
-        
-        if (window.OfflineManager) {
-        setTimeout(() => {
-            window.OfflineManager.actualizarBadgePendientes();
-        }, 500);
-    }
-        // Limpiar formulario después de guardar offline
-        setTimeout(() => {
-            this.clearForm();
-            this.clearTemporaryMarker();
-        }, 2000);
-    }
-
     // 🆕 RECARGAR MAPA SOLO SI ES NECESARIO
     async recargarMapa() {
-        if (window.mapaSistema && typeof window.mapaSistema.recargarReportes === 'function') {
-            try {
-                await window.mapaSistema.recargarReportes();
-                console.log('🗺️ Mapa recargado después de envío online');
-            } catch (error) {
-                console.error('❌ Error recargando mapa:', error);
-            }
+    if (window.mapaSistema && typeof window.mapaSistema.recargarReportes === 'function') {
+        try {
+            console.log('🗺️ Recargando mapa después de envío online...');
+            await window.mapaSistema.recargarReportes();
+        } catch (error) {
+            console.error('❌ Error recargando mapa:', error);
         }
     }
-
+}
+actualizarMapaOffline() {
+    console.log('📍 Actualizando mapa para modo offline (sin recargar todo)');
+    
+    // No recargar todos los reportes, solo manejar el nuevo
+    if (window.mapaSistema && window.mapaSistema.markerManager) {
+        // Opcional: limpiar solo markers offline si es necesario
+        // window.mapaSistema.markerManager.limpiarMarkersOffline();
+    }
+}
     handleSubmitSuccess(message) {
         this.showAlert('✅ ' + message);
         this.clearForm();

@@ -853,6 +853,7 @@
 @media (max-width: 768px) {
     #formReporte {
         gap: 16px;
+        padding: 15px; /* Añadir padding en móvil */
     }
     
     .opciones-imagen {
@@ -888,6 +889,7 @@
     #connection-status-message {
         font-size: 12px;
         padding: 10px 15px;
+        line-height: 1.4;
     }
     
     #badge-pendientes {
@@ -904,12 +906,44 @@
         right: 10px;
         max-width: none;
         min-width: auto;
+        max-height: 40vh;
     }
     
     .offline-mode::before {
         right: 10px;
         font-size: 10px;
         padding: 3px 8px;
+    }
+}
+
+@media (max-width: 480px) {
+    #formReporte select,
+    #formReporte textarea,
+    #formReporte input[type="text"] {
+        padding: 14px;
+        font-size: 16px; /* Previene zoom en iOS */
+    }
+
+    .btn-camara, .btn-archivo {
+        padding: 16px;
+        font-size: 16px;
+    }
+
+    #submitBtn {
+        padding: 20px;
+        font-size: 18px;
+    }
+
+    .comentarios-section h3 {
+        font-size: 16px;
+    }
+
+    #textoComentario {
+        min-height: 60px;
+    }
+
+    #btnComentario {
+        padding: 14px;
     }
 }
 

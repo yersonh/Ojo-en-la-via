@@ -12,6 +12,7 @@ require_once __DIR__ . '/phpmailer/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/SMTP.php';
 require_once __DIR__ . '/phpmailer/Exception.php';
 
+// Determinar base URL automáticamente
 $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http";
 $base_url = $protocol . "://" . $_SERVER['HTTP_HOST'];
 
@@ -569,7 +570,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       }
 
       .modal-content {
-        margin: 20% auto;
+        margin: 20%;
         width: 95%;
       }
     }
@@ -826,14 +827,11 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
         
         // Re-enable after 5 seconds
-        setTimeout(() => {
+        setTimeout(() => {  
             submitBtn.disabled = false;
             submitBtn.innerHTML = originalText;
         }, 5000);
     });
-
-    // Detectar y mostrar tamaño de pantalla (solo para debug)
-    console.log('Ancho de pantalla:', window.innerWidth, 'Altura:', window.innerHeight);
   </script>
 </body>
 </html>

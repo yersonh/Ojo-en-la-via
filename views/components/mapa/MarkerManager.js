@@ -118,7 +118,67 @@ export class MarkerManager {
             popupAnchor: [0, -45]
         });
     }
+    agregarMarkerOffline(reporteOffline) {
+    console.log('📍 Agregando marker offline:', reporteOffline.id);
     
+    // 🆕 VERIFICAR SI EL MARKER YA EXISTE
+    const markerExistente = this.markers.find(m => 
+        m.options && m.options.customId === `offline-${reporteOffline.id}`
+    );
+    
+    if (markerExistente) {
+        console.log('⚠️ Marker offline ya existe, no se duplicará:', reporteOffline.id);
+        return;
+    }
+    
+    // Crear marker para reporte offline
+    const marker = L.marker([reporteOffline.latitud, reporteOffline.longitud], {
+        icon: this.crearIconoPersonalizado(reporteOffline.tipo_incidente, true), // true para offline
+        customId: `offline-${reporteOffline.id}` // ID único para evitar duplicados
+    });
+    
+    // Configurar popup
+    const popupContent = this.crearPopupOffline(reporteOffline);
+    marker.bindPopup(popupContent);
+    
+    // Agregar al mapa y al array
+    marker.addTo(this.mapa);
+    this.markers.push(marker);
+    
+    console.log('✅ Marker offline agregado:', reporteOffline.id);
+}
+crearPopupOffline(reporte) {
+    return `
+        <div class="popup-offline">
+            <div class="popup-header" style="background: #f59e0b; color: white; padding: 8px 12px; border-radius: 4px 4px 0 0;">
+                <strong>📶 Reporte Offline</strong>
+            </div>
+            <div class="popup-content" style="padding: 12px;">
+                <p><strong>Tipo:</strong> ${this.obtenerNombreTipoIncidente(reporte.tipo_incidente)}</p>
+                <p><strong>Descripción:</strong> ${reporte.descripcion}</p>
+                <p><strong>Fecha:</strong> ${new Date(reporte.fecha).toLocaleString()}</p>
+                <p><strong>Estado:</strong> <span style="color: #f59e0b; font-weight: bold;">⏳ Pendiente de envío</span></p>
+                <div style="background: #fef3c7; padding: 8px; border-radius: 4px; margin-top: 8px; font-size: 12px;">
+                    📍 Este reporte se enviará automáticamente cuando recuperes conexión
+                </div>
+            </div>
+        </div>
+    `;
+}
+    
+limpiarMarkersOffline() {
+    console.log('🧹 Limpiando markers offline...');
+    
+    this.markers = this.markers.filter(marker => {
+        if (marker.options && marker.options.customId && marker.options.customId.startsWith('offline-')) {
+            this.mapa.removeLayer(marker);
+            return false; // Eliminar del array
+        }
+        return true; // Mantener en el array
+    });
+    
+    console.log('✅ Markers offline limpiados');
+}
     _ajustarVista() {
         if (this.markers.length > 0) {
             const group = new L.featureGroup(this.markers.map(m => m.marker));
