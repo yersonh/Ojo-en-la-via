@@ -210,6 +210,130 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
             }
         }
     });
+    
+</script>
+
+<!-- 🚀 SISTEMA DE ACTUALIZACIÓN DEL SERVICE WORKER -->
+<script>
+class SWManager {
+    static async init() {
+        if ('serviceWorker' in navigator) {
+            try {
+                const registration = await navigator.serviceWorker.ready;
+                console.log('🔍 Monitoreando actualizaciones del SW...');
+                
+                // Verificar actualizaciones periódicamente
+                setInterval(() => {
+                    registration.update();
+                }, 5 * 60 * 1000); // Cada 5 minutos
+                
+                // Detectar cuando hay nueva versión
+                registration.addEventListener('updatefound', () => {
+                    console.log('🔄 Nueva versión del Service Worker disponible');
+                    const newWorker = registration.installing;
+                    
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed') {
+                            this.showUpdateNotification();
+                        }
+                    });
+                });
+                
+            } catch (error) {
+                console.log('⚠️ No se pudo monitorear actualizaciones:', error);
+            }
+        }
+    }
+    
+    static showUpdateNotification() {
+        // Notificación discreta - No modal intrusivo
+        const notification = document.createElement('div');
+        notification.innerHTML = `
+            <div style="
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                background: #3b82f6;
+                color: white;
+                padding: 12px 16px;
+                border-radius: 8px;
+                box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+                z-index: 10000;
+                font-family: Arial;
+                font-size: 14px;
+                max-width: 300px;
+            ">
+                <strong>🔄 Actualización disponible</strong>
+                <p style="margin: 5px 0; font-size: 12px;">La aplicación se ha actualizado</p>
+                <button onclick="location.reload()" style="
+                    background: white;
+                    color: #3b82f6;
+                    border: none;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                    margin-right: 5px;
+                ">Actualizar</button>
+                <button onclick="this.parentElement.remove()" style="
+                    background: transparent;
+                    color: white;
+                    border: 1px solid white;
+                    padding: 5px 10px;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-size: 12px;
+                ">Cerrar</button>
+            </div>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-ocultar después de 30 segundos
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 30000);
+    }
+}
+
+// 🛠️ COMANDOS DEBUG - Para forzar actualización cuando hay problemas
+window.forceSWUpdate = async function() {
+    if ('serviceWorker' in navigator) {
+        console.log('🔄 Forzando actualización del Service Worker...');
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        
+        for (let registration of registrations) {
+            await registration.unregister();
+            console.log('🗑️ SW eliminado:', registration.scope);
+        }
+        
+        console.log('✅ Todos los SW eliminados. Recargando...');
+        // Limpiar caches también
+        if (window.caches) {
+            const cacheNames = await window.caches.keys();
+            await Promise.all(cacheNames.map(name => window.caches.delete(name)));
+        }
+        
+        setTimeout(() => {
+            location.reload(true); // Forzar recarga sin cache
+        }, 1000);
+    } else {
+        console.log('❌ Service Worker no soportado');
+    }
+};
+
+// Comando alternativo para recarga forzada
+window.hardReload = function() {
+    console.log('🔄 Recarga forzada sin cache...');
+    location.reload(true);
+};
+
+// Inicializar el sistema de actualización cuando la página cargue
+document.addEventListener('DOMContentLoaded', () => {
+    SWManager.init();
+});
 </script>
 
 </body>
