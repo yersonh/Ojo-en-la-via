@@ -1,4 +1,3 @@
-// ConnectionManager - VERSIÓN FINAL SIN ERRORES DE GOOGLE
 class ConnectionManager {
     constructor() {
         this.isOnline = navigator.onLine;
@@ -17,14 +16,11 @@ class ConnectionManager {
     init() {
         console.log('🌐 ConnectionManager iniciado');
         
-        // Eventos nativos del navegador
         window.addEventListener('online', () => this.handleBrowserOnline());
         window.addEventListener('offline', () => this.handleBrowserOffline());
         
-        // Verificación activa con backoff inteligente
         this.startIntelligentChecking();
         
-        // Verificación inicial
         setTimeout(() => this.checkConnection(), 1000);
     }
 
@@ -60,7 +56,6 @@ class ConnectionManager {
         }
     }
 
-    // 🆕 VERIFICACIÓN SEGURA - SIN GOOGLE NI RECURSOS EXTERNOS
     async safeConnectionCheck() {
         const checks = [
             this.quickHeadCheck(),    // Verificación a nuestro servidor
@@ -189,7 +184,6 @@ class ConnectionManager {
         }
     }
 
-    // 🆕 NOTIFICACIÓN ESPECÍFICA PARA RECUPERACIÓN
     notifyConnectionRestored() {
         this.listeners.forEach(listener => {
             try {
@@ -212,14 +206,12 @@ class ConnectionManager {
         }
     }
 
-    // 🆕 MÉTODO MEJORADO PARA AGREGAR LISTENERS
     addListener(callback) {
         if (typeof callback === 'function') {
             this.listeners.push(callback);
         }
     }
 
-    // 🆕 MÉTODO PARA AGREGAR OBJETOS CON MÚLTIPLES HANDLERS
     addListenerObject(listenerObj) {
         this.listeners.push(listenerObj);
     }
@@ -241,14 +233,12 @@ class ConnectionManager {
     onConnectionRestored() {
         console.log('🟢 Conexión restaurada - Notificando sistemas...');
         
-        // Notificar a OfflineManager para sincronización inmediata
         if (window.OfflineManager) {
             setTimeout(() => {
                 window.OfflineManager.intentarSincronizacionInmediata();
             }, 1000);
         }
         
-        // Recargar mapa si existe
         if (window.mapaSistema) {
             setTimeout(() => {
                 window.mapaSistema.recargarReportes();
@@ -256,54 +246,11 @@ class ConnectionManager {
         }
     }
 
-    // 🆕 MÉTODO ÚNICO PARA UI OFFLINE (MANTENIDO DE TU CÓDIGO)
     showOfflineUI() {
         console.log('🔴 Activando modo offline');
         this.hideOfflineUI();
-        this.mostrarBannerOffline();
         this.disableOnlineFeatures();
-        this.mostrarMensajeMapaOffline();
     }
-
-    // 🆕 BANNER OFFLINE MEJORADO
-    mostrarBannerOffline() {
-        const banner = document.createElement('div');
-        banner.id = 'connection-status-message';
-        banner.innerHTML = `
-            <div style="
-                position: fixed;
-                top: 0;
-                left: 0;
-                right: 0;
-                background: #f59e0b;
-                color: white;
-                padding: 12px 20px;
-                text-align: center;
-                font-weight: bold;
-                z-index: 10000;
-                box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                animation: slideDown 0.5s ease;
-                font-size: 14px;
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                gap: 10px;
-            ">
-                <span>📶</span>
-                MODO OFFLINE - Los reportes se guardan localmente y se enviarán automáticamente
-                <span>💾</span>
-            </div>
-            <style>
-                @keyframes slideDown {
-                    from { transform: translateY(-100%); opacity: 0; }
-                    to { transform: translateY(0); opacity: 1; }
-                }
-            </style>
-        `;
-        document.body.appendChild(banner);
-    }
-
-    // 🆕 DESHABILITAR FUNCIONES ONLINE (PERMITIR ENVÍO OFFLINE)
     disableOnlineFeatures() {
         const submitBtn = document.querySelector('button[type="submit"]');
         const searchBtn = document.getElementById('btnBuscar');
@@ -322,7 +269,6 @@ class ConnectionManager {
         }
     }
 
-    // 🆕 HABILITAR FUNCIONES ONLINE
     enableOnlineFeatures() {
         const submitBtn = document.querySelector('button[type="submit"]');
         const searchBtn = document.getElementById('btnBuscar');
@@ -340,55 +286,24 @@ class ConnectionManager {
             searchBtn.innerHTML = 'Buscar';
         }
     }
-
-    // 🆕 LIMPIAR UI OFFLINE
     hideOfflineUI() {
-        // Remover banner
+        // Remover banner (por si acaso existe)
         const banner = document.getElementById('connection-status-message');
         if (banner) banner.remove();
         
-        // Remover overlay del mapa
+        // Remover overlay del mapa (por si acaso existe)
         if (this.offlineMapOverlay && window.mapaSistema) {
-            window.mapaSistema.getMap().removeLayer(this.offlineMapOverlay);
+            try {
+                window.mapaSistema.getMap().removeLayer(this.offlineMapOverlay);
+            } catch (error) {
+                console.log('⚠️ Error removiendo overlay del mapa:', error);
+            }
             this.offlineMapOverlay = null;
         }
         
         // Habilitar funciones
         this.enableOnlineFeatures();
     }
-
-    // 🆕 MENSAJE EN MAPA
-    mostrarMensajeMapaOffline() {
-        if (!window.mapaSistema) return;
-        
-        const map = window.mapaSistema.getMap();
-        
-        if (this.offlineMapOverlay) {
-            map.removeLayer(this.offlineMapOverlay);
-        }
-        
-        this.offlineMapOverlay = L.rectangle(map.getBounds(), {
-            color: '#6b7280',
-            fillColor: '#f3f4f6',
-            fillOpacity: 0.5,
-            weight: 1,
-            interactive: false
-        }).addTo(map);
-        
-        this.offlineMapOverlay.bindPopup(`
-            <div style="text-align: center; padding: 15px; min-width: 250px;">
-                <div style="font-size: 32px; margin-bottom: 10px;">📶</div>
-                <strong style="color: #dc2626; font-size: 16px;">Mapa no disponible</strong>
-                <p style="margin: 10px 0; color: #6b7280; font-size: 14px;">
-                    Sin conexión a internet<br>
-                    <strong>Los reportes se guardan localmente</strong><br>
-                    y se enviarán automáticamente<br>
-                    cuando recuperes conexión
-                </p>
-            </div>
-        `).openPopup();
-    }
-
     getStatus() {
         return this.isOnline;
     }
@@ -401,5 +316,4 @@ class ConnectionManager {
     }
 }
 
-// Crear instancia global
 const connectionManager = new ConnectionManager();

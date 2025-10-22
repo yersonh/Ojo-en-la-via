@@ -1,4 +1,3 @@
-// ConnectionManager - VERSIÓN OPTIMIZADA PARA RAILWAY
 if (window.connectionManager && typeof window.connectionManager === 'object') {
     console.log('✅ ConnectionManager ya está inicializado');
 } else {
@@ -136,56 +135,15 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
             console.log('🌐🔥 CAMBIO DE ESTADO:', online ? 'ONLINE' : 'OFFLINE');
             
             this.notifyListeners();
-            this.updateUI();
+            // 🆕 ELIMINADO: this.updateUI(); - Ya no actualiza la UI visualmente
             
             if (online) {
                 this.onConnectionRestored();
             }
         }
 
-        updateUI() {
-            if (this.isOnline) {
-                this.hideOfflineUI();
-            } else {
-                this.showOfflineUI();
-            }
-        }
-
-        showOfflineUI() {
-            console.log('🔴 ACTIVANDO MODO OFFLINE');
-            this.hideOfflineUI();
-            
-            const banner = document.createElement('div');
-            banner.id = 'connection-status-message';
-            banner.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    background: #dc2626;
-                    color: white;
-                    padding: 12px 20px;
-                    text-align: center;
-                    font-weight: bold;
-                    z-index: 10000;
-                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
-                ">
-                    📶 MODO OFFLINE - Sin conexión a internet
-                </div>
-            `;
-            document.body.appendChild(banner);
-            
-            this.disableOnlineFeatures();
-        }
-
-        hideOfflineUI() {
-            console.log('🟢 DESACTIVANDO MODO OFFLINE');
-            const banner = document.getElementById('connection-status-message');
-            if (banner) banner.remove();
-            
-            this.enableOnlineFeatures();
-        }
+        // 🆕 ELIMINADO: Métodos showOfflineUI() y hideOfflineUI()
+        // Ya no se mostrará el banner rojo de offline
 
         disableOnlineFeatures() {
             const searchBtn = document.getElementById('btnBuscar');

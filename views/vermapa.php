@@ -149,19 +149,21 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         </div>
     </div>
 
-    <!-- Scripts externos -->
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
-    
-    <!-- Nuestros módulos JavaScript -->
-<script src="components/offline-manager.js"></script>
-<script src="components/background-sync-manager.js"></script>
+<!-- Scripts externos -->
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
 
+<!-- Scripts tradicionales -->
+<script src="components/ConnectionManager.js"></script>
+<script src="components/background-sync-manager.js"></script>
+<script src="components/Buscador.js"></script>
+<script src="components/comentarios.js"></script>
+
+<!-- Módulos ES6 principales -->
 <script type="module">
     import { mapaSistema } from './components/mapa/index.js';
     import { formularioSistema } from './components/formulario/index.js';
     
-    // Hacer disponibles globalmente
     window.mapaSistema = mapaSistema;
     window.formularioSistema = formularioSistema;
     window.FormularioManager = formularioSistema;
@@ -189,21 +191,10 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
                 console.log('✅ BuscadorManager inicializado');
             }
             
-            // 4. Inicializar Background Sync Manager
-            await backgroundSyncManager.initialize();
-            console.log('✅ Background Sync Manager inicializado');
-            
-            // 5. Integrar Connection Manager con Offline Manager
+            // 4. Integrar Connection Manager
             if (window.connectionManager) {
                 window.connectionManager.addListener((online) => {
                     formularioSistema.handleConnectionChange(online);
-                    
-                    // Si se recupera conexión, sincronizar
-                    if (online) {
-                        setTimeout(() => {
-                            backgroundSyncManager.sincronizarSilenciosamente();
-                        }, 2000);
-                    }
                 });
             }
 
@@ -220,11 +211,6 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     });
 </script>
-
-    <!-- Scripts tradicionales (asegúrate de que sean compatibles) -->
-    <script src="components/Buscador.js"></script>
-    <script src="components/comentarios.js"></script>
-    <script src="components/ConnectionManager.js"></script>
 
 </body>
 </html>

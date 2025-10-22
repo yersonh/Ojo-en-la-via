@@ -359,25 +359,85 @@
     to { transform: translateY(0); opacity: 1; }
 }
 
-/* Formulario en modo offline */
-.offline-mode {
-    border-left: 4px solid var(--accent-yellow);
-    background: linear-gradient(135deg, var(--bg-secondary), #3d3d3d);
-    position: relative;
+/* ===== ESTILOS PARA MODO OFFLINE ===== */
+
+/* Banner de estado offline */
+#connection-status-message {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: linear-gradient(135deg, var(--accent-yellow), #d97706);
+    color: var(--text-primary);
+    padding: 12px 20px;
+    text-align: center;
+    font-weight: bold;
+    z-index: 10000;
+    box-shadow: 0 2px 10px var(--shadow-heavy);
+    animation: slideDown 0.5s ease;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
 }
 
-.offline-mode::before {
-    content: '📶 Modo Offline';
+@keyframes slideDown {
+    from { transform: translateY(-100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+/* Formulario en modo offline - SOLO EL INDICADOR */
+#formReporte.offline-mode {
+    position: relative; /* Solo para posicionar el indicador */
+    /* MANTENER todos los estilos normales del formulario */
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+}
+
+#formReporte.offline-mode::before {
+    content: '📶 Modo offline';
     position: absolute;
     top: -8px;
     right: 15px;
     background: var(--accent-yellow);
     color: var(--text-primary);
     padding: 4px 12px;
-    border-radius: 12px;
+    border-radius: 8px;
     font-size: 11px;
     font-weight: bold;
     z-index: 10;
+}
+
+/* Asegurar que NINGÚN elemento dentro se vea afectado */
+#formReporte.offline-mode * {
+    /* Reset forzado para evitar herencia de estilos */
+    border-color: inherit !important;
+    background: inherit !important;
+    color: inherit !important;
+}
+
+/* Específicamente prevenir que los campos cambien */
+#formReporte.offline-mode select,
+#formReporte.offline-mode textarea,
+#formReporte.offline-mode input,
+#formReporte.offline-mode .form-group,
+#formReporte.offline-mode .campo-imagen {
+    border-color: var(--border-color) !important;
+    background: var(--bg-secondary) !important;
+    color: var(--text-primary) !important;
+}
+
+#formReporte.offline-mode select:focus,
+#formReporte.offline-mode textarea:focus,
+#formReporte.offline-mode input:focus {
+    border-color: var(--accent-blue) !important;
+    background: var(--bg-tertiary) !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2) !important;
 }
 
 /* Botón de enviar en modo offline */
@@ -909,11 +969,6 @@
         max-height: 40vh;
     }
     
-    .offline-mode::before {
-        right: 10px;
-        font-size: 10px;
-        padding: 3px 8px;
-    }
 }
 
 @media (max-width: 480px) {
