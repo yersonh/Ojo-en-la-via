@@ -12,13 +12,31 @@ export class ImageManager {
     }
 
     setupEventListeners() {
-        const fileInput = document.querySelector(FormConstants.SELECTORS.FOTO);
-        if (fileInput) {
-            fileInput.addEventListener('change', (e) => {
-                this.handleFileSelection(e);
-            });
-        }
+    const fileInput = document.querySelector(FormConstants.SELECTORS.FOTO);
+    const fileBtn = document.querySelector(FormConstants.SELECTORS.BTN_SELECCIONAR_ARCHIVO);
+    
+    console.log('🔍 ImageManager - Elementos:', { fileInput, fileBtn });
+    
+    if (fileInput && fileBtn) {
+        // 🆕 CONECTAR BOTÓN AL INPUT FILE
+        fileBtn.addEventListener('click', () => {
+            console.log('🖱️ Botón clickeado - Abriendo selector de archivos...');
+            fileInput.click(); // Esto abre el selector nativo
+        });
+        
+        // Manejar selección de archivos
+        fileInput.addEventListener('change', (e) => {
+            console.log('📁 Archivos seleccionados:', e.target.files);
+            this.handleFileSelection(e);
+        });
+        
+    } else {
+        console.error('❌ Elementos no encontrados:', {
+            fileInput: !!fileInput,
+            fileBtn: !!fileBtn
+        });
     }
+}
 
     handleFileSelection(e) {
         const files = e.target.files;

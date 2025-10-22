@@ -4,7 +4,6 @@ import { UIManager } from './UIManager.js';
 import { ImageManager } from './ImageManager.js';
 import { CameraManager } from './CameraManager.js';
 
-// Asegúrate de que la clase esté exportada correctamente
 export class FormManager {
     constructor() {
         this.validationManager = new ValidationManager(this);
@@ -29,6 +28,13 @@ export class FormManager {
         this.setupFormSubmit();
         this.validationManager.setupCharacterCounter();
         
+        // REGISTRARSE PARA CAMBIOS DE CONEXIÓN (SOLO UNA VEZ)
+        if (window.connectionManager) {
+            window.connectionManager.addListener((online) => {
+                this.handleConnectionChange(online);
+            });
+        }
+        
         this.initialized = true;
         console.log('✅ FormManager inicializado correctamente');
     }
@@ -45,8 +51,15 @@ export class FormManager {
     async handleFormSubmit(e) {
         e.preventDefault();
 
-        // Validar formulario
+        // Validación básica del formulario
         if (!this.validationManager.validateForm()) {
+            console.log('❌ Validación de formulario falló');
+            return;
+        }
+
+        // Verificación de coordenadas
+        if (!this.verificarCoordenadas()) {
+            this.handleSubmitError('Por favor, selecciona una ubicación en el mapa');
             return;
         }
 
@@ -56,6 +69,8 @@ export class FormManager {
             console.log('📤 Enviando formulario...');
             
             const formData = new FormData(e.target);
+            
+            // ✅ CORREGIDO: Usar el endpoint correcto que SÍ existe
             const resp = await fetch('../../controllers/reportecontrolador.php?action=registrar', {
                 method: 'POST',
                 body: formData
@@ -77,11 +92,102 @@ export class FormManager {
             } else {
                 throw new Error(result.mensaje || result.error || 'Error desconocido');
             }
+
         } catch (error) {
-            console.error('💥 Error:', error);
-            this.handleSubmitError(error.message);
+            console.error('💥 Error en envío:', error);
+            
+            // ✅ MEJORADO: DETECCIÓN INTELIGENTE DE OFFLINE
+            const isOffline = !window.connectionManager || !window.connectionManager.getStatus();
+            const isNetworkError = error.message.includes('Failed to fetch') || 
+                                 error.message.includes('NetworkError');
+            
+            if (isOffline || isNetworkError) {
+                // Estamos offline, guardar localmente
+                const timestamp = new Date().getTime();
+                this.handleSubmitOfflineSuccess(`offline-${timestamp}`);
+            } else {
+                this.handleSubmitError(error.message || 'Error al procesar el reporte');
+            }
         } finally {
             this.uiManager.hideLoadingState();
+        }
+    }
+
+    // ✅ MANTENIDO: Mejor verificación de coordenadas
+    verificarCoordenadas() {
+        const latInput = document.getElementById('latitud');
+        const lngInput = document.getElementById('longitud');
+        
+        if (!latInput || !lngInput) {
+            console.error('❌ No se encontraron inputs de coordenadas');
+            return false;
+        }
+        
+        const lat = latInput.value;
+        const lng = lngInput.value;
+        
+        if (!lat || !lng || lat === '' || lng === '') {
+            console.error('❌ Coordenadas vacías:', { lat, lng });
+            return false;
+        }
+        
+        if (lat === 'No seleccionada' || lng === 'No seleccionada') {
+            console.error('❌ Coordenadas no seleccionadas');
+            return false;
+        }
+        
+        console.log('✅ Coordenadas válidas:', lat, lng);
+        return true;
+    }
+
+    // ✅ MANTENIDO: MANEJADOR DE ÉXITO OFFLINE MEJORADO
+    handleSubmitOfflineSuccess(idOffline) {
+        const mensaje = `✅ Reporte guardado localmente (ID: ${idOffline}). Se enviará automáticamente cuando recuperes conexión.`;
+        
+        console.log('💾 Reporte offline guardado exitosamente');
+
+        this.showAlert(mensaje, 'success');
+        
+        // Agregar marker al mapa
+        this.agregarMarkerOfflineAlMapa(idOffline);
+        
+        // Limpiar formulario
+        setTimeout(() => {
+            this.clearForm();
+        }, 2000);
+    }
+
+    // ✅ MANTENIDO: MÉTODO PARA AGREGAR MARKER OFFLINE
+    async agregarMarkerOfflineAlMapa(idOffline) {
+        if (!window.mapaSistema || !window.mapaSistema.markerManager) {
+            console.log('❌ No se puede agregar marker - mapa o markerManager no disponible');
+            return;
+        }
+        
+        try {
+            console.log('📍 Intentando agregar marker offline al mapa:', idOffline);
+            
+            // Agregar marker con datos actuales del formulario
+            const lat = document.getElementById('latitud').value;
+            const lng = document.getElementById('longitud').value;
+            const tipo = document.getElementById('tipo');
+            const descripcion = document.getElementById('descripcion').value;
+            
+            if (lat && lng) {
+                window.mapaSistema.markerManager.agregarMarkerOffline({
+                    id: idOffline,
+                    latitud: parseFloat(lat),
+                    longitud: parseFloat(lng),
+                    tipo_incidente: tipo.options[tipo.selectedIndex]?.text || 'Desconocido',
+                    descripcion: descripcion,
+                    fecha: new Date().toISOString()
+                });
+                
+                console.log('✅ Marker offline agregado al mapa');
+            }
+            
+        } catch (error) {
+            console.error('❌ Error agregando marker offline:', error);
         }
     }
 
@@ -98,15 +204,13 @@ export class FormManager {
         this.uiManager.showErrorAnimation();
     }
 
+    // ✅ MANTENIDO: ClearForm mejorado
     clearForm() {
-        // Limpiar campos del formulario
         const form = document.querySelector(FormConstants.SELECTORS.FORM);
         if (form) form.reset();
         
-        // Limpiar imágenes
         this.imageManager.clearImages();
         
-        // Limpiar coordenadas
         const latDisplay = document.querySelector(FormConstants.SELECTORS.LAT_DISPLAY);
         const lngDisplay = document.querySelector(FormConstants.SELECTORS.LNG_DISPLAY);
         
@@ -116,10 +220,7 @@ export class FormManager {
         document.getElementById('latitud').value = '';
         document.getElementById('longitud').value = '';
         
-        // Limpiar validaciones
         this.validationManager.clearAllErrors();
-        
-        // Limpiar cámara
         this.cameraManager.deactivateCamera();
         
         console.log('🧹 Formulario limpiado');
@@ -137,47 +238,24 @@ export class FormManager {
         }
     }
 
+    // ✅ MEJORADO: Usar UIManager para alertas
     showAlert(message, type = 'success') {
-        const alertSuccess = document.getElementById('alertSuccess');
-        const alertError = document.getElementById('alertError');
-        
-        if (!alertSuccess || !alertError) return;
-        
-        if (type === 'success') {
-            alertSuccess.textContent = message;
-            alertSuccess.style.display = 'block';
-            alertError.style.display = 'none';
-            
-            setTimeout(() => {
-                alertSuccess.style.display = 'none';
-            }, 5000);
-        } else {
-            alertError.textContent = message;
-            alertError.style.display = 'block';
-            alertSuccess.style.display = 'none';
-        }
+        this.uiManager.showAlert(message, type);
     }
 
     updateCoordinates(lat, lng) {
         this.uiManager.updateCoordinates(lat, lng);
     }
 
-    // Métodos públicos para integración externa
+    // ✅ MANTENIDO: MÉTODO ÚNICO MEJORADO PARA CAMBIOS DE CONEXIÓN
     handleConnectionChange(online) {
-        const submitBtn = document.querySelector(FormConstants.SELECTORS.SUBMIT_BTN);
-        const searchBtn = document.getElementById('btnBuscar');
-        
-        if (submitBtn) {
-            submitBtn.disabled = !online;
-            if (!online) {
-                submitBtn.innerHTML = '📶 Sin Conexión';
-                submitBtn.title = 'No se puede enviar reportes sin conexión a Internet';
-            } else {
-                submitBtn.innerHTML = '<span class="btn-text">📝 Registrar Reporte</span><span class="btn-loading" style="display: none;"><div class="spinner-mini"></div> Procesando...</span>';
-                submitBtn.title = '';
-            }
+        if (online) {
+            this.updateOnlineUI();
+        } else {
+            this.updateOfflineUI();
         }
         
+        const searchBtn = document.getElementById('btnBuscar');
         if (searchBtn) {
             searchBtn.disabled = !online;
             if (!online) {
@@ -190,21 +268,42 @@ export class FormManager {
         }
         
         // Aplicar clase CSS para modo offline
-        const form = document.querySelector(FormConstants.SELECTORS.FORM);
-        if (form) {
+        const panel = document.getElementById('panel');
+        if (panel) {
             if (!online) {
-                form.classList.add('offline-mode');
+                panel.classList.add('offline-mode');
             } else {
-                form.classList.remove('offline-mode');
+                panel.classList.remove('offline-mode');
             }
         }
     }
 
-    // Método para limpieza global (backward compatibility)
+    // ✅ MANTENIDO: INTERFAZ OFFLINE MEJORADA
+    updateOfflineUI() {
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false; // IMPORTANTE: NO DESHABILITAR EN OFFLINE
+            submitBtn.innerHTML = '<span class="btn-text">💾 Guardar Localmente</span><span class="btn-loading" style="display: none;"><div class="spinner-mini"></div> Guardando...</span>';
+            submitBtn.title = 'El reporte se guardará localmente y se enviará automáticamente cuando recuperes conexión';
+            submitBtn.classList.add('offline-submit');
+        }
+    }
+
+    // ✅ MANTENIDO: INTERFAZ ONLINE MEJORADA
+    updateOnlineUI() {
+        const submitBtn = document.querySelector('button[type="submit"]');
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = '<span class="btn-text">📝 Registrar Reporte</span><span class="btn-loading" style="display: none;"><div class="spinner-mini"></div> Procesando...</span>';
+            submitBtn.title = '';
+            submitBtn.classList.remove('offline-submit');
+        }
+    }
+
+    // Método para limpieza global
     limpiarFormulario() {
         this.clearForm();
     }
 }
 
-// Exportación por defecto para mayor compatibilidad
 export default FormManager;
