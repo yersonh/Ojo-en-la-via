@@ -1,245 +1,268 @@
 * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: Arial, sans-serif;
-            height: 100vh;
-            overflow: hidden;
-        }
-        
-        /* Contenedor principal */
-        .app-container {
-            display: flex;
-            height: 100vh;
-            position: relative;
-        }
-        
-        /* Mapa */
-        #map {
-            flex: 1;
-            height: 100%;
-            z-index: 1;
-        }
-        
-        /*Panel de formulario */
-        #panel {
-            width: 400px;
-            background: white;
-            padding: 20px;
-            overflow-y: auto;
-            box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-            z-index: 2;
-        }
-        
-        #panel h2 {
-            margin-bottom: 20px;
-            color: #333;
-            font-size: 22px;
-        }
-        
-        /* Formulario */
-        #formReporte {
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        
-        label {
-            font-weight: bold;
-            color: #333;
-            margin-bottom: 5px;
-            display: block;
-        }
-        
-        select, textarea, input[type="text"], input[type="file"] {
-            width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-        }
-        
-        textarea {
-            resize: vertical;
-            min-height: 80px;
-        }
-        
-        .coordenadas {
-            background: #f5f5f5;
-            padding: 10px;
-            border-radius: 5px;
-            font-family: monospace;
-            font-size: 14px;
-        }
-        
-        .preview {
-            margin-top: 10px;
-            text-align: center;
-        }
-        
-        #previewImg {
-            max-width: 100%;
-            max-height: 200px;
-            border-radius: 5px;
-            border: 1px solid #ddd;
-        }
-        
-        /* Alertas */
-        .alert {
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-            display: none;
-        }
-        
-        .alert-success {
-            background: #d4edda;
-            color: #155724;
-            border: 1px solid #c3e6cb;
-        }
-        
-        .alert-error {
-            background: #f8d7da;
-            color: #721c24;
-            border: 1px solid #f5c6cb;
-        }
-        
-        /* Loading */
-        .loading {
-            display: none;
-            align-items: center;
-            justify-content: center;
-            gap: 10px;
-            padding: 15px;
-            background: #f8f9fa;
-            border-radius: 5px;
-            margin: 10px 0;
-        }
-        
-        .spinner {
-            width: 20px;
-            height: 20px;
-            border: 2px solid #ddd;
-            border-top: 2px solid #007bff;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Botones */
-        button {
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 14px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: bold;
-            transition: background 0.3s;
-        }
-        
-        button:hover {
-            background: #0056b3;
-        }
-        
-        /* Sección de comentarios */
-        .comentarios-section {
-            margin-top: 25px;
-            border-top: 2px solid #eee;
-            padding-top: 20px;
-        }
-        
-        .comentarios-section h3 {
-            margin-bottom: 15px;
-            color: #333;
-        }
-        
-        .comentarios-list {
-            max-height: 300px;
-            overflow-y: auto;
-            margin-bottom: 15px;
-            border: 1px solid #eee;
-            border-radius: 5px;
-            padding: 10px;
-        }
-        
-        .form-comentario {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        
-        /* Botón móvil para alternar panel */
-        .mobile-toggle {
-            display: none;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            z-index: 1000;
-            background: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 15px;
-            border-radius: 5px;
-            font-size: 14px;
-            cursor: pointer;
-        }
-        
-/* Media Queries para Responsive */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    background: #1a1a1a;
+}
+
+/* Contenedor principal MEJORADO */
+.app-container {
+    display: flex;
+    height: 100vh;
+    position: relative;
+    background: #1a1a1a;
+}
+
+/* Mapa MEJORADO */
+#map {
+    flex: 1;
+    height: 100%;
+    z-index: 1;
+    background: #1a1a1a;
+}
+
+/* Panel de formulario MEJORADO */
+#panel {
+    width: 400px;
+    background: #1a1a1a;
+    color: #ffffff;
+    padding: 20px;
+    overflow-y: auto;
+    box-shadow: -2px 0 10px rgba(0,0,0,0.3);
+    z-index: 2;
+    border-left: 1px solid #404040;
+}
+
+#panel h2 {
+    margin-bottom: 20px;
+    color: #ffffff;
+    font-size: 22px;
+    border-bottom: 2px solid #3b82f6;
+    padding-bottom: 10px;
+}
+
+/* Formulario base - CONSISTENTE con formulario.css */
+#formReporte {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+label {
+    font-weight: bold;
+    color: #ffffff;
+    margin-bottom: 5px;
+    display: block;
+}
+
+select, textarea, input[type="text"], input[type="file"] {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #404040;
+    border-radius: 5px;
+    font-size: 16px;
+    background: #2d2d2d;
+    color: #ffffff;
+}
+
+select:focus, textarea:focus, input[type="text"]:focus {
+    outline: none;
+    border-color: #3b82f6;
+    background: #3d3d3d;
+}
+
+textarea {
+    resize: vertical;
+    min-height: 80px;
+}
+
+.coordenadas {
+    background: #2d2d2d;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 14px;
+    color: #ffffff;
+    border: 1px solid #404040;
+}
+
+.preview {
+    margin-top: 10px;
+    text-align: center;
+}
+
+#previewImg {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 5px;
+    border: 1px solid #404040;
+}
+
+/* Alertas - ACTUALIZADAS para tema oscuro */
+.alert {
+    padding: 12px;
+    border-radius: 5px;
+    margin-bottom: 15px;
+    display: none;
+}
+
+.alert-success {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.alert-error {
+    background: rgba(239, 68, 68, 0.2);
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Loading - ACTUALIZADO para tema oscuro */
+.loading {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px;
+    background: #2d2d2d;
+    border-radius: 5px;
+    margin: 10px 0;
+    color: #ffffff;
+    border: 1px solid #404040;
+}
+
+.spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid #404040;
+    border-top: 2px solid #3b82f6;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Botones - ACTUALIZADOS para tema oscuro */
+button {
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 14px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s;
+}
+
+button:hover {
+    background: #2563eb;
+}
+
+/* Sección de comentarios - ACTUALIZADA para tema oscuro */
+.comentarios-section {
+    margin-top: 25px;
+    border-top: 2px solid #404040;
+    padding-top: 20px;
+}
+
+.comentarios-section h3 {
+    margin-bottom: 15px;
+    color: #ffffff;
+}
+
+.comentarios-list {
+    max-height: 300px;
+    overflow-y: auto;
+    margin-bottom: 15px;
+    border: 1px solid #404040;
+    border-radius: 5px;
+    padding: 10px;
+    background: #2d2d2d;
+}
+
+.form-comentario {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+/* Botón móvil para alternar panel - ACTUALIZADO */
+.mobile-toggle {
+    display: none;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    font-size: 14px;
+    cursor: pointer;
+}
+
+/* ========== MEDIA QUERIES MEJORADAS PARA MÓVIL ========== */
+
 @media (max-width: 768px) {
     .app-container {
         flex-direction: column;
+        height: 100vh;
+        background: #1a1a1a;
     }
     
     #map {
-        height: 50%; /* Reducir altura del mapa */
+        height: 60vh !important;
         width: 100%;
+        position: relative;
+        z-index: 1;
     }
     
     #panel {
-        width: 100%;
-        height: 50%; /* Aumentar altura del panel */
-        position: relative; /* Cambiar a relativo para que fluya */
-        bottom: auto;
-        left: auto;
-        transform: none;
-        transition: none;
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-        padding-top: 20px;
+        width: 100% !important;
+        height: 40vh !important;
+        position: relative !important;
+        bottom: auto !important;
+        left: auto !important;
+        transform: none !important;
+        transition: none !important;
+        border-top: 2px solid #404040;
+        border-left: none;
+        border-radius: 0;
+        padding: 15px;
         box-shadow: none;
-        border-top: 1px solid #ddd;
-    }
-    
-    #panel.active {
-        transform: none;
-        height: 50%;
+        overflow-y: auto;
+        z-index: 2;
     }
     
     .mobile-toggle {
-        display: none; /* Ocultar el botón de toggle */
+        display: none;
     }
     
     #panel h2 {
-        font-size: 20px;
+        font-size: 18px;
         margin-bottom: 15px;
     }
     
     select, textarea, input[type="text"], input[type="file"] {
         padding: 14px;
-        font-size: 16px; /* Previene zoom en iOS */
+        font-size: 16px;
     }
     
     button {
         padding: 16px;
+        font-size: 16px;
     }
     
     .comentarios-section {
@@ -248,52 +271,41 @@
     }
     
     .comentarios-list {
-        max-height: 150px;
+        max-height: 120px;
     }
-}
-
-/* Detectar cuando está en iframe y forzar diseño móvil */
-@media (max-width: 900px) {
-    .app-container {
+    
+    #formReporte {
+        gap: 12px;
+    }
+    
+    .campo-imagen {
+        padding: 15px;
+    }
+    
+    .opciones-imagen {
         flex-direction: column;
+        gap: 8px;
     }
     
-    #map {
-        height: 50%;
+    .btn-camara, .btn-archivo {
         width: 100%;
-    }
-    
-    #panel {
-        width: 100%;
-        height: 50%;
-        position: relative;
-        bottom: auto;
-        left: auto;
-        border-top: 1px solid #ddd;
-        box-shadow: none;
-    }
-    
-    .mobile-toggle {
-        display: none;
+        padding: 14px;
     }
 }
 
 @media (max-width: 480px) {
     #map {
-        height: 40%;
+        height: 55vh !important;
     }
     
     #panel {
-        height: 60%;
-        padding: 15px;
-    }
-    
-    #panel.active {
-        height: 60%;
+        height: 45vh !important;
+        padding: 12px;
     }
     
     #panel h2 {
-        font-size: 18px;
+        font-size: 16px;
+        margin-bottom: 12px;
     }
     
     .coordenadas {
@@ -302,29 +314,111 @@
     }
     
     .comentarios-list {
-        max-height: 120px;
+        max-height: 100px;
+        padding: 8px;
+    }
+    
+    #formReporte {
+        gap: 10px;
+    }
+    
+    label {
+        font-size: 14px;
+        margin-bottom: 4px;
+    }
+    
+    select, textarea, input[type="text"], input[type="file"] {
+        padding: 12px;
+        font-size: 15px;
+    }
+    
+    button {
+        padding: 14px;
+        font-size: 15px;
     }
 }
 
 @media (max-width: 360px) {
     #panel {
-        padding: 12px;
+        padding: 10px;
     }
-            
-            #panel h2 {
-                font-size: 16px;
-            }
-            
-            select, textarea, input[type="text"], input[type="file"] {
-                padding: 12px;
-            }
-            
-            button {
-                padding: 14px;
-                font-size: 14px;
-            }
-        }
-        /* Estilos para la funcionalidad de cámara */
+    
+    #panel h2 {
+        font-size: 15px;
+    }
+    
+    select, textarea, input[type="text"], input[type="file"] {
+        padding: 10px;
+    }
+    
+    button {
+        padding: 12px;
+        font-size: 14px;
+    }
+    
+    .comentarios-list {
+        max-height: 80px;
+    }
+}
+
+/* Estilos para cuando está en iframe o embebido */
+@media (max-width: 900px) {
+    .app-container {
+        flex-direction: column;
+    }
+    
+    #map {
+        height: 60vh;
+        width: 100%;
+    }
+    
+    #panel {
+        width: 100%;
+        height: 40vh;
+        position: relative;
+        border-top: 2px solid #404040;
+    }
+    
+    .mobile-toggle {
+        display: none;
+    }
+}
+
+/* Asegurar que los controles del mapa sean accesibles en móvil */
+@media (max-width: 768px) {
+    .leaflet-control-zoom {
+        margin-bottom: 20px !important;
+    }
+    
+    .leaflet-top.leaflet-left {
+        top: 10px !important;
+    }
+    
+    .leaflet-bottom.leaflet-left {
+        bottom: calc(40vh + 10px) !important;
+    }
+}
+
+/* Scrollbar personalizado para tema oscuro */
+#panel::-webkit-scrollbar {
+    width: 6px;
+}
+
+#panel::-webkit-scrollbar-track {
+    background: #2d2d2d;
+    border-radius: 3px;
+}
+
+#panel::-webkit-scrollbar-thumb {
+    background: #404040;
+    border-radius: 3px;
+}
+
+#panel::-webkit-scrollbar-thumb:hover {
+    background: #3b82f6;
+}
+
+/* ESTILOS PARA LA FUNCIONALIDAD DE CÁMARA */
 .campo-imagen {
     margin-bottom: 15px;
 }
@@ -340,9 +434,9 @@
 .btn-camara, .btn-archivo {
     flex: 1;
     padding: 12px;
-    border: 2px dashed #007bff;
-    background: #f8f9fa;
-    color: #007bff;
+    border: 2px dashed #3b82f6;
+    background: #2d2d2d;
+    color: #3b82f6;
     border-radius: 8px;
     cursor: pointer;
     font-size: 14px;
@@ -351,7 +445,7 @@
 }
 
 .btn-camara:hover, .btn-archivo:hover {
-    background: #007bff;
+    background: #3b82f6;
     color: white;
 }
 
@@ -398,9 +492,9 @@
     text-align: center;
     padding: 20px;
     color: #666;
-    background: #f8f9fa;
+    background: #2d2d2d;
     border-radius: 8px;
-    border: 2px dashed #ddd;
+    border: 2px dashed #404040;
     margin-top: 10px;
 }
 
@@ -438,9 +532,8 @@
         font-size: 16px;
     }
 }
-/* ESTILOS MEJORADOS PARA EL MAPA */
 
-/* Contenedor del mapa mejorado */
+/* ESTILOS MEJORADOS PARA EL MAPA */
 #map {
     flex: 1;
     height: 100%;
@@ -450,8 +543,8 @@
 
 /* Controles del mapa mejorados */
 .leaflet-control-zoom a {
-    background: white !important;
-    color: #333 !important;
+    background: #2d2d2d !important;
+    color: #ffffff !important;
     border: none !important;
     box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
     border-radius: 6px !important;
@@ -461,15 +554,15 @@
 }
 
 .leaflet-control-zoom a:hover {
-    background: #f8f9fa !important;
+    background: #3d3d3d !important;
     transform: scale(1.05);
 }
 
 .leaflet-control-scale-line {
-    background: rgba(255, 255, 255, 0.95) !important;
+    background: rgba(45, 45, 45, 0.95) !important;
     border: none !important;
     border-radius: 6px !important;
-    color: #333 !important;
+    color: #ffffff !important;
     font-size: 11px !important;
     font-weight: bold;
     padding: 4px 8px !important;
@@ -477,32 +570,33 @@
 
 /* Popups mejorados */
 .leaflet-popup-content-wrapper {
-    background: white !important;
+    background: #2d2d2d !important;
     border-radius: 12px !important;
     box-shadow: 0 10px 40px rgba(0,0,0,0.2) !important;
     border: none !important;
     overflow: hidden;
+    color: #ffffff !important;
 }
 
 .leaflet-popup-tip {
-    background: white !important;
+    background: #2d2d2d !important;
     box-shadow: none !important;
 }
 
 .leaflet-popup-close-button {
-    background: rgba(0,0,0,0.1) !important;
+    background: rgba(255,255,255,0.1) !important;
     border-radius: 50% !important;
     width: 24px !important;
     height: 24px !important;
     line-height: 22px !important;
     font-size: 16px !important;
-    color: #666 !important;
+    color: #ffffff !important;
     transition: all 0.3s ease !important;
 }
 
 .leaflet-popup-close-button:hover {
-    background: rgba(0,0,0,0.2) !important;
-    color: #333 !important;
+    background: rgba(255,255,255,0.2) !important;
+    color: #ffffff !important;
 }
 
 /* Clusters de marcadores mejorados */
@@ -546,15 +640,15 @@
 
 /* Control de geolocalización mejorado */
 .leaflet-control-locate a {
-    background: white !important;
-    color: #333 !important;
+    background: #2d2d2d !important;
+    color: #ffffff !important;
     border: none !important;
     box-shadow: 0 2px 10px rgba(0,0,0,0.15) !important;
     border-radius: 6px !important;
 }
 
 .leaflet-control-locate a:hover {
-    background: #f8f9fa !important;
+    background: #3d3d3d !important;
 }
 
 /* Responsive mejorado */
@@ -573,76 +667,7 @@
     }
 }
 
-/* Estilos para el modo oscuro del mapa (opcional) */
-@media (prefers-color-scheme: dark) {
-    .leaflet-control-zoom a {
-        background: #2d3748 !important;
-        color: #e2e8f0 !important;
-    }
-    
-    .leaflet-control-scale-line {
-        background: rgba(45, 55, 72, 0.9) !important;
-        color: #e2e8f0 !important;
-    }
-}
-/* ANIMACIONES PARA EL CONTROL DE GEOLOCALIZACIÓN */
-
-/* Spinner de carga */
-@keyframes spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
-}
-
-/* Anillo de pulso para el marcador de ubicación */
-@keyframes pulse-ring {
-    0% {
-        transform: translate(-50%, -50%) scale(0.8);
-        opacity: 1;
-    }
-    80%, 100% {
-        transform: translate(-50%, -50%) scale(1.4);
-        opacity: 0;
-    }
-}
-
-/* Estilos para el marcador estilo Google Maps */
-.google-maps-marker {
-    background: transparent !important;
-    border: none !important;
-}
-
-/* Efectos para el control de ubicación */
-.leaflet-control-custom a {
-    transition: all 0.3s ease !important;
-}
-
-.leaflet-control-custom a:hover {
-    background: #f8f9fa !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
-}
-
-/* Círculo de precisión mejorado */
-.leaflet-interactive {
-    animation: fadeIn 0.5s ease-in;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Popup estilo Google Maps */
-.leaflet-popup-content-wrapper {
-    border-radius: 8px !important;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
-    overflow: hidden;
-}
-
-.leaflet-popup-tip {
-    background: #4285f4 !important;
-}
-/* ===== ESTILOS PARA EL BUSCADOR DE DIRECCIONES ===== */
-
+/* ESTILOS PARA EL BUSCADOR DE DIRECCIONES */
 .search-container {
     margin-bottom: 20px;
     position: relative;
@@ -657,20 +682,22 @@
 #searchInput {
     flex: 1;
     padding: 12px;
-    border: 2px solid #ddd;
+    border: 2px solid #404040;
     border-radius: 8px;
     font-size: 14px;
     transition: border-color 0.3s;
     font-family: Arial, sans-serif;
+    background: #2d2d2d;
+    color: #ffffff;
 }
 
 #searchInput:focus {
     outline: none;
-    border-color: #4264fb;
+    border-color: #3b82f6;
 }
 
 .btn-buscar {
-    background: #4264fb;
+    background: #3b82f6;
     color: white;
     border: none;
     padding: 12px 20px;
@@ -683,25 +710,25 @@
 }
 
 .btn-buscar:hover {
-    background: #3151e0;
+    background: #2563eb;
     transform: translateY(-1px);
 }
 
 .btn-buscar:disabled {
-    background: #ccc;
+    background: #666;
     cursor: not-allowed;
     transform: none;
 }
 
 .search-results {
-    background: white;
+    background: #2d2d2d;
     border-radius: 8px;
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     max-height: 300px;
     overflow-y: auto;
     display: none;
     z-index: 1000;
-    border: 1px solid #eee;
+    border: 1px solid #404040;
     position: absolute;
     width: 100%;
     top: 100%;
@@ -711,13 +738,14 @@
 
 .search-result-item {
     padding: 12px 15px;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid #404040;
     cursor: pointer;
     transition: background 0.2s;
+    color: #ffffff;
 }
 
 .search-result-item:hover {
-    background: #f5f7ff;
+    background: #3d3d3d;
 }
 
 .search-result-item:last-child {
@@ -726,20 +754,20 @@
 
 .result-name {
     font-weight: bold;
-    color: #333;
+    color: #ffffff;
     font-size: 14px;
     margin-bottom: 4px;
 }
 
 .result-address {
     font-size: 12px;
-    color: #666;
+    color: #a0a0a0;
     line-height: 1.4;
 }
 
 .relevance-badge {
     float: right;
-    background: #4264fb;
+    background: #3b82f6;
     color: white;
     padding: 2px 8px;
     border-radius: 10px;
@@ -750,9 +778,9 @@
 .no-results {
     padding: 20px;
     text-align: center;
-    color: #666;
+    color: #a0a0a0;
     font-style: italic;
-    background: #f8f9fa;
+    background: #2d2d2d;
 }
 
 /* Marcador de búsqueda especial */
@@ -766,8 +794,8 @@
     display: inline-block;
     width: 16px;
     height: 16px;
-    border: 2px solid #f3f3f3;
-    border-top: 2px solid #4264fb;
+    border: 2px solid #404040;
+    border-top: 2px solid #3b82f6;
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -789,8 +817,7 @@
     animation: slideDown 0.3s ease;
 }
 
-/* ===== RESPONSIVE PARA EL BUSCADOR ===== */
-
+/* RESPONSIVE PARA EL BUSCADOR */
 @media (max-width: 768px) {
     .search-box {
         flex-direction: column;
@@ -811,10 +838,6 @@
         max-height: 50vh;
         border-radius: 15px 15px 0 0;
         z-index: 3000;
-    }
-    
-    #panel.active .search-results {
-        bottom: calc(70vh - 50px);
     }
 }
 
@@ -841,72 +864,31 @@
     }
 }
 
-/* ===== MEJORAS PARA LOS MARCADORES DEL BUSCADOR ===== */
-
+/* MEJORAS PARA LOS MARCADORES DEL BUSCADOR */
 .marker-selected {
     animation: pulse 1.5s infinite;
 }
 
 @keyframes pulse {
     0% {
-        box-shadow: 0 0 0 0 rgba(66, 100, 251, 0.7);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.7);
     }
     70% {
-        box-shadow: 0 0 0 15px rgba(66, 100, 251, 0);
+        box-shadow: 0 0 0 15px rgba(59, 130, 246, 0);
     }
     100% {
-        box-shadow: 0 0 0 0 rgba(66, 100, 251, 0);
+        box-shadow: 0 0 0 0 rgba(59, 130, 246, 0);
     }
 }
 
 /* Efecto de éxito en búsqueda */
 .search-success {
-    background: #d4edda !important;
-    border-color: #c3e6cb !important;
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: rgba(16, 185, 129, 0.3) !important;
     transition: all 0.5s ease;
 }
 
-/* Contraste mejorado para accesibilidad */
-@media (prefers-contrast: high) {
-    .search-result-item:hover {
-        background: #e0e0e0;
-        border: 2px solid #4264fb;
-    }
-    
-    #searchInput {
-        border-width: 2px;
-    }
-}
-/* ESTILOS PARA LA VISUALIZACIÓN DE IMÁGENES EN REPORTES */
-
-/* Overlay de imagen grande */
-.image-overlay {
-    animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-}
-
-/* Efectos hover para imágenes en popup */
-.leaflet-popup-content img {
-    transition: all 0.3s ease;
-}
-
-.leaflet-popup-content img:hover {
-    transform: scale(1.02);
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-/* Indicador de que hay imagen */
-.reporte-con-imagen::after {
-    content: ' 📸';
-    font-size: 12px;
-}
 /* ESTILOS PARA MÚLTIPLES IMÁGENES EN FORMULARIO */
-
-/* Contenedor de previsualización múltiple */
 .preview {
     display: flex;
     flex-wrap: wrap;
@@ -935,7 +917,7 @@
 /* Efectos para el área de imagen cuando hay múltiples archivos */
 .campo-imagen.con-archivos {
     border-color: #10b981;
-    background: #f0fdf4;
+    background: rgba(16, 185, 129, 0.1);
 }
 
 /* Contador de imágenes */
@@ -955,18 +937,19 @@
     justify-content: center;
     z-index: 5;
 }
+
 /* Posición específica para móviles */
 @media (max-width: 768px) {
     .geolocation-btn {
         z-index: 1001 !important;
-        margin-bottom: 120px !important; /* Espacio extra para el formulario */
+        margin-bottom: 120px !important;
     }
     
-    /* Cuando el formulario está activo, mover el botón más arriba */
     #panel.active ~ .leaflet-control-container .geolocation-btn {
         margin-bottom: 300px !important;
     }
 }
+
 /* Estilos para mejorar visualización de imágenes */
 .galeria-imagen {
     max-width: 100%;
@@ -997,7 +980,7 @@
 
 /* Loading para imágenes grandes */
 .imagen-cargando {
-    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background: linear-gradient(90deg, #2d2d2d 25%, #3d3d3d 50%, #2d2d2d 75%);
     background-size: 200% 100%;
     animation: loading 1.5s infinite;
 }
@@ -1005,4 +988,85 @@
 @keyframes loading {
     0% { background-position: 200% 0; }
     100% { background-position: -200% 0; }
+}
+
+/* ANIMACIONES PARA EL CONTROL DE GEOLOCALIZACIÓN */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Anillo de pulso para el marcador de ubicación */
+@keyframes pulse-ring {
+    0% {
+        transform: translate(-50%, -50%) scale(0.8);
+        opacity: 1;
+    }
+    80%, 100% {
+        transform: translate(-50%, -50%) scale(1.4);
+        opacity: 0;
+    }
+}
+
+/* Estilos para el marcador estilo Google Maps */
+.google-maps-marker {
+    background: transparent !important;
+    border: none !important;
+}
+
+/* Efectos para el control de ubicación */
+.leaflet-control-custom a {
+    transition: all 0.3s ease !important;
+}
+
+.leaflet-control-custom a:hover {
+    background: #3d3d3d !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.4) !important;
+}
+
+/* Círculo de precisión mejorado */
+.leaflet-interactive {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Popup estilo Google Maps */
+.leaflet-popup-content-wrapper {
+    border-radius: 8px !important;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2) !important;
+    overflow: hidden;
+}
+
+.leaflet-popup-tip {
+    background: #3b82f6 !important;
+}
+
+/* ESTILOS PARA LA VISUALIZACIÓN DE IMÁGENES EN REPORTES */
+.image-overlay {
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Efectos hover para imágenes en popup */
+.leaflet-popup-content img {
+    transition: all 0.3s ease;
+}
+
+.leaflet-popup-content img:hover {
+    transform: scale(1.02);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
+
+/* Indicador de que hay imagen */
+.reporte-con-imagen::after {
+    content: ' 📸';
+    font-size: 12px;
 }
