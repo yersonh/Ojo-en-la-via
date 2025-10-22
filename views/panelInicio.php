@@ -710,8 +710,8 @@ if (!isset($_SESSION['usuario_id'])) {
     </script>
 
     <script src="components/panel.js"></script>
-    <script src="components/mapa.js"></script>
-    <script src="components/formulario-reporte.js"></script>
+    <script type="module" src="components/mapa/index.js"></script>
+    <script type="module" src="components/formulario/index.js"></script>
     <script src="components/comentarios.js"></script>
 </body>
 </html>

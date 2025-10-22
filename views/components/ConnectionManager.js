@@ -1,4 +1,4 @@
-// ConnectionManager - VERSIÓN QUE DETECTA WIFI REAL
+// ConnectionManager - VERSIÓN OPTIMIZADA PARA RAILWAY
 if (window.connectionManager && typeof window.connectionManager === 'object') {
     console.log('✅ ConnectionManager ya está inicializado');
 } else {
@@ -16,7 +16,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
         }
 
         init() {
-            // 🆕 EVENTOS PRINCIPALES - Confiar más en el navegador
+            // EVENTOS PRINCIPALES - Confiar más en el navegador
             window.addEventListener('online', () => {
                 console.log('📡 EVENTO ONLINE del navegador');
                 this.handleBrowserOnline();
@@ -27,8 +27,11 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                 this.setOnlineState(false);
             });
 
-            // 🆕 Verificar cada 3 segundos (más frecuente)
-            setInterval(() => this.checkConnection(), 3000);
+            // Verificar cada 5 segundos (menos frecuente para mejor performance)
+            setInterval(() => this.checkConnection(), 5000);
+            
+            // Verificación inicial
+            setTimeout(() => this.checkConnection(), 1000);
         }
 
         handleBrowserOnline() {
@@ -45,7 +48,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
             try {
                 console.log('🔍 Verificando conexión a internet...');
                 
-                // 🆕 ESTRATEGIA MEJORADA: Verificar si tenemos internet real
+                // ESTRATEGIA MEJORADA: Usar nuestro propio health-check
                 const hasRealInternet = await this.checkRealInternet();
                 
                 if (hasRealInternet) {
@@ -55,7 +58,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                         this.setOnlineState(true);
                     }
                 } else {
-                    // 🆕 Si no hay internet real, cambiar a offline inmediatamente
+                    // Si no hay internet real, cambiar a offline inmediatamente
                     if (this.isOnline) {
                         console.log('🔴 SIN INTERNET - Cambiando a OFFLINE');
                         this.setOnlineState(false);
@@ -64,7 +67,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                 
             } catch (error) {
                 console.log('🔍 Error en verificación:', error);
-                // 🆕 Si hay error, asumir que no hay internet
+                // Si hay error, asumir que no hay internet
                 if (this.isOnline) {
                     console.log('🔴 ERROR - Cambiando a OFFLINE');
                     this.setOnlineState(false);
@@ -75,7 +78,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
         }
 
         async checkRealInternet() {
-            // VERIFICAR INTERNET REAL, NO SOLO CONEXIÓN LOCAL
+            // VERIFICAR INTERNET USANDO NUESTRO PROPIO HEALTH-CHECK
             
             // 1. Primero verificar si el navegador dice que está offline
             if (!navigator.onLine) {
@@ -83,13 +86,13 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                 return false;
             }
             
-            // 2. Intentar conectar a un recurso externo confiable
+            // 2. Intentar conectar a nuestro propio health-check endpoint
             try {
                 const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 4000);
+                const timeoutId = setTimeout(() => controller.abort(), 3000);
                 
-                // 🆕 Usar un recurso que solo funcione con internet real
-                const response = await fetch('https://httpbin.org/status/200', {
+                // 🆕 USAR NUESTRO PROPIO ENDPOINT - Sin problemas de CORS
+                const response = await fetch('/api/health-check.php', {
                     method: 'HEAD',
                     cache: 'no-cache',
                     signal: controller.signal
@@ -98,17 +101,17 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                 clearTimeout(timeoutId);
                 
                 if (response.ok) {
-                    console.log('✅ Conexión a internet confirmada');
+                    console.log('✅ Health-check local exitoso');
                     return true;
                 } else {
-                    console.log('❌ Respuesta no OK de internet');
+                    console.log('❌ Health-check local falló');
                     return false;
                 }
                 
             } catch (error) {
-                console.log('❌ No se pudo conectar a internet:', error.message);
+                console.log('❌ No se pudo conectar al health-check:', error.message);
                 
-                // FALLBACK: Intentar con Google (pero sin bloquear)
+                // FALLBACK: Intentar con Google (solo como último recurso)
                 try {
                     const fallbackResponse = await fetch('https://www.google.com/favicon.ico?t=' + Date.now(), {
                         method: 'HEAD',
@@ -118,7 +121,7 @@ if (window.connectionManager && typeof window.connectionManager === 'object') {
                     console.log('✅ Fallback a Google exitoso');
                     return true;
                 } catch (fallbackError) {
-                    console.log('❌ Fallback también falló');
+                    console.log('❌ Fallback también falló - Sin conexión real');
                     return false;
                 }
             }

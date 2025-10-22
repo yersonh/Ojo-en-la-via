@@ -154,7 +154,7 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
     
     <!-- Nuestros módulos JavaScript -->
-    <script src="components/offline-manager.js"></script>
+<script src="components/offline-manager.js"></script>
 <script src="components/background-sync-manager.js"></script>
 
 <script type="module">
