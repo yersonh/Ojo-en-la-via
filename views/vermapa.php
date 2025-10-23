@@ -213,6 +213,79 @@ $tipos = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
 </script>
 
+<!-- 🔧 SOLUCIÓN MÍNIMA PARA IMÁGENES HTTPS SOLO EN PRODUCCIÓN -->
+<script>
+// SOLO corregir imágenes en producción (Railway)
+function esProduccion() {
+    return window.location.hostname.includes('railway.app') || 
+           window.location.hostname.includes('ojo-en-la-via');
+}
+
+function corregirImagenesSoloProduccion() {
+    // Solo ejecutar en producción
+    if (!esProduccion()) {
+        console.log('🔧 Modo desarrollo: imágenes sin cambios');
+        return;
+    }
+    
+    console.log('🔧 Corrigiendo imágenes a HTTPS en producción...');
+    
+    // Corregir imágenes existentes
+    document.querySelectorAll('img').forEach(img => {
+        const srcOriginal = img.src;
+        if (srcOriginal.startsWith('http://')) {
+            img.src = srcOriginal.replace('http://', 'https://');
+            console.log('✅ Imagen corregida en producción:', srcOriginal, '→', img.src);
+        }
+    });
+    
+    // Observar cambios futuros solo en producción
+    if (esProduccion()) {
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    if (node.nodeType === 1) {
+                        if (node.tagName === 'IMG' && node.src.startsWith('http://')) {
+                            node.src = node.src.replace('http://', 'https://');
+                        } else if (node.querySelectorAll) {
+                            node.querySelectorAll('img').forEach(img => {
+                                if (img.src.startsWith('http://')) {
+                                    img.src = img.src.replace('http://', 'https://');
+                                }
+                            });
+                        }
+                    }
+                });
+            });
+        });
+        
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true
+        });
+    }
+}
+
+// Inicializar cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Esperar a que Leaflet se inicialice
+    setTimeout(() => {
+        corregirImagenesSoloProduccion();
+    }, 1000);
+});
+
+// También corregir cuando se cargan reportes en producción
+if (window.mapaSistema && esProduccion()) {
+    const originalRecargarReportes = window.mapaSistema.recargarReportes;
+    if (originalRecargarReportes) {
+        window.mapaSistema.recargarReportes = async function() {
+            await originalRecargarReportes.call(this);
+            setTimeout(corregirImagenesSoloProduccion, 500);
+        };
+    }
+}
+</script>
+
 <!-- 🚀 SISTEMA DE ACTUALIZACIÓN DEL SERVICE WORKER -->
 <script>
 class SWManager {
@@ -335,6 +408,5 @@ document.addEventListener('DOMContentLoaded', () => {
     SWManager.init();
 });
 </script>
-
 </body>
 </html>
