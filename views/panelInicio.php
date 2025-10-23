@@ -4,6 +4,13 @@ if (!isset($_SESSION['usuario_id'])) {
     header('Location: ../index.php');
     exit();
 }
+
+// Determinar la URL base para el iframe
+$baseUrl = 'http://' . $_SERVER['HTTP_HOST'];
+if ($_SERVER['HTTP_HOST'] === 'localhost:8080') {
+    $baseUrl = 'http://localhost:8080';
+}
+$mapUrl = $baseUrl . '/views/vermapa.php';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -588,10 +595,10 @@ if (!isset($_SESSION['usuario_id'])) {
             <!-- Mapa -->
             <div id="mapView" style="display:none;">
                 <div class="map-container">
-                    <iframe src="vermapa.php" title="Mapa de reportes"></iframe>
+                    <iframe src="<?php echo $mapUrl; ?>" title="Mapa de reportes"></iframe>
                 </div>
                 <div style="text-align: center; margin-top: 16px;">
-                    <button class="btn btn-primary" onclick="window.open('vermapa.php', '_blank')">
+                    <button class="btn btn-primary" onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
                         <i class="fas fa-expand"></i> Abrir mapa en pantalla completa
                     </button>
                 </div>
@@ -707,6 +714,9 @@ if (!isset($_SESSION['usuario_id'])) {
 
         // Mejorar la experiencia en móviles
         document.addEventListener('touchstart', function() {}, { passive: true });
+
+        // Variable global con la URL del mapa
+        const mapUrl = '<?php echo $mapUrl; ?>';
     </script>
 
     <script src="components/panel.js"></script>
