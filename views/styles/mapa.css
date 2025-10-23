@@ -1,5 +1,5 @@
 * {
-    margin: 0;
+    @media (max-width: 768px) {argin: 0;
     padding: 0;
     box-sizing: border-box;
 }
@@ -745,5 +745,34 @@ button:hover {
     
     .result-address {
         font-size: 13px;
+    }
+}
+}
+/* ========== AJUSTE PARA BOTÓN DE GEOLOCALIZACIÓN INFERIOR DERECHO ========== */
+@media (max-width: 768px) {
+    .leaflet-bottom.leaflet-right {
+        bottom: 20px !important; /* 🆕 Subir el botón desde el borde inferior */
+    }
+    
+    .leaflet-control-locate {
+        margin-bottom: 0 !important;
+    }
+}
+
+/* Para cuando el formulario está abierto */
+@media (max-width: 768px) {
+    #panel.active ~ .leaflet-container .leaflet-bottom.leaflet-right {
+        bottom: calc(70vh + 20px) !important; /* 🆕 Subir más cuando el formulario está abierto */
+    }
+}
+
+/* Ajuste adicional para pantallas muy pequeñas */
+@media (max-width: 480px) {
+    .leaflet-bottom.leaflet-right {
+        bottom: 15px !important;
+    }
+    
+    #panel.active ~ .leaflet-container .leaflet-bottom.leaflet-right {
+        bottom: calc(80vh + 15px) !important;
     }
 }
