@@ -12,6 +12,13 @@ require_once __DIR__ . '/../controllers/admin_controlador.php';
 $database = new Database();
 $adminControlador = new AdminControlador($database);
 
+// Obtener ID de usuario actual para notificaciones
+$idUsuarioActual = $_SESSION['usuario_id'];
+
+// Obtener notificaciones del usuario actual
+$notificacionesNoLeidas = $adminControlador->contarNotificacionesNoLeidas($idUsuarioActual);
+$notificaciones = $adminControlador->obtenerNotificacionesNoLeidas($idUsuarioActual, 5);
+
 // Procesar acciones del administrador
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     switch ($_POST['action']) {
@@ -31,6 +38,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
             if (isset($_POST['id_usuario'], $_POST['nuevo_estado'])) {
                 $adminControlador->cambiarEstadoUsuario($_POST['id_usuario'], $_POST['nuevo_estado']);
             }
+            break;
+            
+        case 'enviar_alerta_autoridad':
+            if (isset($_POST['id_reporte'], $_POST['id_autoridad'])) {
+                $emailPersonalizado = $_POST['email_personalizado'] ?? null;
+                $adminControlador->enviarAlertaAutoridad($_POST['id_reporte'], $_POST['id_autoridad'], $emailPersonalizado);
+            }
+            break;
+
+        case 'marcar_notificacion_leida':
+            if (isset($_POST['id_notificacion'])) {
+                $adminControlador->marcarNotificacionLeida($_POST['id_notificacion'], $idUsuarioActual);
+                header('Content-Type: application/json');
+                echo json_encode(['success' => true]);
+                exit();
+            }
+            break;
+
+        case 'marcar_todas_leidas':
+            $adminControlador->marcarTodasLeidas($idUsuarioActual);
+            header('Content-Type: application/json');
+            echo json_encode(['success' => true]);
+            exit();
             break;
     }
     
@@ -91,19 +121,20 @@ $usuarios = $adminControlador->obtenerUsuarios();
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
     <script src="components/admin-analytics.js"></script>
-    
     <script src="components/admin.js"></script>
     <script src="components/admin-configuracion.js"></script>
+    <script src="components/admin-notificaciones.js"></script>
     
-    
-    <!-- REMOVER este script que causa el error -->
-    <!-- 
+    <!-- Modal de Alertas -->
+    <?php include 'components/admin-alertas-modal.php'; ?>
+
     <script>
     <?php if (isset($reportes)): ?>
-        // Este código ya no es necesario - se maneja en admin-map.js
+        
     <?php endif; ?>
     </script>
-    -->
+    
 </body>
 </html>

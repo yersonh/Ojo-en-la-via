@@ -1,52 +1,240 @@
 <?php
+// controllers/notificacion_sistema_controlador.php
 header('Content-Type: application/json; charset=utf-8');
-require_once _DIR_ . '/../config/database.php';
+require_once __DIR__ . '/../config/database.php';
 
 $action = $_GET['action'] ?? '';
-session_start();
-if (!isset($_SESSION['usuario_id'])) {
-    echo json_encode(['error' => 'No autenticado']);
-    exit();
-}
-
-$user = $_SESSION['usuario_id'];
 
 try {
     $database = new Database();
     $db = $database->conectar();
 
     switch ($action) {
-        case 'listar':
-            $q = "SELECT n.*, p.nombres AS origen_nombres, p.apellidos AS origen_apellidos FROM notificacion n LEFT JOIN usuario u ON n.id_usuario_origen = u.id_usuario LEFT JOIN persona p ON u.id_persona = p.id_persona WHERE n.id_usuario_destino = :u ORDER BY n.fecha DESC";
-            $s = $db->prepare($q);
-            $s->execute([':u' => $user]);
-            $rows = $s->fetchAll(PDO::FETCH_ASSOC);
-            echo json_encode($rows);
+        // 🆕 NOTIFICAR A TODOS LOS ADMINS SOBRE NUEVO REPORTE
+        case 'notificar_nuevo_reporte':
+            $id_reporte = $_POST['id_reporte'] ?? '';
+            
+            if (!$id_reporte) { 
+                echo json_encode(['success' => false, 'error' => 'ID de reporte requerido']); 
+                exit(); 
+            }
+            
+            // Validar que el ID sea numérico
+            if (!is_numeric($id_reporte)) {
+                echo json_encode(['success' => false, 'error' => 'ID de reporte inválido']);
+                exit();
+            }
+            
+            // Obtener información del reporte
+            $sqlReporte = "SELECT r.descripcion, 
+                    ti.nombre AS tipo_incidente, 
+                    r.id_usuario,
+                    CONCAT(p.nombres, ' ', p.apellidos) AS nombre_usuario
+                FROM reporte r
+                INNER JOIN tipo_incidente ti ON r.id_tipo_incidente = ti.id_tipo_incidente
+                INNER JOIN usuario u ON r.id_usuario = u.id_usuario
+                INNER JOIN persona p ON u.id_persona = p.id_persona
+                WHERE r.id_reporte = :id_reporte";
+            $stmtReporte = $db->prepare($sqlReporte);
+            $stmtReporte->execute([':id_reporte' => $id_reporte]);
+            $reporte = $stmtReporte->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$reporte) {
+                echo json_encode(['success' => false, 'error' => 'Reporte no encontrado']);
+                exit();
+            }
+            
+            // Obtener todos los administradores activos
+            $sqlAdmins = "SELECT id_usuario FROM usuario WHERE id_rol = 1 AND id_estado = 1";
+            $stmtAdmins = $db->prepare($sqlAdmins);
+            $stmtAdmins->execute();
+            $admins = $stmtAdmins->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($admins)) {
+                echo json_encode(['success' => true, 'mensaje' => 'No hay administradores activos para notificar', 'total_notificaciones' => 0]);
+                exit();
+            }
+            
+            $notificaciones_creadas = 0;
+            $errors = [];
+            
+            foreach ($admins as $admin) {
+                $mensaje = "🚨 Nuevo reporte #{$id_reporte}: {$reporte['tipo_incidente']} - " . 
+                        substr($reporte['descripcion'], 0, 100) . "...";
+                
+                $sqlInsert = "INSERT INTO notificacion 
+                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje, fecha_creacion) 
+                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje, NOW())";
+                
+                try {
+                    $stmtInsert = $db->prepare($sqlInsert);
+                    $stmtInsert->execute([
+                        ':id_destino' => $admin['id_usuario'],
+                        ':id_origen' => $reporte['id_usuario'],
+                        ':id_reporte' => $id_reporte,
+                        ':mensaje' => $mensaje
+                    ]);
+                    
+                    $notificaciones_creadas++;
+                    
+                } catch (Exception $e) {
+                    $errors[] = "Error notificando admin {$admin['id_usuario']}: " . $e->getMessage();
+                }
+            }
+            
+            $response = [
+                'success' => true,
+                'mensaje' => "{$notificaciones_creadas} notificaciones creadas para administradores",
+                'total_notificaciones' => $notificaciones_creadas
+            ];
+            
+            if (!empty($errors)) {
+                $response['warnings'] = $errors;
+            }
+            
+            echo json_encode($response);
             break;
+            // Agregar estos cases al switch existente
+        case 'obtener_nuevas':
+    session_start();
+    $id_usuario = $_SESSION['usuario_id'] ?? null;
+    $ultima_verificacion = $_GET['ultima_verificacion'] ?? null;
+    
+    if (!$id_usuario) {
+        echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+        break;
+    }
+    
+    // 🆕 CONSULTA CORREGIDA
+    $sql = "SELECT n.*, 
+                   p.nombres as nombre_origen, 
+                   p.apellidos as apellido_origen,
+                   r.descripcion 
+            FROM notificacion n 
+            LEFT JOIN usuario u ON n.id_usuario_origen = u.id_usuario 
+            LEFT JOIN persona p ON u.id_persona = p.id_persona
+            LEFT JOIN reporte r ON n.id_reporte = r.id_reporte 
+            WHERE n.id_usuario_destino = :id_usuario 
+            AND n.leido = 0";
+    
+    $params = [':id_usuario' => $id_usuario];
+    
+    if ($ultima_verificacion) {
+        $sql .= " AND n.fecha > :ultima_verificacion";
+        $params[':ultima_verificacion'] = $ultima_verificacion;
+    }
+    
+    $sql .= " ORDER BY n.fecha DESC LIMIT 10";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $notificaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Formatear nombre completo
+    foreach ($notificaciones as &$notif) {
+        if ($notif['nombre_origen']) {
+            $notif['nombre_origen'] = trim($notif['nombre_origen'] . ' ' . $notif['apellido_origen']);
+        }
+        unset($notif['apellido_origen']);
+    }
+    unset($notif);
+    
+    // Obtener total de no leídas
+    $sqlCount = "SELECT COUNT(*) as total FROM notificacion 
+                WHERE id_usuario_destino = :id_usuario AND leido = 0";
+    $stmtCount = $db->prepare($sqlCount);
+    $stmtCount->execute([':id_usuario' => $id_usuario]);
+    $total = $stmtCount->fetch(PDO::FETCH_ASSOC);
+    
+    echo json_encode([
+        'success' => true,
+        'notificaciones' => $notificaciones,
+        'total_nuevas' => $total['total']
+    ]);
+    break;
 
         case 'marcar_leida':
-            $id = $_POST['id_notificacion'] ?? '';
-            if (!$id) { echo json_encode(['success'=>false]); exit(); }
-            $q = "UPDATE notificacion SET leida = TRUE WHERE id_notificacion = :id AND id_usuario_destino = :u";
-            $s = $db->prepare($q);
-            $s->execute([':id'=>$id, ':u'=>$user]);
-            echo json_encode(['success'=>true]);
+            session_start();
+            $id_notificacion = $_POST['id_notificacion'] ?? null;
+            
+            if (!$id_notificacion) {
+                echo json_encode(['success' => false, 'error' => 'ID de notificación requerido']);
+                break;
+            }
+            
+            $sql = "UPDATE notificacion SET leido = 1, fecha_leido = NOW() 
+                    WHERE id_notificacion = :id_notificacion";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':id_notificacion' => $id_notificacion]);
+            
+            echo json_encode(['success' => true, 'mensaje' => 'Notificación marcada como leída']);
             break;
 
-        case 'eliminar':
-            $id = $_POST['id_notificacion'] ?? '';
-            if (!$id) { echo json_encode(['success'=>false]); exit(); }
-            $q = "DELETE FROM notificacion WHERE id_notificacion = :id AND id_usuario_destino = :u";
-            $s = $db->prepare($q);
-            $s->execute([':id'=>$id, ':u'=>$user]);
-            echo json_encode(['success'=>true]);
+        case 'marcar_todas_leidas':
+            session_start();
+            $id_usuario = $_SESSION['usuario_id'] ?? null;
+            
+            if (!$id_usuario) {
+                echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+                break;
+            }
+            
+            $sql = "UPDATE notificacion SET leido = 1, fecha_leido = NOW() 
+                    WHERE id_usuario_destino = :id_usuario AND leido = 0";
+            $stmt = $db->prepare($sql);
+            $stmt->execute([':id_usuario' => $id_usuario]);
+            
+            echo json_encode(['success' => true, 'mensaje' => 'Todas las notificaciones marcadas como leídas']);
+            break;
+            case 'crear_notificacion_sse':
+            $id_reporte = $_POST['id_reporte'] ?? '';
+            $mensaje = $_POST['mensaje'] ?? '';
+            
+            if (!$id_reporte || !$mensaje) {
+                echo json_encode(['success' => false, 'error' => 'Datos incompletos']);
+                break;
+            }
+            
+            // Obtener todos los administradores activos
+            $sqlAdmins = "SELECT id_usuario FROM usuario WHERE id_rol = 1 AND id_estado = 1";
+            $stmtAdmins = $db->prepare($sqlAdmins);
+            $stmtAdmins->execute();
+            $admins = $stmtAdmins->fetchAll(PDO::FETCH_ASSOC);
+            
+            $notificaciones_creadas = 0;
+            
+            foreach ($admins as $admin) {
+                $sqlInsert = "INSERT INTO notificacion 
+                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje, fecha_creacion) 
+                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje, NOW())";
+                
+                $stmtInsert = $db->prepare($sqlInsert);
+                $stmtInsert->execute([
+                    ':id_destino' => $admin['id_usuario'],
+                    ':id_origen' => 0, // Sistema
+                    ':id_reporte' => $id_reporte,
+                    ':mensaje' => $mensaje
+                ]);
+                
+                $notificaciones_creadas++;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'mensaje' => "{$notificaciones_creadas} notificaciones creadas"
+            ]);
             break;
 
         default:
-            echo json_encode(['error'=>'Acción no válida']);
+            echo json_encode(['success' => false, 'error' => 'Acción no válida']);
     }
 
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['success'=>false,'error'=>$e->getMessage()]);
+     $mensajeError = $e->getMessage();
+     
+    if (stripos($mensajeError, 'SQLSTATE') !== false || stripos($mensajeError, 'failed') !== false) {
+        http_response_code(500);
+    }
+    echo json_encode(['success' => false, 'error' => $mensajeError]);
 }
+?>

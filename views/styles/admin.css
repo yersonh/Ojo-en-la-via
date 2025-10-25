@@ -1282,3 +1282,409 @@ html, body {
 .logout-modal.exiting .modal-content {
     transform: translate(-50%, -50%) scale(0.9);
 }
+/* ============================================== */
+/* ESTILOS PARA ALERTAS Y NOTIFICACIONES */
+/* ============================================== */
+
+/* Header alignment */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background: white;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.header-right {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+/* Modal de Alertas */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+}
+
+.modal.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: white;
+    margin: 50px auto;
+    max-width: 600px;
+    border-radius: 8px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    transform: translateY(-20px);
+    transition: transform 0.3s ease;
+}
+
+.modal.show .modal-content {
+    transform: translateY(0);
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.close-modal:hover {
+    color: #333;
+}
+
+.modal-body {
+    padding: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.modal-actions {
+    padding: 20px;
+    border-top: 1px solid #eee;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+/* Historial de alertas */
+.historial-alertas {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f8f9fa;
+    border-radius: 5px;
+}
+
+.historial-item {
+    padding: 8px;
+    border-bottom: 1px solid #ddd;
+    font-size: 14px;
+}
+
+.historial-item:last-child {
+    border-bottom: none;
+}
+
+/* Botón de alerta */
+.btn-alerta {
+    background: #f39c12;
+    border-color: #f39c12;
+    color: white;
+    margin: 0 2px;
+}
+
+.btn-alerta:hover {
+    background: #e67e22;
+    border-color: #e67e22;
+    color: white;
+}
+
+/* Badge para estado Notificado */
+.badge-notificado {
+    background: #9b59b6;
+    color: white;
+}
+
+/* Notificaciones */
+.notificaciones-wrapper {
+    position: relative;
+}
+
+.notificacion-icon {
+    position: relative;
+    cursor: pointer;
+    padding: 10px;
+    border-radius: 50%;
+    transition: background-color 0.3s;
+    color: #666;
+    font-size: 1.2rem;
+}
+
+.notificacion-icon:hover {
+    background-color: #f8f9fa;
+    color: #333;
+}
+
+.notificacion-badge {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+    background: #e74c3c;
+    color: white;
+    border-radius: 50%;
+    width: 18px;
+    height: 18px;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
+.notificaciones-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    width: 380px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    display: none;
+    z-index: 1000;
+}
+
+.notificaciones-panel.show {
+    display: block;
+}
+
+.notificaciones-header {
+    padding: 15px;
+    border-bottom: 1px solid #eee;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.notificaciones-header h4 {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 1.1rem;
+}
+
+.notificaciones-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.notificacion-count {
+    background: #3498db;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.btn-marcar-todas {
+    background: none;
+    border: none;
+    color: #666;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 3px;
+    font-size: 0.9rem;
+}
+
+.btn-marcar-todas:hover {
+    background: #f8f9fa;
+    color: #333;
+}
+
+.notificaciones-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.notificacion-item {
+    padding: 15px;
+    border-bottom: 1px solid #f8f9fa;
+    display: flex;
+    gap: 12px;
+    transition: background-color 0.2s;
+}
+
+.notificacion-item.no-leida {
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+}
+
+.notificacion-item:hover {
+    background: #f1f2f6;
+}
+
+.notificacion-icono {
+    font-size: 16px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.notificacion-contenido {
+    flex: 1;
+    min-width: 0;
+}
+
+.notificacion-mensaje {
+    font-size: 14px;
+    margin-bottom: 6px;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.notificacion-meta {
+    font-size: 12px;
+    color: #666;
+    margin-bottom: 8px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.notificacion-origen {
+    font-style: italic;
+}
+
+.notificacion-fecha {
+    color: #999;
+}
+
+.notificacion-acciones {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.btn-ver-reporte, .btn-marcar-leida {
+    font-size: 11px;
+    padding: 4px 8px;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-ver-reporte {
+    background: #3498db;
+    color: white;
+}
+
+.btn-ver-reporte:hover {
+    background: #2980b9;
+}
+
+.btn-marcar-leida {
+    background: #95a5a6;
+    color: white;
+}
+
+.btn-marcar-leida:hover {
+    background: #7f8c8d;
+}
+
+.notificacion-vacia {
+    padding: 40px 20px;
+    text-align: center;
+    color: #666;
+}
+
+.notificacion-vacia i {
+    font-size: 2rem;
+    margin-bottom: 10px;
+    color: #27ae60;
+}
+
+.notificacion-vacia p {
+    margin: 0;
+    font-size: 14px;
+}
+
+.notificaciones-footer {
+    padding: 15px;
+    border-top: 1px solid #eee;
+    text-align: center;
+}
+
+.notificaciones-footer a {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+.notificaciones-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Colores para iconos de notificaciones */
+.text-primary { color: #3498db !important; }
+.text-warning { color: #f39c12 !important; }
+.text-info { color: #17a2b8 !important; }
+.text-danger { color: #e74c3c !important; }
+.text-success { color: #27ae60 !important; }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .notificaciones-panel {
+        width: 320px;
+        right: -50px;
+    }
+    
+    .header-right {
+        gap: 10px;
+    }
+    
+    .modal-content {
+        margin: 20px;
+        width: calc(100% - 40px);
+    }
+}
+.notificacion-flotante {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  background: #2563eb;
+  color: white;
+  padding: 12px 16px;
+  border-radius: 8px;
+  opacity: 0;
+  transition: all 0.5s ease;
+  z-index: 9999;
+}
+.notificacion-flotante.visible {
+  opacity: 1;
+  transform: translateY(10px);
+}
+
+
+/* Estados adicionales para badges */
+.badge-pendiente { background: #f39c12; color: white; }
+.badge-enproceso { background: #3498db; color: white; }
+.badge-resuelto { background: #27ae60; color: white; }
+.badge-notificado { background: #9b59b6; color: white; }

@@ -11,5 +11,7 @@
         <li><a href="#" data-tab="analytics"><i class="fas fa-chart-bar"></i> Analytics</a></li>
         <li><a href="#" data-tab="configuracion"><i class="fas fa-cog"></i> Configuración</a></li>
         <li><a href="../index.php?logout=true"><i class="fas fa-sign-out-alt"></i> Cerrar Sesión</a></li>
+        
+        
     </ul>
 </div>

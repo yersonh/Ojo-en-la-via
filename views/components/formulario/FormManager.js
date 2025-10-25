@@ -88,6 +88,9 @@ export class FormManager {
             }
             
             if (result.success) {
+                // ✅ NUEVO: Enviar notificación a administradores después de crear el reporte
+                await this.enviarNotificacionAdmins(result.id_reporte);
+                
                 this.handleSubmitSuccess(result.mensaje);
             } else {
                 throw new Error(result.mensaje || result.error || 'Error desconocido');
@@ -99,7 +102,7 @@ export class FormManager {
             // ✅ MEJORADO: DETECCIÓN INTELIGENTE DE OFFLINE
             const isOffline = !window.connectionManager || !window.connectionManager.getStatus();
             const isNetworkError = error.message.includes('Failed to fetch') || 
-                                 error.message.includes('NetworkError');
+                                error.message.includes('NetworkError');
             
             if (isOffline || isNetworkError) {
                 // Estamos offline, guardar localmente
@@ -110,6 +113,34 @@ export class FormManager {
             }
         } finally {
             this.uiManager.hideLoadingState();
+        }
+    }
+
+    // ✅ NUEVO: MÉTODO PARA ENVIAR NOTIFICACIÓN A ADMINS
+    async enviarNotificacionAdmins(idReporte) {
+        try {
+            console.log(`📢 Enviando notificación a administradores para reporte #${idReporte}`);
+            
+            const formData = new FormData();
+            formData.append('id_reporte', idReporte);
+            
+            const response = await fetch('../../controllers/notificacion_controlador.php?action=notificar_nuevo_reporte', {
+                method: 'POST',
+                body: formData
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                console.log(`✅ Notificaciones enviadas: ${result.total_notificaciones} administradores notificados`);
+            } else {
+                console.warn(`⚠️ No se pudieron enviar notificaciones: ${result.error}`);
+                // No lanzamos error para no afectar el flujo principal del reporte
+            }
+            
+        } catch (error) {
+            console.error('❌ Error enviando notificaciones:', error);
+            // No lanzamos error para no afectar el flujo principal del reporte
         }
     }
 

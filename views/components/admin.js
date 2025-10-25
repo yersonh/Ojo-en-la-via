@@ -1,9 +1,10 @@
-// admin.js - Versión corregida con logout funcional
+// admin.js - Versión completa con sistema de alertas y notificaciones
 class AdminManager {
     constructor() {
         this.map = null;
         this.mapInitialized = false;
         this.markers = [];
+        this.currentReporteId = null;
         this.init();
     }
 
@@ -12,7 +13,10 @@ class AdminManager {
         this.fixScrollIssues();
         this.setupNavigation();
         this.setupEventListeners();
-        this.setupLogoutHandler(); // ¡IMPORTANTE! Llamar directamente
+        this.setupLogoutHandler();
+        this.setupAlertHandlers();
+        this.initSSE();
+        this.setupNotificaciones();
         this.initializeMapIfNeeded();
     }
 
@@ -229,7 +233,6 @@ class AdminManager {
         }, 1000);
     }
 
-    // ... (el resto de tus métodos del mapa se mantienen igual)
     setupEventListeners() {
         document.addEventListener('click', (e) => {
             if (e.target.id === 'refreshMapBtn' || e.target.closest('#refreshMapBtn')) {
@@ -527,6 +530,319 @@ class AdminManager {
             .replace(/>/g, "&gt;")
             .replace(/"/g, "&quot;")
             .replace(/'/g, "&#039;");
+    }
+
+    // ==============================================
+    // SISTEMA DE ALERTAS Y NOTIFICACIONES
+    // ==============================================
+
+    setupAlertHandlers() {
+        // Botón para abrir modal de alertas
+        document.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-alerta') || 
+                e.target.closest('.btn-alerta')) {
+                const btn = e.target.classList.contains('btn-alerta') ? 
+                e.target : e.target.closest('.btn-alerta');
+                const idReporte = btn.getAttribute('data-id');
+                this.mostrarModalAlerta(idReporte);
+            }
+        });
+
+        // Configurar modal de alertas
+        this.setupModalAlerta();
+    }
+    initSSE() {
+        try {
+            const eventSource = new EventSource('${window.location.origin}/../../controllers/sse_notificaciones.php');
+
+            eventSource.addEventListener("ping", (e) => {
+                console.log("🔄 Conexión SSE activa", JSON.parse(e.data));
+            });
+
+            eventSource.addEventListener("nuevo_reporte", (e) => {
+                const data = JSON.parse(e.data);
+                console.log("📥 Nuevo reporte recibido:", data);
+
+                // Mostrar alerta visual
+                this.mostrarNotificacionFlotante(`Nuevo reporte #${data.id_reporte} registrado`, "info");
+
+                // Refrescar mapa y lista de reportes automáticamente
+                this.refreshMap();
+            });
+
+            eventSource.onerror = (err) => {
+                console.warn("❌ Error en la conexión SSE", err);
+            };
+        } catch (e) {
+            console.error("Error inicializando SSE:", e);
+        }
+    }
+
+    // Pequeña utilidad visual para avisar
+    mostrarNotificacionFlotante(mensaje, tipo = "info") {
+        const div = document.createElement("div");
+        div.textContent = mensaje;
+        div.className = `notificacion-flotante ${tipo}`;
+        document.body.appendChild(div);
+
+        setTimeout(() => {
+            div.classList.add("visible");
+            setTimeout(() => div.classList.remove("visible"), 4000);
+            setTimeout(() => div.remove(), 4500);
+        }, 100);
+    }
+
+    setupModalAlerta() {
+        const modal = document.getElementById('alertaModal');
+        if (!modal) {
+            console.error('❌ Modal de alertas no encontrado');
+            return;
+        }
+
+        // Cerrar modal
+        modal.querySelector('.close-modal').addEventListener('click', () => {
+            this.cerrarModalAlerta();
+        });
+
+        modal.querySelector('.modal-overlay').addEventListener('click', () => {
+            this.cerrarModalAlerta();
+        });
+
+        // Cambio de autoridad
+        const selectAutoridad = modal.querySelector('#autoridadDestino');
+        if (selectAutoridad) {
+            selectAutoridad.addEventListener('change', (e) => {
+                this.actualizarDescripcionAutoridad(e.target);
+            });
+        }
+
+        // Botón cancelar
+        modal.querySelector('#cancelarAlerta').addEventListener('click', () => {
+            this.cerrarModalAlerta();
+        });
+
+        // Botón enviar
+        modal.querySelector('#enviarAlerta').addEventListener('click', () => {
+            this.enviarAlerta();
+        });
+    }
+
+    async mostrarModalAlerta(idReporte) {
+        this.currentReporteId = idReporte;
+        const modal = document.getElementById('alertaModal');
+        
+        try {
+            // Cargar información del reporte
+            const reporte = await this.obtenerInfoReporte(idReporte);
+            const infoReporte = document.getElementById('infoReporte');
+            if (infoReporte) {
+                infoReporte.innerHTML = `
+                    <strong>ID:</strong> #${reporte.id_reporte} | 
+                    <strong>Tipo:</strong> ${reporte.tipo_incidente} | 
+                    <strong>Estado:</strong> ${reporte.estado}
+                `;
+            }
+
+            // Cargar historial de alertas
+            await this.cargarHistorialAlertas(idReporte);
+            
+            // Mostrar modal
+            modal.style.display = 'block';
+            setTimeout(() => modal.classList.add('show'), 10);
+            
+        } catch (error) {
+            console.error('Error cargando información del reporte:', error);
+            alert('Error al cargar información del reporte');
+        }
+    }
+
+    cerrarModalAlerta() {
+        const modal = document.getElementById('alertaModal');
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.style.display = 'none';
+            this.currentReporteId = null;
+        }, 300);
+    }
+
+    actualizarDescripcionAutoridad(select) {
+        const selectedOption = select.options[select.selectedIndex];
+        const descripcion = selectedOption.getAttribute('data-descripcion');
+        const descripcionElement = document.getElementById('descripcionAutoridad');
+        if (descripcionElement) {
+            descripcionElement.textContent = descripcion || '';
+        }
+    }
+
+    async cargarHistorialAlertas(idReporte) {
+        // Por ahora no cargamos historial, pero dejamos el método para futuras implementaciones
+        const container = document.getElementById('historialAlertas');
+        if (container) {
+            container.style.display = 'none';
+        }
+    }
+
+    async obtenerInfoReporte(idReporte) {
+        // Simulamos la data por ahora
+        return {
+            id_reporte: idReporte,
+            tipo_incidente: 'Cargando...',
+            estado: 'Cargando...'
+        };
+    }
+
+    enviarAlerta() {
+        const modal = document.getElementById('alertaModal');
+        const selectAutoridad = modal.querySelector('#autoridadDestino');
+        const inputEmail = modal.querySelector('#emailPersonalizado');
+        
+        const idAutoridad = selectAutoridad.value;
+        const emailPersonalizado = inputEmail.value.trim() || null;
+        
+        if (!idAutoridad) {
+            alert('Por favor seleccione una autoridad');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('action', 'enviar_alerta_autoridad');
+        formData.append('id_reporte', this.currentReporteId);
+        formData.append('id_autoridad', idAutoridad);
+        if (emailPersonalizado) {
+            formData.append('email_personalizado', emailPersonalizado);
+        }
+        
+        // Mostrar loading
+        const btnEnviar = modal.querySelector('#enviarAlerta');
+        const originalText = btnEnviar.innerHTML;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+        btnEnviar.disabled = true;
+        
+        fetch('admin.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            if (response.ok) {
+                this.cerrarModalAlerta();
+                // Mostrar mensaje de éxito y recargar
+                setTimeout(() => {
+                    location.reload();
+                }, 1000);
+            } else {
+                alert('Error al enviar la alerta');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Error de conexión');
+        })
+        .finally(() => {
+            btnEnviar.innerHTML = originalText;
+            btnEnviar.disabled = false;
+        });
+    }
+
+    setupNotificaciones() {
+        const icono = document.getElementById('notificacionIcon');
+        const panel = document.getElementById('notificacionesPanel');
+        
+        if (!icono || !panel) return;
+        
+        // Toggle panel
+        icono.addEventListener('click', (e) => {
+            e.stopPropagation();
+            panel.classList.toggle('show');
+        });
+        
+        // Cerrar al hacer click fuera
+        document.addEventListener('click', (e) => {
+            if (!panel.contains(e.target) && !icono.contains(e.target)) {
+                panel.classList.remove('show');
+            }
+        });
+        
+        // Marcar como leída individual
+        panel.addEventListener('click', (e) => {
+            if (e.target.classList.contains('btn-marcar-leida')) {
+                const item = e.target.closest('.notificacion-item');
+                const idNotificacion = item.getAttribute('data-id');
+                this.marcarNotificacionLeida(idNotificacion, item);
+            }
+        });
+        
+        // Marcar todas como leídas
+        const btnMarcarTodas = document.getElementById('marcarTodasLeidas');
+        if (btnMarcarTodas) {
+            btnMarcarTodas.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this.marcarTodasLeidas();
+            });
+        }
+    }
+
+    async marcarNotificacionLeida(idNotificacion, elemento) {
+        try {
+            const formData = new FormData();
+            formData.append('action', 'marcar_notificacion_leida');
+            formData.append('id_notificacion', idNotificacion);
+            
+            const response = await fetch('admin.php', {
+                method: 'POST',
+                body: formData
+            });
+            
+            if (response.ok) {
+                elemento.classList.remove('no-leida');
+                const btnLeida = elemento.querySelector('.btn-marcar-leida');
+                if (btnLeida) btnLeida.remove();
+                this.actualizarContadorNotificaciones();
+            }
+        } catch (error) {
+            console.error('Error marcando notificación:', error);
+        }
+    }
+
+    async marcarTodasLeidas() {
+        try {
+            const response = await fetch('admin.php?action=marcar_todas_leidas', {
+                method: 'POST'
+            });
+            
+            if (response.ok) {
+                // Actualizar UI
+                document.querySelectorAll('.notificacion-item').forEach(item => {
+                    item.classList.remove('no-leida');
+                    const btnLeida = item.querySelector('.btn-marcar-leida');
+                    if (btnLeida) btnLeida.remove();
+                });
+                
+                // Ocultar badge
+                const badge = document.querySelector('.notificacion-badge');
+                if (badge) badge.remove();
+                
+                // Actualizar contador en header
+                const countElement = document.querySelector('.notificacion-count');
+                if (countElement) countElement.textContent = '0 sin leer';
+            }
+        } catch (error) {
+            console.error('Error marcando todas las notificaciones:', error);
+        }
+    }
+
+    actualizarContadorNotificaciones() {
+        // Podemos hacer una petición AJAX para actualizar el contador
+        // Por simplicidad, recargamos la página cada 30 segundos si hay notificaciones nuevas
+        const badge = document.querySelector('.notificacion-badge');
+        if (badge) {
+            // Solo recargar si el usuario no está viendo el panel
+            const panel = document.getElementById('notificacionesPanel');
+            if (!panel.classList.contains('show')) {
+                setTimeout(() => {
+                    location.reload();
+                }, 30000);
+            }
+        }
     }
 }
 

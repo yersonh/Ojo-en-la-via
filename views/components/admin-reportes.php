@@ -2,11 +2,12 @@
     <div class="section-header">
         <h3><i class="fas fa-map-marker-alt"></i> Gestión de Reportes</h3>
         <div>
-            <select id="filtroEstado" class="form-control" style="display: inline-block; width: auto;">
+            <select id="filtroEstadoReportes" class="form-control" style="display: inline-block; width: auto;">
                 <option value="">Todos los estados</option>
                 <option value="Pendiente">Pendiente</option>
                 <option value="En Proceso">En Proceso</option>
                 <option value="Resuelto">Resuelto</option>
+                <option value="Notificado">Notificado</option>
             </select>
         </div>
     </div>
@@ -45,7 +46,16 @@
                                     <option value="Pendiente" <?php echo $reporte['estado'] == 'Pendiente' ? 'selected' : ''; ?>>Pendiente</option>
                                     <option value="En Proceso" <?php echo $reporte['estado'] == 'En Proceso' ? 'selected' : ''; ?>>En Proceso</option>
                                     <option value="Resuelto" <?php echo $reporte['estado'] == 'Resuelto' ? 'selected' : ''; ?>>Resuelto</option>
+                                    <option value="Notificado" <?php echo $reporte['estado'] == 'Notificado' ? 'selected' : ''; ?>>Notificado</option>
                                 </select>
+                                
+                                <!-- Botón de alerta -->
+                                <button class="btn btn-warning btn-sm btn-alerta" 
+                                        data-id="<?php echo $reporte['id_reporte']; ?>"
+                                        title="Enviar alerta a autoridad">
+                                    <i class="fas fa-bell"></i>
+                                </button>
+                                
                                 <button class="btn btn-danger btn-sm eliminar-reporte" data-id="<?php echo $reporte['id_reporte']; ?>">
                                     <i class="fas fa-trash"></i>
                                 </button>
