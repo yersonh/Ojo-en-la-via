@@ -81,7 +81,23 @@ try {
                     $errors[] = "Error notificando admin {$admin['id_usuario']}: " . $e->getMessage();
                 }
             }
-            
+            try {
+                $sseData = [
+                    'event' => 'nuevo_reporte',
+                    'id_reporte' => $id_reporte,
+                    'tipo_incidente' => $reporte['tipo_incidente'],
+                    'descripcion' => $reporte['descripcion'],
+                    'usuario' => $reporte['nombre_usuario'],
+                    'timestamp' => time()
+                ];
+
+                $archivoSSE = __DIR__ . '/../temp/ultima_notificacion.json';
+                file_put_contents($archivoSSE, json_encode($sseData, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT));
+
+                error_log("📢 Archivo SSE creado: " . $archivoSSE);
+            } catch (Exception $e) {
+                error_log("❌ Error generando archivo SSE: " . $e->getMessage());
+            }
             $response = [
                 'success' => true,
                 'mensaje' => "{$notificaciones_creadas} notificaciones creadas para administradores",
@@ -107,9 +123,9 @@ try {
     
     // 🆕 CONSULTA CORREGIDA
     $sql = "SELECT n.*, 
-                   p.nombres as nombre_origen, 
-                   p.apellidos as apellido_origen,
-                   r.descripcion 
+                p.nombres as nombre_origen, 
+                p.apellidos as apellido_origen,
+                r.descripcion 
             FROM notificacion n 
             LEFT JOIN usuario u ON n.id_usuario_origen = u.id_usuario 
             LEFT JOIN persona p ON u.id_persona = p.id_persona
@@ -224,6 +240,24 @@ try {
                 'mensaje' => "{$notificaciones_creadas} notificaciones creadas"
             ]);
             break;
+            // Agregar al switch existente
+case 'generate_sse_token':
+    session_start();
+    
+    if (!isset($_SESSION['usuario_id']) || ($_SESSION['rol'] ?? 0) != 1) {
+        echo json_encode(['success' => false, 'error' => 'No autorizado']);
+        break;
+    }
+    
+    require_once __DIR__ . '/../config/session_manager.php';
+    $token = SessionManager::generateSSEToken($_SESSION['usuario_id']);
+    
+    echo json_encode([
+        'success' => true,
+        'token' => $token,
+        'expires_in' => 3600
+    ]);
+    break;
 
         default:
             echo json_encode(['success' => false, 'error' => 'Acción no válida']);

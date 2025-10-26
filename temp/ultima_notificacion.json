@@ -1,0 +1,8 @@
+{
+    "event": "nuevo_reporte",
+    "id_reporte": "64",
+    "tipo_incidente": "Inundación",
+    "descripcion": "dadaddadadda",
+    "usuario": "Carito Cardenas",
+    "timestamp": 1761521556
+}

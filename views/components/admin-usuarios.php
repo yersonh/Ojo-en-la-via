@@ -12,7 +12,7 @@
         <!-- Filtros -->
         <div class="filters" style="margin-bottom: 20px; display: flex; gap: 15px; align-items: center;">
             <div class="filter-group">
-                <label for="filtroEstado">Filtrar por estado:</label>
+                <label for="filtroEstadoUsuarios">Filtrar por estado:</label>
                 <select id="filtroEstadoUsuarios" class="form-control" style="width: 150px;">
                     <option value="">Todos</option>
                     <option value="Activo">Activo</option>

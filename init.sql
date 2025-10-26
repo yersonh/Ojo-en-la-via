@@ -1,22 +1,22 @@
-CREATE TABLE persona (
+CREATE TABLE IF NOT EXISTS persona (
     id_persona SERIAL PRIMARY KEY,
     nombres VARCHAR(100) NOT NULL,
     apellidos VARCHAR(100) NOT NULL,
     telefono VARCHAR(20)
 );
 
-CREATE TABLE estado_usuario (
+CREATE TABLE IF NOT EXISTS estado_usuario (
     id_estado SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL
 );
 
-CREATE TABLE rol (
+CREATE TABLE IF NOT EXISTS rol (
     id_rol SERIAL PRIMARY KEY,
     nombre VARCHAR(50) NOT NULL,
     descripcion TEXT
 );
 
-CREATE TABLE usuario (
+CREATE TABLE IF NOT EXISTS usuario (
     id_usuario SERIAL PRIMARY KEY,
     id_persona INT NOT NULL,
     id_rol INT NOT NULL,
@@ -28,24 +28,17 @@ CREATE TABLE usuario (
     CONSTRAINT fk_usuario_estado FOREIGN KEY (id_estado) REFERENCES estado_usuario (id_estado) ON DELETE RESTRICT
 );
 
--- Inserts iniciales
-INSERT INTO estado_usuario (nombre) VALUES ('Activo'), ('Inactivo');
-INSERT INTO rol (nombre, descripcion) VALUES ('Admin', 'Administrador general'), ('Usuario', 'Usuario estándar');
+-- 🆕 TABLA REMEMBER_TOKENS - EN ORDEN CORRECTO
+CREATE TABLE IF NOT EXISTS remember_tokens (
+    id_token SERIAL PRIMARY KEY,
+    id_usuario INTEGER NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expiracion TIMESTAMP NOT NULL,
+    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
+);
 
-INSERT INTO persona (nombres, apellidos, telefono) VALUES 
-('Yerson', 'Solano Alfonso', '3142452456'),
-('Lauren', 'Oviedo Garces', '3117962475'),
-('Isabella', 'Hernadez Parrado', '3154567890');
-
--- INSERTS con hashes bcrypt reales para la contraseña "12345678"
-INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
-(1, 1, 1, 'solanoalfonsoy@gmail.com', '$2b$12$TuijOg5BDHfcJ42GzyinNuaqLaiRPtYaLEGLNiHl5gmyNu4QWtjSO'),
-(2, 1, 1, 'lauren.oviedo68@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
-(3, 1, 1, 'isamoradahernandezp@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC');
-
-
-
-CREATE TABLE recovery_tokens (
+CREATE TABLE IF NOT EXISTS recovery_tokens (
     id SERIAL PRIMARY KEY,
     id_usuario INTEGER NOT NULL,
     token VARCHAR(64) UNIQUE NOT NULL,
@@ -54,7 +47,33 @@ CREATE TABLE recovery_tokens (
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_recovery_usuario FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
 );
-CREATE TABLE tipo_incidente (
+
+-- Datos iniciales
+INSERT INTO estado_usuario (nombre) VALUES 
+('Activo'), 
+('Inactivo')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO rol (nombre, descripcion) VALUES 
+('Admin', 'Administrador general'), 
+('Usuario', 'Usuario estándar')
+ON CONFLICT DO NOTHING;
+
+INSERT INTO persona (nombres, apellidos, telefono) VALUES 
+('Yerson', 'Solano Alfonso', '3142452456'),
+('Lauren', 'Oviedo Garces', '3117962475'),
+('Isabella', 'Hernadez Parrado', '3154567890')
+ON CONFLICT DO NOTHING;
+
+-- INSERTS con hashes bcrypt
+INSERT INTO usuario (id_persona, id_rol, id_estado, correo, contrasena) VALUES 
+(1, 1, 1, 'solanoalfonsoy@gmail.com', '$2b$12$TuijOg5BDHfcJ42GzyinNuaqLaiRPtYaLEGLNiHl5gmyNu4QWtjSO'),
+(2, 1, 1, 'lauren.oviedo68@gmail.com', '$2b$12$2fHBgK/57vFJdcF7CSnWqO8DYaESHf85d9ZRHyt0vNRswxeedMw7W'), 
+(3, 1, 1, 'isamoradahernandezp@gmail.com', '$2b$12$sc2lFhNFEdiU1GibsSzpOe3C3.nh6cYKj0otL57fBI3z6UBcKP4WC')
+ON CONFLICT (correo) DO NOTHING;
+
+-- Resto de tablas
+CREATE TABLE IF NOT EXISTS tipo_incidente (
     id_tipo_incidente SERIAL PRIMARY KEY,
     nombre VARCHAR(100) NOT NULL,
     descripcion TEXT
@@ -64,9 +83,10 @@ INSERT INTO tipo_incidente (nombre, descripcion) VALUES
 ('Accidente de tránsito', 'Colisión o siniestro vial'),
 ('Hueco en la vía', 'Daño en la calzada'),
 ('Semáforo dañado', 'Falla en la señal de tránsito'),
-('Inundación', 'Vía obstruida por acumulación de agua');
+('Inundación', 'Vía obstruida por acumulación de agua')
+ON CONFLICT DO NOTHING;
 
-CREATE TABLE reporte (
+CREATE TABLE IF NOT EXISTS reporte (
     id_reporte SERIAL PRIMARY KEY,
     id_usuario INT NOT NULL,
     id_tipo_incidente INT NOT NULL,
@@ -79,7 +99,7 @@ CREATE TABLE reporte (
     CONSTRAINT fk_reporte_tipo FOREIGN KEY (id_tipo_incidente) REFERENCES tipo_incidente (id_tipo_incidente) ON DELETE RESTRICT
 );
 
-CREATE TABLE imagen_reporte (
+CREATE TABLE IF NOT EXISTS imagen_reporte (
     id_imagen SERIAL PRIMARY KEY,
     id_reporte INT NOT NULL,
     url_imagen TEXT NOT NULL,
@@ -87,7 +107,7 @@ CREATE TABLE imagen_reporte (
     CONSTRAINT fk_imagen_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE
 );
 
-CREATE TABLE comentario_reporte (
+CREATE TABLE IF NOT EXISTS comentario_reporte (
     id_comentario SERIAL PRIMARY KEY,
     id_reporte INT NOT NULL,
     id_usuario INT NOT NULL,
@@ -97,7 +117,7 @@ CREATE TABLE comentario_reporte (
     CONSTRAINT fk_comentario_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE CASCADE
 );
 
-CREATE TABLE historial_estado (
+CREATE TABLE IF NOT EXISTS historial_estado (
     id_historial SERIAL PRIMARY KEY,
     id_reporte INT NOT NULL,
     estado_anterior VARCHAR(50),
@@ -107,16 +127,8 @@ CREATE TABLE historial_estado (
     CONSTRAINT fk_historial_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE,
     CONSTRAINT fk_historial_usuario FOREIGN KEY (id_usuario) REFERENCES usuario (id_usuario) ON DELETE SET NULL
 );
-CREATE TABLE remember_tokens (
-    id_token INT AUTO_INCREMENT PRIMARY KEY,
-    id_usuario INT NOT NULL,
-    token VARCHAR(64) NOT NULL UNIQUE,
-    expiracion DATETIME NOT NULL,
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (id_usuario) REFERENCES usuario(id_usuario) ON DELETE CASCADE
-);
--- Tabla para likes en reportes
-CREATE TABLE like_reporte (
+
+CREATE TABLE IF NOT EXISTS like_reporte (
     id_like SERIAL PRIMARY KEY,
     id_reporte INT NOT NULL,
     id_usuario INT NOT NULL,
@@ -126,13 +138,12 @@ CREATE TABLE like_reporte (
     CONSTRAINT uq_like UNIQUE (id_reporte, id_usuario)
 );
 
--- Tabla para notificaciones
-CREATE TABLE notificacion (
+CREATE TABLE IF NOT EXISTS notificacion (
     id_notificacion SERIAL PRIMARY KEY,
     id_usuario_destino INT NOT NULL,
     id_usuario_origen INT,
     id_reporte INT,
-    tipo VARCHAR(50) NOT NULL, -- 'like' | 'comentario' | 'otro'
+    tipo VARCHAR(50) NOT NULL,
     mensaje TEXT,
     leida BOOLEAN DEFAULT FALSE,
     fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -141,17 +152,20 @@ CREATE TABLE notificacion (
     CONSTRAINT fk_notificacion_reporte FOREIGN KEY (id_reporte) REFERENCES reporte (id_reporte) ON DELETE CASCADE
 );
 
-CREATE INDEX idx_token ON remember_tokens(token);
-CREATE INDEX idx_expiracion ON remember_tokens(expiracion);
--- Insertar un reporte de prueba
-INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud)
-VALUES (1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890);
+-- 🆕 ÍNDICES AL FINAL
+CREATE INDEX IF NOT EXISTS idx_remember_token ON remember_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_remember_expiracion ON remember_tokens(expiracion);
+CREATE INDEX IF NOT EXISTS idx_remember_usuario ON remember_tokens(id_usuario);
 
--- Insertar una imagen relacionada
-INSERT INTO imagen_reporte (id_reporte, url_imagen)
-VALUES (1, 'https://miapp.com/uploads/hueco_parque.jpg');
+-- Datos de prueba (opcional)
+INSERT INTO reporte (id_usuario, id_tipo_incidente, descripcion, latitud, longitud) VALUES 
+(1, 1, 'Hueco grande frente al parque principal', 4.15123456, -73.63567890)
+ON CONFLICT DO NOTHING;
 
--- Insertar un comentario
-INSERT INTO comentario_reporte (id_reporte, id_usuario, comentario)
-VALUES (1, 2, 'Yo también lo vi, sigue igual esta semana.');
+INSERT INTO imagen_reporte (id_reporte, url_imagen) VALUES 
+(1, 'https://miapp.com/uploads/hueco_parque.jpg')
+ON CONFLICT DO NOTHING;
 
+INSERT INTO comentario_reporte (id_reporte, id_usuario, comentario) VALUES 
+(1, 2, 'Yo también lo vi, sigue igual esta semana.')
+ON CONFLICT DO NOTHING;

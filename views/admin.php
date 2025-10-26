@@ -11,65 +11,67 @@ require_once __DIR__ . '/../controllers/admin_controlador.php';
 
 $database = new Database();
 $adminControlador = new AdminControlador($database);
-
-// Obtener ID de usuario actual para notificaciones
 $idUsuarioActual = $_SESSION['usuario_id'];
 
-// Obtener notificaciones del usuario actual
+// Obtener notificaciones (sin SSE por ahora)
 $notificacionesNoLeidas = $adminControlador->contarNotificacionesNoLeidas($idUsuarioActual);
 $notificaciones = $adminControlador->obtenerNotificacionesNoLeidas($idUsuarioActual, 5);
 
-// Procesar acciones del administrador
+// Procesar acciones AJAX (NO redireccionar)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    header('Content-Type: application/json');
+    
     switch ($_POST['action']) {
         case 'cambiar_estado_reporte':
             if (isset($_POST['id_reporte'], $_POST['nuevo_estado'])) {
-                $adminControlador->cambiarEstadoReporte($_POST['id_reporte'], $_POST['nuevo_estado']);
+                $result = $adminControlador->cambiarEstadoReporte($_POST['id_reporte'], $_POST['nuevo_estado']);
+                echo json_encode($result);
+                exit();
             }
             break;
             
         case 'eliminar_reporte':
             if (isset($_POST['id_reporte'])) {
-                $adminControlador->eliminarReporte($_POST['id_reporte']);
+                $result = $adminControlador->eliminarReporte($_POST['id_reporte']);
+                echo json_encode($result);
+                exit();
             }
             break;
             
         case 'cambiar_estado_usuario':
             if (isset($_POST['id_usuario'], $_POST['nuevo_estado'])) {
-                $adminControlador->cambiarEstadoUsuario($_POST['id_usuario'], $_POST['nuevo_estado']);
+                $result = $adminControlador->cambiarEstadoUsuario($_POST['id_usuario'], $_POST['nuevo_estado']);
+                echo json_encode($result);
+                exit();
             }
             break;
             
         case 'enviar_alerta_autoridad':
             if (isset($_POST['id_reporte'], $_POST['id_autoridad'])) {
                 $emailPersonalizado = $_POST['email_personalizado'] ?? null;
-                $adminControlador->enviarAlertaAutoridad($_POST['id_reporte'], $_POST['id_autoridad'], $emailPersonalizado);
+                $result = $adminControlador->enviarAlertaAutoridad($_POST['id_reporte'], $_POST['id_autoridad'], $emailPersonalizado);
+                echo json_encode($result);
+                exit();
             }
             break;
 
         case 'marcar_notificacion_leida':
             if (isset($_POST['id_notificacion'])) {
-                $adminControlador->marcarNotificacionLeida($_POST['id_notificacion'], $idUsuarioActual);
-                header('Content-Type: application/json');
-                echo json_encode(['success' => true]);
+                $result = $adminControlador->marcarNotificacionLeida($_POST['id_notificacion'], $idUsuarioActual);
+                echo json_encode($result);
                 exit();
             }
             break;
 
         case 'marcar_todas_leidas':
-            $adminControlador->marcarTodasLeidas($idUsuarioActual);
-            header('Content-Type: application/json');
-            echo json_encode(['success' => true]);
+            $result = $adminControlador->marcarTodasLeidas($idUsuarioActual);
+            echo json_encode($result);
             exit();
             break;
     }
-    
-    
-    header("Location: admin.php");
-    exit();
 }
 
-// Obtener datos para las vistas
+// Solo obtener datos para la vista (no procesar acciones que redirijan)
 $estadisticas = $adminControlador->obtenerEstadisticas();
 $reportes = $adminControlador->obtenerReportes(50);
 $usuarios = $adminControlador->obtenerUsuarios();
@@ -122,6 +124,7 @@ $usuarios = $adminControlador->obtenerUsuarios();
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Scripts modificados para producción -->
     <script src="components/admin-analytics.js"></script>
     <script src="components/admin.js"></script>
     <script src="components/admin-configuracion.js"></script>
@@ -130,11 +133,12 @@ $usuarios = $adminControlador->obtenerUsuarios();
     <!-- Modal de Alertas -->
     <?php include 'components/admin-alertas-modal.php'; ?>
 
+    <!-- Inicialización segura -->
     <script>
-    <?php if (isset($reportes)): ?>
-        
-    <?php endif; ?>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Admin panel cargado correctamente');
+        // Inicializar componentes aquí
+    });
     </script>
-    
 </body>
 </html>

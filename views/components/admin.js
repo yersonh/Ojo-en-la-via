@@ -15,7 +15,7 @@ class AdminManager {
         this.setupEventListeners();
         this.setupLogoutHandler();
         this.setupAlertHandlers();
-        this.initSSE();
+        //this.initSSE();
         this.setupNotificaciones();
         this.initializeMapIfNeeded();
     }
@@ -551,6 +551,7 @@ class AdminManager {
         // Configurar modal de alertas
         this.setupModalAlerta();
     }
+    /*
     initSSE() {
         try {
             const eventSource = new EventSource('${window.location.origin}/../../controllers/sse_notificaciones.php');
@@ -577,7 +578,7 @@ class AdminManager {
             console.error("Error inicializando SSE:", e);
         }
     }
-
+*/
     // Pequeña utilidad visual para avisar
     mostrarNotificacionFlotante(mensaje, tipo = "info") {
         const div = document.createElement("div");

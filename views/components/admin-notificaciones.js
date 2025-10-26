@@ -1,4 +1,4 @@
-// views/components/admin-notificaciones.js
+// views/components/admin-notificaciones.js - VERSIÓN PRODUCCIÓN
 class NotificationManager {
     constructor() {
         this.eventSource = null;
@@ -7,21 +7,22 @@ class NotificationManager {
         this.maxReconnectAttempts = 3;
         this.reconnectTimeout = null;
         this.audioContext = null;
+        this.sseToken = null;
+        this.pollingInterval = null;
     }
 
     initialize() {
         console.log('🔔 Inicializando NotificationManager...');
         this.setupEventListeners();
         
-        // 🆕 SOLO CONECTAR SSE SI ESTAMOS VISIBLES Y ES PÁGINA ADMIN
+        // 🆕 CONEXIÓN MEJORADA CON TOKEN
         if (document.visibilityState === 'visible' && this.isAdminPage()) {
-            // Esperar a que la página esté completamente cargada
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', () => {
-                    setTimeout(() => this.connectSSE(), 1000);
+                    setTimeout(() => this.initSSEConnection(), 1000);
                 });
             } else {
-                setTimeout(() => this.connectSSE(), 1000);
+                setTimeout(() => this.initSSEConnection(), 1000);
             }
         }
         
@@ -33,13 +34,11 @@ class NotificationManager {
         // 🆕 MANEJAR VISIBILIDAD DE LA PÁGINA
         document.addEventListener('visibilitychange', () => {
             if (document.visibilityState === 'hidden') {
-                // Página en background - desconectar SSE temporalmente
                 console.log('👻 Página en background - desconectando SSE');
                 this.disconnectSSE();
             } else if (document.visibilityState === 'visible' && !this.isConnected && this.isAdminPage()) {
-                // Página visible - reconectar SSE después de un delay
                 console.log('👀 Página visible - reconectando SSE');
-                setTimeout(() => this.connectSSE(), 2000);
+                setTimeout(() => this.initSSEConnection(), 2000);
             }
         });
     }
@@ -47,6 +46,31 @@ class NotificationManager {
     isAdminPage() {
         return window.location.pathname.includes('admin.php') || 
                document.querySelector('.admin-container') !== null;
+    }
+
+    // 🆕 NUEVO MÉTODO PARA INICIALIZAR CONEXIÓN SSE CON TOKEN
+    async initSSEConnection() {
+        if (document.visibilityState === 'hidden') {
+            console.log('👻 Página en background - no conectar SSE');
+            return;
+        }
+        
+        try {
+            // Obtener token seguro para SSE
+            const response = await fetch('../controllers/notificacion_controlador.php?action=generate_sse_token');
+            const data = await response.json();
+            
+            if (data.success && data.token) {
+                this.sseToken = data.token;
+                console.log('🔐 Token SSE obtenido correctamente');
+                this.connectSSE();
+            } else {
+                throw new Error(data.error || 'Error generando token SSE');
+            }
+        } catch (error) {
+            console.error('❌ Error obteniendo token SSE:', error);
+            this.fallbackToPolling();
+        }
     }
 
     setupEventListeners() {
@@ -108,7 +132,6 @@ class NotificationManager {
     }
 
     connectSSE() {
-        // 🆕 VERIFICAR SI LA PÁGINA ESTÁ SIENDO CERRADA
         if (document.visibilityState === 'hidden') {
             console.log('👻 Página en background - no conectar SSE');
             return;
@@ -118,23 +141,30 @@ class NotificationManager {
             this.eventSource.close();
         }
 
-        // Limpiar timeout anterior
+        // Limpiar timeout anterior y polling
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
         }
+        
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
 
         try {
-            const sseUrl = '../controllers/sse_notificaciones.php';
-            console.log('🔌 Conectando a SSE...');
+            // 🆕 URL CON TOKEN DE SEGURIDAD
+            const sseUrl = `../controllers/sse_notificaciones.php?token=${encodeURIComponent(this.sseToken)}`;
+            console.log('🔌 Conectando a SSE con token...');
             
-            // 🆕 TIMEOUT DE CONEXIÓN POR SEGURIDAD
+            // Timeout de conexión por seguridad
             const connectTimeout = setTimeout(() => {
                 if (this.eventSource && this.eventSource.readyState !== EventSource.OPEN) {
                     console.log('⏰ Timeout de conexión SSE (5s) - cancelando');
                     this.eventSource.close();
                     this.eventSource = null;
                     this.isConnected = false;
+                    this.updateConnectionStatus(false);
                 }
             }, 5000);
             
@@ -152,49 +182,117 @@ class NotificationManager {
                 try {
                     const data = JSON.parse(event.data);
                     
-                    if (data.type === 'nuevo_reporte') {
-                        this.handleNuevoReporte(data.data);
-                    } else if (data.type === 'ping') {
+                    if (data.type === 'ping') {
                         console.log('📡 Ping recibido - Conexión activa');
-                    } else if (data.type === 'error') {
-                        console.error('❌ Error del servidor SSE:', data.message);
-                        this.handleSSEError(data.message);
                     } else if (data.type === 'connected') {
                         console.log('✅ ' + data.message);
+                    } else if (data.type === 'timeout') {
+                        console.log('🔄 Reconectando por timeout...');
+                        this.reconnectSSE();
                     }
                 } catch (parseError) {
                     console.error('❌ Error parseando mensaje SSE:', parseError);
                 }
             };
             
+            // 🆕 MANEJADORES DE EVENTOS ESPECÍFICOS
+            this.eventSource.addEventListener('nuevo_reporte', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    this.handleNuevoReporte(data);
+                } catch (parseError) {
+                    console.error('❌ Error parseando nuevo_reporte:', parseError);
+                }
+            });
+            
+            this.eventSource.addEventListener('ping', (event) => {
+                console.log('📡 Ping SSE recibido');
+            });
+            
+            this.eventSource.addEventListener('error', (event) => {
+                try {
+                    const data = JSON.parse(event.data);
+                    console.error('❌ Error del servidor SSE:', data.message);
+                    this.handleSSEError(data.message);
+                } catch (parseError) {
+                    console.error('❌ Error SSE:', event);
+                }
+            });
+
             this.eventSource.onerror = (error) => {
                 clearTimeout(connectTimeout);
-                console.error('❌ Error en conexión SSE');
-                this.isConnected = false;
-                this.updateConnectionStatus(false);
-                
-                this.reconnectAttempts++;
-                
-                if (this.reconnectAttempts <= this.maxReconnectAttempts) {
-                    const delay = Math.min(2000 * this.reconnectAttempts, 10000);
-                    console.log(`🔄 Reintentando en ${delay}ms (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
-                    
-                    this.reconnectTimeout = setTimeout(() => {
-                        this.reconnectSSE();
-                    }, delay);
-                } else {
-                    console.log('🚫 Máximo de intentos alcanzado - SSE desactivado');
-                    this.showToast('Notificaciones en tiempo real desactivadas', 'error');
-                }
+                console.error('❌ Error en conexión SSE:', error);
+                this.handleSSEError();
             };
             
         } catch (error) {
             console.error('❌ Error inicializando SSE:', error);
             this.updateConnectionStatus(false);
+            this.handleSSEError();
         }
     }
 
-    // 🆕 MÉTODO PARA DESCONECTAR TEMPORALMENTE
+    // 🆕 MANEJO MEJORADO DE ERRORES SSE
+    handleSSEError(message = 'Error de conexión') {
+        this.isConnected = false;
+        this.updateConnectionStatus(false);
+        
+        if (this.eventSource) {
+            this.eventSource.close();
+            this.eventSource = null;
+        }
+        
+        this.reconnectAttempts++;
+        
+        if (this.reconnectAttempts <= this.maxReconnectAttempts) {
+            const delay = Math.min(2000 * this.reconnectAttempts, 10000);
+            console.log(`🔄 Reintentando en ${delay}ms (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
+            
+            this.reconnectTimeout = setTimeout(() => {
+                this.reconnectSSE();
+            }, delay);
+        } else {
+            console.log('🚫 Máximo de intentos alcanzado - Cambiando a polling');
+            this.fallbackToPolling();
+        }
+    }
+
+    reconnectSSE() {
+        console.log('🔄 Reconectando SSE...');
+        this.connectSSE();
+    }
+
+    // 🆕 FALLBACK A POLLING MEJORADO
+    fallbackToPolling() {
+        console.log('🔁 Iniciando polling para notificaciones...');
+        
+        // Verificar inmediatamente
+        this.verificarNotificacionesPolling();
+        
+        // Luego cada 15 segundos
+        this.pollingInterval = setInterval(() => {
+            this.verificarNotificacionesPolling();
+        }, 15000);
+        
+        this.showToast('Notificaciones en modo polling (cada 15 segundos)', 'info');
+    }
+
+    async verificarNotificacionesPolling() {
+        try {
+            const response = await fetch(`../controllers/notificacion_controlador.php?action=obtener_nuevas`);
+            const data = await response.json();
+            
+            if (data.success && data.notificaciones && data.notificaciones.length > 0) {
+                console.log(`📨 ${data.notificaciones.length} nuevas notificaciones vía polling`);
+                data.notificaciones.forEach(notif => {
+                    this.handleNuevaNotificacion(notif);
+                });
+            }
+        } catch (error) {
+            console.error('Error en polling:', error);
+        }
+    }
+
     disconnectSSE() {
         if (this.eventSource) {
             this.eventSource.close();
@@ -203,11 +301,6 @@ class NotificationManager {
             console.log('🔴 SSE desconectado (página en background)');
             this.updateConnectionStatus(false);
         }
-    }
-
-    reconnectSSE() {
-        console.log('🔄 Reconectando SSE...');
-        this.connectSSE();
     }
 
     // 🆕 MÉTODO PARA LIMPIAR TODOS LOS RECURSOS
@@ -221,19 +314,39 @@ class NotificationManager {
             console.log('🔴 Conexión SSE cerrada');
         }
         
-        // Limpiar timeouts
+        // Limpiar timeouts e intervals
         if (this.reconnectTimeout) {
             clearTimeout(this.reconnectTimeout);
             this.reconnectTimeout = null;
+        }
+        
+        if (this.pollingInterval) {
+            clearInterval(this.pollingInterval);
+            this.pollingInterval = null;
+        }
+        
+        // Invalidar token si existe
+        if (this.sseToken) {
+            this.invalidateSSEToken();
         }
         
         this.isConnected = false;
         this.updateConnectionStatus(false);
     }
 
-    handleSSEError(message) {
-        console.error('❌ Error SSE:', message);
-        this.showToast('Error en notificaciones: ' + message, 'error');
+    async invalidateSSEToken() {
+        try {
+            await fetch('../controllers/notificacion_controlador.php?action=invalidate_sse_token', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `token=${encodeURIComponent(this.sseToken)}`
+            });
+            console.log('🔐 Token SSE invalidado');
+        } catch (error) {
+            console.error('Error invalidando token SSE:', error);
+        }
     }
 
     updateConnectionStatus(connected) {
@@ -244,37 +357,45 @@ class NotificationManager {
                 notifIcon.title = 'Notificaciones en tiempo real - Conectado';
             } else {
                 notifIcon.classList.add('offline');
-                notifIcon.title = 'Notificaciones - Sin conexión';
+                notifIcon.title = 'Notificaciones - Sin conexión en tiempo real';
             }
         }
+        
+        // 🆕 INDICADOR VISUAL DE ESTADO
+        this.updateConnectionIndicator(connected);
     }
 
-    async testSSEConnection() {
-        try {
-            const baseUrl = window.location.origin;
-            const testUrl = `${baseUrl}/controllers/sse_notificaciones.php`;
-            
-            console.log('🔍 Probando conexión SSE:', testUrl);
-            
-            const response = await fetch(testUrl);
-            console.log('🔍 Estado SSE:', response.status, response.statusText);
-            
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-            }
-            
-            return true;
-        } catch (error) {
-            console.error('🔍 Error probando SSE:', error);
-            return false;
+    updateConnectionIndicator(connected) {
+        let indicator = document.getElementById('sse-status-indicator');
+        if (!indicator) {
+            indicator = document.createElement('div');
+            indicator.id = 'sse-status-indicator';
+            indicator.className = 'sse-status-indicator';
+            indicator.title = connected ? 'Conectado en tiempo real' : 'Modo polling';
+            document.body.appendChild(indicator);
         }
+        
+        indicator.className = `sse-status-indicator ${connected ? 'sse-connected' : 'sse-disconnected'}`;
+        indicator.title = connected ? 'Conectado en tiempo real' : 'Modo polling';
     }
 
+    // 🆕 MÉTODO UNIFICADO PARA MANEJAR NUEVAS NOTIFICACIONES
     handleNuevoReporte(reporteData) {
         console.log('📢 Nuevo reporte en tiempo real:', reporteData);
-        
+        this.handleNuevaNotificacion({
+            id_notificacion: 'sse-' + Date.now(),
+            mensaje: reporteData.mensaje || `Nuevo reporte #${reporteData.id_reporte}`,
+            tipo: 'nuevo_reporte',
+            fecha_creacion: new Date().toISOString(),
+            leida: 0,
+            id_reporte: reporteData.id_reporte,
+            timestamp: reporteData.timestamp
+        });
+    }
+
+    handleNuevaNotificacion(notificacion) {
         // 1. Mostrar notificación en tiempo real
-        this.mostrarNotificacionTiempoReal(reporteData);
+        this.mostrarNotificacionTiempoReal(notificacion);
         
         // 2. Actualizar badge
         this.incrementarBadge();
@@ -283,30 +404,24 @@ class NotificationManager {
         this.playNotificationSound();
         
         // 4. Notificación del navegador
-        this.showBrowserNotification(reporteData);
+        this.showBrowserNotification(notificacion);
+        
+        // 5. Agregar al panel
+        this.agregarAlPanelNotificaciones(notificacion);
     }
 
-    mostrarNotificacionTiempoReal(reporteData) {
-        this.agregarAlPanelNotificaciones(reporteData);
-        this.showToast(`📢 ${reporteData.mensaje}`, 'info');
+    mostrarNotificacionTiempoReal(notificacion) {
+        this.showToast(`📢 ${notificacion.mensaje}`, 'info');
     }
 
-    agregarAlPanelNotificaciones(reporteData) {
+    agregarAlPanelNotificaciones(notificacion) {
         const notifList = document.querySelector('.notificaciones-list');
         if (!notifList) {
             console.warn('❌ No se encontró el contenedor de notificaciones');
             return;
         }
 
-        const notifElement = this.crearElementoNotificacion({
-            id_notificacion: 'temp-' + Date.now(),
-            mensaje: reporteData.mensaje,
-            tipo: 'nuevo_reporte',
-            fecha_creacion: new Date().toISOString(),
-            leida: 0,
-            id_reporte: reporteData.id_reporte
-        });
-
+        const notifElement = this.crearElementoNotificacion(notificacion);
         notifList.insertBefore(notifElement, notifList.firstChild);
         
         // Remover notificación vacía si existe
@@ -333,11 +448,13 @@ class NotificationManager {
                     <span class="notificacion-fecha">
                         ${this.formatTime(notificacion.fecha_creacion)}
                     </span>
+                    ${notificacion.tipo === 'nuevo_reporte' ? '<span class="notificacion-tipo">Nuevo Reporte</span>' : ''}
                 </div>
                 <div class="notificacion-acciones">
-                    <a href="admin.php?ver_reporte=${notificacion.id_reporte}" class="btn-ver-reporte">
-                        <i class="fas fa-eye"></i> Ver Reporte
-                    </a>
+                    ${notificacion.id_reporte ? 
+                        `<a href="admin.php?ver_reporte=${notificacion.id_reporte}" class="btn-ver-reporte">
+                            <i class="fas fa-eye"></i> Ver Reporte
+                        </a>` : ''}
                     ${!notificacion.leida ? 
                         `<button class="btn-marcar-leida">
                             <i class="fas fa-check"></i> Marcar leída
@@ -391,23 +508,31 @@ class NotificationManager {
         return icons[tipo] || icons.default;
     }
 
-    showBrowserNotification(reporteData) {
+    showBrowserNotification(notificacion) {
         if ("Notification" in window && Notification.permission === "granted") {
             const notification = new Notification("🚨 Nuevo Reporte - Villavicencio", {
-                body: reporteData.mensaje,
+                body: notificacion.mensaje,
                 icon: '../../imagenes/fiveicon.png',
-                tag: reporteData.id_reporte
+                tag: notificacion.id_reporte || 'notificacion'
             });
             
             notification.onclick = () => {
                 window.focus();
                 notification.close();
-                window.location.href = `admin.php?ver_reporte=${reporteData.id_reporte}`;
+                if (notificacion.id_reporte) {
+                    window.location.href = `admin.php?ver_reporte=${notificacion.id_reporte}`;
+                }
             };
         }
     }
 
     showToast(message, type = 'info') {
+        // Evitar toasts duplicados
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        if (existingToasts.length > 2) {
+            existingToasts[0].remove();
+        }
+
         const toast = document.createElement('div');
         toast.className = `toast-notification toast-${type}`;
         toast.innerHTML = `
@@ -479,7 +604,7 @@ class NotificationManager {
             formData.append('id_notificacion', idNotificacion);
             formData.append('action', 'marcar_notificacion_leida');
             
-            const response = await fetch('admin.php', {
+            const response = await fetch('../controllers/notificacion_controlador.php', {
                 method: 'POST',
                 body: formData
             });
@@ -490,9 +615,11 @@ class NotificationManager {
                 element.classList.remove('no-leida');
                 element.querySelector('.btn-marcar-leida')?.remove();
                 this.updateNotificationBadge(-1);
+                this.showToast('Notificación marcada como leída', 'success');
             }
         } catch (error) {
             console.error('Error marcando notificación como leída:', error);
+            this.showToast('Error al marcar como leída', 'error');
         }
     }
 
@@ -501,7 +628,7 @@ class NotificationManager {
             const formData = new FormData();
             formData.append('action', 'marcar_todas_leidas');
             
-            const response = await fetch('admin.php', {
+            const response = await fetch('../controllers/notificacion_controlador.php', {
                 method: 'POST',
                 body: formData
             });
@@ -518,6 +645,7 @@ class NotificationManager {
             }
         } catch (error) {
             console.error('Error marcando todas como leídas:', error);
+            this.showToast('Error al marcar todas como leídas', 'error');
         }
     }
 
@@ -574,6 +702,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // 🆕 Asegurar que se limpien los recursos incluso si hay errores
 window.addEventListener('error', function() {
+    if (window.notificationManager) {
+        window.notificationManager.destroy();
+    }
+});
+
+// 🆕 Manejar excepciones no capturadas
+window.addEventListener('unhandledrejection', function(event) {
+    console.error('❌ Promesa rechazada no manejada:', event.reason);
     if (window.notificationManager) {
         window.notificationManager.destroy();
     }
