@@ -17,43 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     navItems.forEach(i => i.addEventListener('click', onNavClick));
 
-    // Referencias de vistas
+    // Referencias
     const feedView = document.getElementById('feedView');
     const notificationsView = document.getElementById('notificationsView');
     const profileView = document.getElementById('profileView');
-    const mapView = document.getElementById('mapView'); // 👈 nueva referencia
-    const floatingButton = document.querySelector('.map-floating-button'); // 👈 referencia del botón
-
-    // 👇 --- LÓGICA PARA MOSTRAR/OCULTAR EL BOTÓN FLOTANTE ---
-    navItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const target = this.getAttribute('data-target');
-
-            // Ocultar todas las vistas
-            document.querySelectorAll('#feedView, #notificationsView, #mapView, #profileView')
-                .forEach(v => v.style.display = 'none');
-            
-            // Mostrar la vista seleccionada
-            document.getElementById(target).style.display = 'block';
-
-            // Mostrar el botón solo en el mapa
-            if (floatingButton) {
-                floatingButton.style.display = (target === 'mapView') ? 'flex' : 'none';
-            }
-
-            // Actualizar el estado activo en la barra inferior
-            navItems.forEach(nav => nav.classList.remove('active'));
-            this.classList.add('active');
-        });
-    });
-
-    // Estado inicial
-    feedView.style.display = 'block';
-    notificationsView.style.display = 'none';
-    profileView.style.display = 'none';
-    if (mapView) mapView.style.display = 'none';
-    if (floatingButton) floatingButton.style.display = 'none';
-    // 👆 --- FIN BLOQUE MAPA ---
 
     // Inicializar
     initAutoHideNav();
