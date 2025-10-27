@@ -178,14 +178,17 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
 
             <!-- Mapa -->
             <div id="mapView" style="display:none;">
-                <iframe 
-                    src="<?php echo $mapUrl; ?>" 
-                    title="Mapa de reportes de Ojo en la Vía"
-                ></iframe>
-                <!-- Botón DENTRO del mapa -->
+            <div id="mapView" style="display:none;">
+            <iframe 
+                src="<?php echo $mapUrl; ?>" 
+                title="Mapa de reportes de Ojo en la Vía"
+            ></iframe>
+            </div>
+
+        <!-- Botón FUERA del mapa -->
                 <button class="map-floating-button" 
-                        onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
-                    <i class="fas fa-expand"></i>
+                onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
+            <i class="fas fa-expand"></i>
                 </button>
             </div>
 

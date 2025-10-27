@@ -325,24 +325,22 @@ body, html {
 }
 
 .map-floating-button {
-    position: fixed; /* Fijo para que no lo tape el mapa */
-    bottom: calc(env(safe-area-inset-bottom) + 100px); /* Subido dinámicamente */
+    position: fixed;
+    bottom: 120px; /* Subido para evitar el nav */
     left: 20px;
-    z-index: 2000;
-    box-shadow: var(--shadow-lg);
+    z-index: 3000;
+    width: 50px;
+    height: 50px;
     border-radius: 50%;
-    width: 48px;
-    height: 48px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 0;
     background: var(--primary);
-    color: white;
+    color: #fff;
     border: 2px solid var(--bg-primary);
+    box-shadow: var(--shadow-lg);
     transition: all 0.3s ease;
 }
-
 
 .map-floating-button:hover {
     transform: scale(1.1);
@@ -365,7 +363,7 @@ body, html {
 /* Móviles pequeños en portrait */
 @media (max-width: 480px) {
     .map-floating-button {
-        bottom: calc(env(safe-area-inset-bottom) + 120px); /* aún más alto */
+        bottom: 140px; /* aún más arriba */
         left: 15px;
         width: 46px;
         height: 46px;
