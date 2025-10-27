@@ -180,194 +180,184 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
             </div>
 
             <!-- Perfil - DENTRO del mainContent -->
-            <div id="profileView" style="display:none;">
-                <div class="profile-container">
-                    <!-- Header Hero -->
-                    <div class="profile-hero">
-                        <div class="profile-hero-content">
-                            <div class="profile-avatar-container">
-                                <img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
-                                <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
-                                    <i class="fas fa-camera"></i>
-                                </div>
-                            </div>
-                            <div class="profile-hero-info">
-                                <h1 id="profileName">Cargando...</h1>
-                                <div class="profile-hero-stats">
-                                    <div class="hero-stat">
-                                        <i class="fas fa-envelope"></i>
-                                        <span id="profileEmail">cargando...</span>
-                                    </div>
-                                    <div class="hero-stat">
-                                        <i class="fas fa-phone"></i>
-                                        <span id="profilePhone">Cargando...</span>
-                                    </div>
-                                    <div class="hero-stat">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span id="profileLocation">Cargando...</span>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+            <!-- Perfil - DENTRO del mainContent -->
+<div id="profileView" style="display:none;">
+    <div class="profile-container">
+        <!-- Header Hero -->
+        <div class="profile-hero">
+            <div class="profile-hero-content">
+                <div class="profile-avatar-container">
+                    <img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
+                    <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
+                        <i class="fas fa-camera"></i>
                     </div>
-
-                    <div class="profile-content">
-                        <!-- Columna Principal -->
-                        <div class="profile-main">
-                            <!-- Información de Contacto -->
-                            <div class="profile-card">
-                                <div class="profile-card-header">
-                                    <h3><i class="fas fa-id-card"></i> Información de Contacto</h3>
-                                </div>
-                                <div class="contact-info">
-                                    <div class="contact-item">
-                                        <div class="contact-icon">
-                                            <i class="fas fa-envelope"></i>
-                                        </div>
-                                        <div class="contact-details">
-                                            <div class="contact-label">Correo Electrónico</div>
-                                            <div class="contact-value" id="profileEmailCard">cargando...</div>
-                                        </div>
-                                    </div>
-                                    <div class="contact-item">
-                                        <div class="contact-icon">
-                                            <i class="fas fa-phone"></i>
-                                        </div>
-                                        <div class="contact-details">
-                                            <div class="contact-label">Teléfono</div>
-                                            <div class="contact-value" id="profilePhoneCard">Cargando...</div>
-                                        </div>
-                                    </div>
-                                    <div class="contact-item">
-                                        <div class="contact-icon">
-                                            <i class="fas fa-map-marker-alt"></i>
-                                        </div>
-                                        <div class="contact-details">
-                                            <div class="contact-label">Ubicación</div>
-                                            <div class="contact-value" id="profileLocationCard">Cargando...</div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Biografía -->
-                            <div class="profile-card">
-                                <div class="profile-card-header">
-                                    <h3><i class="fas fa-user"></i> Biografía</h3>
-                                </div>
-                                <p id="profileBio" class="bio-content">Sin biografía...</p>
-                            </div>
-
-                            <!-- Formulario de Edición (oculto inicialmente) -->
-                            <form id="profileForm" style="display:none;" class="profile-card edit-form">
-                                <div class="profile-card-header">
-                                    <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
-                                </div>
-                                <input type="file" id="fotoPerfil" name="foto" accept="image/*" style="display: none;">
-                                
-                                <div class="form-grid">
-                                    <div class="form-group">
-                                        <label for="inpNombres" class="form-label">Nombres</label>
-                                        <input type="text" name="nombres" id="inpNombres" class="form-input" placeholder="Tus nombres">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="inpApellidos" class="form-label">Apellidos</label>
-                                        <input type="text" name="apellidos" id="inpApellidos" class="form-input" placeholder="Tus apellidos">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="inpTelefono" class="form-label">Teléfono</label>
-                                        <input type="tel" name="telefono" id="inpTelefono" class="form-input" placeholder="Tu teléfono">
-                                    </div>
-                                    <div class="form-group">
-                                        <label for="inpUbicacion" class="form-label">Ubicación</label>
-                                        <input type="text" name="ubicacion" id="inpUbicacion" class="form-input" placeholder="Tu ubicación">
-                                    </div>
-                                    <div class="form-group form-textarea">
-                                        <label for="inpBio" class="form-label">Biografía</label>
-                                        <textarea name="biografia" id="inpBio" class="form-input" placeholder="Cuéntanos sobre ti..." rows="4"></textarea>
-                                    </div>
-                                </div>
-                                
-                                <div class="form-actions">
-                                    <button type="button" id="btnSaveProfile" class="btn btn-primary">
-                                        <i class="fas fa-save"></i> Guardar Cambios
-                                    </button>
-                                    <button type="button" id="btnCancelProfile" class="btn">
-                                        <i class="fas fa-times"></i> Cancelar
-                                    </button>
-                                </div>
-                            </form>
+                </div>
+                <div class="profile-hero-info">
+                    <h1 id="profileName">Cargando...</h1>
+                    <div class="profile-hero-stats">
+                        <div class="hero-stat">
+                            <i class="fas fa-envelope"></i>
+                            <span id="profileEmail">cargando...</span>
                         </div>
-
-                        <!-- Sidebar -->
-                        <div class="profile-sidebar">
-                            <!-- Estadísticas -->
-                            <div class="profile-card">
-                                <div class="profile-card-header">
-                                    <h3><i class="fas fa-chart-bar"></i> Estadísticas</h3>
-                                </div>
-                                <div class="stats-grid">
-                                    <div class="stat-card">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-flag"></i>
-                                        </div>
-                                        <div class="stat-number" id="statReports">0</div>
-                                        <div class="stat-label">Reportes</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-heart"></i>
-                                        </div>
-                                        <div class="stat-number" id="statLikes">0</div>
-                                        <div class="stat-label">Likes</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-comments"></i>
-                                        </div>
-                                        <div class="stat-number" id="statComments">0</div>
-                                        <div class="stat-label">Comentarios</div>
-                                    </div>
-                                    <div class="stat-card">
-                                        <div class="stat-icon">
-                                            <i class="fas fa-eye"></i>
-                                        </div>
-                                        <div class="stat-number" id="statViews">0</div>
-                                        <div class="stat-label">Visitas</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <!-- Acciones Rápidas -->
-                            <div class="profile-card">
-                                <div class="profile-card-header">
-                                    <h3><i class="fas fa-bolt"></i> Acciones Rápidas</h3>
-                                </div>
-                                <div class="quick-actions">
-                                    <button class="quick-action-btn" id="btnEditProfile">
-                                        <div class="quick-action-icon">
-                                            <i class="fas fa-edit"></i>
-                                        </div>
-                                        <div class="quick-action-text">
-                                            <div class="quick-action-title">Editar Perfil</div>
-                                            <div class="quick-action-desc">Actualiza tu información personal</div>
-                                        </div>
-                                    </button>
-                                    <button class="quick-action-btn" onclick="cerrarSesion()">
-                                        <div class="quick-action-icon">
-                                            <i class="fas fa-sign-out-alt"></i>
-                                        </div>
-                                        <div class="quick-action-text">
-                                            <div class="quick-action-title">Cerrar Sesión</div>
-                                            <div class="quick-action-desc">Salir de tu cuenta</div>
-                                        </div>
-                                    </button>
-                                </div>
-                            </div>
+                        <div class="hero-stat">
+                            <i class="fas fa-phone"></i>
+                            <span id="profilePhone">Cargando...</span>
                         </div>
                     </div>
                 </div>
             </div>
+        </div>
+
+        <div class="profile-content">
+            <!-- Columna Principal -->
+            <div class="profile-main">
+                <!-- Información Personal -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3><i class="fas fa-user"></i> Información Personal</h3>
+                    </div>
+                    <div class="contact-info">
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="contact-details">
+                                <div class="contact-label">Nombres</div>
+                                <div class="contact-value" id="profileNames">cargando...</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <div class="contact-details">
+                                <div class="contact-label">Apellidos</div>
+                                <div class="contact-value" id="profileLastnames">cargando...</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fas fa-envelope"></i>
+                            </div>
+                            <div class="contact-details">
+                                <div class="contact-label">Correo Electrónico</div>
+                                <div class="contact-value" id="profileEmailCard">cargando...</div>
+                            </div>
+                        </div>
+                        <div class="contact-item">
+                            <div class="contact-icon">
+                                <i class="fas fa-phone"></i>
+                            </div>
+                            <div class="contact-details">
+                                <div class="contact-label">Teléfono</div>
+                                <div class="contact-value" id="profilePhoneCard">cargando...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Formulario de Edición (oculto inicialmente) -->
+                <form id="profileForm" style="display:none;" class="profile-card edit-form">
+                    <div class="profile-card-header">
+                        <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
+                    </div>
+                    <input type="file" id="fotoPerfil" name="foto" accept="image/*" style="display: none;">
+                    
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="inpNombres" class="form-label">Nombres</label>
+                            <input type="text" name="nombres" id="inpNombres" class="form-input" placeholder="Tus nombres">
+                        </div>
+                        <div class="form-group">
+                            <label for="inpApellidos" class="form-label">Apellidos</label>
+                            <input type="text" name="apellidos" id="inpApellidos" class="form-input" placeholder="Tus apellidos">
+                        </div>
+                        <div class="form-group">
+                            <label for="inpTelefono" class="form-label">Teléfono</label>
+                            <input type="tel" name="telefono" id="inpTelefono" class="form-input" placeholder="Tu teléfono">
+                        </div>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="button" id="btnSaveProfile" class="btn btn-primary">
+                            <i class="fas fa-save"></i> Guardar Cambios
+                        </button>
+                        <button type="button" id="btnCancelProfile" class="btn">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Sidebar (mantener igual) -->
+            <div class="profile-sidebar">
+                <!-- Estadísticas -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3><i class="fas fa-chart-bar"></i> Estadísticas</h3>
+                    </div>
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-flag"></i>
+                            </div>
+                            <div class="stat-number" id="statReports">0</div>
+                            <div class="stat-label">Reportes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-heart"></i>
+                            </div>
+                            <div class="stat-number" id="statLikes">0</div>
+                            <div class="stat-label">Likes</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="stat-number" id="statComments">0</div>
+                            <div class="stat-label">Comentarios</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon">
+                                <i class="fas fa-eye"></i>
+                            </div>
+                            <div class="stat-number" id="statViews">0</div>
+                            <div class="stat-label">Visitas</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Acciones Rápidas -->
+                <div class="profile-card">
+                    <div class="profile-card-header">
+                        <h3><i class="fas fa-bolt"></i> Acciones Rápidas</h3>
+                    </div>
+                    <div class="quick-actions">
+                        <button class="quick-action-btn" id="btnEditProfile">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-edit"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <div class="quick-action-title">Editar Perfil</div>
+                                <div class="quick-action-desc">Actualiza tu información personal</div>
+                            </div>
+                        </button>
+                        <button class="quick-action-btn" onclick="cerrarSesion()">
+                            <div class="quick-action-icon">
+                                <i class="fas fa-sign-out-alt"></i>
+                            </div>
+                            <div class="quick-action-text">
+                                <div class="quick-action-title">Cerrar Sesión</div>
+                                <div class="quick-action-desc">Salir de tu cuenta</div>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
             <!-- FIN del profileView -->
             
         </div>

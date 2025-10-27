@@ -324,30 +324,43 @@ function showNavigation() {
     }
 
     // Cargar perfil
-    async function cargarPerfil() {
-        try {
-            const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
-            const user = await resp.json();
-
-            if (!user) return;
-
-            document.getElementById('profileAvatar').src = user.foto_perfil || '/imagenes/fiveicon.png';
-            document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`;
-            document.getElementById('profileEmail').innerHTML = `<i class="fas fa-envelope"></i> ${user.correo || ''}`;
-            document.getElementById('profilePhone').innerHTML = `<i class="fas fa-phone"></i> ${user.telefono || 'Sin teléfono'}`;
-            document.getElementById('profileLocation').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${user.ubicacion || 'Sin ubicación'}`;
-            document.getElementById('profileBio').textContent = user.biografia || 'Sin biografía';
-
-            // Prefill form
-            document.getElementById('inpNombres').value = user.nombres || '';
-            document.getElementById('inpApellidos').value = user.apellidos || '';
-            document.getElementById('inpTelefono').value = user.telefono || '';
-            document.getElementById('inpUbicacion').value = user.ubicacion || '';
-            document.getElementById('inpBio').value = user.biografia || '';
-        } catch (err) {
-            console.error('Error cargar perfil', err);
+   async function cargarPerfil() {
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
+        
+        // Verificar si la respuesta es JSON
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.warn('El servidor devolvió HTML en lugar de JSON');
+            return;
         }
+        
+        const user = await resp.json();
+
+        if (!user) return;
+
+        // Solo mostrar datos que existen en la BD
+        document.getElementById('profileAvatar').src = '/imagenes/fiveicon.png'; // Avatar por defecto
+        document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`.trim();
+        document.getElementById('profileEmail').textContent = user.correo || 'No disponible';
+        document.getElementById('profilePhone').textContent = user.telefono || 'Sin teléfono';
+        
+        // Información personal en la tarjeta
+        document.getElementById('profileNames').textContent = user.nombres || 'No disponible';
+        document.getElementById('profileLastnames').textContent = user.apellidos || 'No disponible';
+        document.getElementById('profileEmailCard').textContent = user.correo || 'No disponible';
+        document.getElementById('profilePhoneCard').textContent = user.telefono || 'Sin teléfono';
+
+        // Prefill form solo con datos existentes
+        document.getElementById('inpNombres').value = user.nombres || '';
+        document.getElementById('inpApellidos').value = user.apellidos || '';
+        document.getElementById('inpTelefono').value = user.telefono || '';
+
+    } catch (err) {
+        console.warn('Error cargar perfil (no crítico):', err);
+        // No hacer nada, dejar que la aplicación continúe
     }
+}
 
     async function guardarPerfil() {
         const form = new FormData();
