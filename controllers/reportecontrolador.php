@@ -107,58 +107,6 @@ case 'registrar':
 
             $id_reporte = $db->lastInsertId();
             error_log("✅ Reporte insertado con ID: " . $id_reporte);
-// 🔔 Crear notificación SSE
-try {
-    $queryInfo = "
-        SELECT 
-            r.descripcion, 
-            ti.nombre AS tipo_incidente, 
-            u.id_usuario,
-            p.nombres, 
-            p.apellidos
-        FROM reporte r
-        INNER JOIN tipo_incidente ti ON r.id_tipo_incidente = ti.id_tipo_incidente
-        INNER JOIN usuario u ON r.id_usuario = u.id_usuario
-        INNER JOIN persona p ON u.id_persona = p.id_persona
-        WHERE r.id_reporte = :id_reporte
-    ";
-    $stmtInfo = $db->prepare($queryInfo);
-    $stmtInfo->execute([':id_reporte' => $id_reporte]);
-    $infoReporte = $stmtInfo->fetch(PDO::FETCH_ASSOC);
-
-    if ($infoReporte) {
-        $nombreCompleto = trim($infoReporte['nombres'] . ' ' . $infoReporte['apellidos']);
-        $mensajeCorto = strlen($infoReporte['descripcion']) > 60 
-            ? substr($infoReporte['descripcion'], 0, 60) . "..." 
-            : $infoReporte['descripcion'];
-        
-        $notificacionData = [
-            'id_reporte' => $id_reporte,
-            'mensaje' => "🚨 Nuevo reporte #{$id_reporte}: {$infoReporte['tipo_incidente']} - {$mensajeCorto}",
-            'tipo_incidente' => $infoReporte['tipo_incidente'],
-            'usuario' => $nombreCompleto,
-            'timestamp' => time()
-        ];
-
-        // Ruta del archivo SSE
-        $archivoNotificacion = $_SERVER['DOCUMENT_ROOT'] . '/temp/ultima_notificacion.json';
-        $tempDir = dirname($archivoNotificacion);
-
-        // Crear directorio si no existe
-        if (!is_dir($tempDir)) {
-            mkdir($tempDir, 0755, true);
-        }
-
-        // Guardar archivo temporal para SSE
-        if (file_put_contents($archivoNotificacion, json_encode($notificacionData)) !== false) {
-            error_log("✅ Notificación SSE creada para reporte #{$id_reporte} por {$nombreCompleto}");
-        } else {
-            error_log("⚠️ Error guardando notificación SSE");
-        }
-    }
-} catch (Exception $e) {
-    error_log("❌ Error generando notificación SSE: " . $e->getMessage());
-}
 
             // 🆕 CORREGIDO: OBTENER INFORMACIÓN PARA LA NOTIFICACIÓN
             $queryInfo = "
@@ -312,43 +260,7 @@ try {
 
             // Confirmar transacción
             $db->commit();
-            try {
-    // Detectar entorno dinámicamente
-                $base_url = getenv('BASE_URL'); // ← Variable de entorno para producción
-                
-                if (!$base_url) {
-                    // Si no hay variable de entorno, asumir entorno local
-                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
-                    $host = $_SERVER['HTTP_HOST'] ?? 'localhost:8080';
-                    $base_url = $protocol . '://' . $host;
-                }
-
-                // Construir URL destino
-                $url = rtrim($base_url, '/') . '/controllers/notificacion_controlador.php?action=notificar_nuevo_reporte';
-
-                // Datos a enviar
-                $data = ['id_reporte' => $id_reporte];
-
-                $options = [
-                    'http' => [
-                        'header'  => "Content-Type: application/x-www-form-urlencoded\r\n",
-                        'method'  => 'POST',
-                        'content' => http_build_query($data),
-                        'timeout' => 3 // evita bloqueos si el notificador tarda
-                    ]
-                ];
-
-                $context  = stream_context_create($options);
-                $result = @file_get_contents($url, false, $context);
-
-                if ($result === FALSE) {
-                    error_log("⚠️ Error enviando notificación SSE a: $url");
-                } else {
-                    error_log("✅ Notificación SSE enviada correctamente a: $url");
-                }
-            } catch (Exception $ex) {
-                error_log("⚠️ Excepción al notificar SSE: " . $ex->getMessage());
-            }
+            
             // Limpiar output accidental
             $unexpected_output = ob_get_contents();
             if (!empty($unexpected_output)) {

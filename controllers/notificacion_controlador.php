@@ -1,5 +1,4 @@
 <?php
-// controllers/notificacion_sistema_controlador.php
 header('Content-Type: application/json; charset=utf-8');
 require_once __DIR__ . '/../config/database.php';
 
@@ -19,7 +18,6 @@ try {
                 exit(); 
             }
             
-            // Validar que el ID sea numérico
             if (!is_numeric($id_reporte)) {
                 echo json_encode(['success' => false, 'error' => 'ID de reporte inválido']);
                 exit();
@@ -62,9 +60,10 @@ try {
                 $mensaje = "🚨 Nuevo reporte #{$id_reporte}: {$reporte['tipo_incidente']} - " . 
                         substr($reporte['descripcion'], 0, 100) . "...";
                 
+                // ✅ Ajuste a la estructura real de la tabla (sin fecha_creacion)
                 $sqlInsert = "INSERT INTO notificacion 
-                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje, fecha_creacion) 
-                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje, NOW())";
+                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje) 
+                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje)";
                 
                 try {
                     $stmtInsert = $db->prepare($sqlInsert);
@@ -81,6 +80,8 @@ try {
                     $errors[] = "Error notificando admin {$admin['id_usuario']}: " . $e->getMessage();
                 }
             }
+
+            // Crear archivo para SSE
             try {
                 $sseData = [
                     'event' => 'nuevo_reporte',
@@ -98,6 +99,7 @@ try {
             } catch (Exception $e) {
                 error_log("❌ Error generando archivo SSE: " . $e->getMessage());
             }
+
             $response = [
                 'success' => true,
                 'mensaje' => "{$notificaciones_creadas} notificaciones creadas para administradores",
@@ -110,65 +112,64 @@ try {
             
             echo json_encode($response);
             break;
-            // Agregar estos cases al switch existente
-        case 'obtener_nuevas':
-    session_start();
-    $id_usuario = $_SESSION['usuario_id'] ?? null;
-    $ultima_verificacion = $_GET['ultima_verificacion'] ?? null;
-    
-    if (!$id_usuario) {
-        echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
-        break;
-    }
-    
-    // 🆕 CONSULTA CORREGIDA
-    $sql = "SELECT n.*, 
-                p.nombres as nombre_origen, 
-                p.apellidos as apellido_origen,
-                r.descripcion 
-            FROM notificacion n 
-            LEFT JOIN usuario u ON n.id_usuario_origen = u.id_usuario 
-            LEFT JOIN persona p ON u.id_persona = p.id_persona
-            LEFT JOIN reporte r ON n.id_reporte = r.id_reporte 
-            WHERE n.id_usuario_destino = :id_usuario 
-            AND n.leido = 0";
-    
-    $params = [':id_usuario' => $id_usuario];
-    
-    if ($ultima_verificacion) {
-        $sql .= " AND n.fecha > :ultima_verificacion";
-        $params[':ultima_verificacion'] = $ultima_verificacion;
-    }
-    
-    $sql .= " ORDER BY n.fecha DESC LIMIT 10";
-    
-    $stmt = $db->prepare($sql);
-    $stmt->execute($params);
-    $notificaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
-    // Formatear nombre completo
-    foreach ($notificaciones as &$notif) {
-        if ($notif['nombre_origen']) {
-            $notif['nombre_origen'] = trim($notif['nombre_origen'] . ' ' . $notif['apellido_origen']);
-        }
-        unset($notif['apellido_origen']);
-    }
-    unset($notif);
-    
-    // Obtener total de no leídas
-    $sqlCount = "SELECT COUNT(*) as total FROM notificacion 
-                WHERE id_usuario_destino = :id_usuario AND leido = 0";
-    $stmtCount = $db->prepare($sqlCount);
-    $stmtCount->execute([':id_usuario' => $id_usuario]);
-    $total = $stmtCount->fetch(PDO::FETCH_ASSOC);
-    
-    echo json_encode([
-        'success' => true,
-        'notificaciones' => $notificaciones,
-        'total_nuevas' => $total['total']
-    ]);
-    break;
 
+        // 🔔 Obtener nuevas notificaciones
+        case 'obtener_nuevas':
+            session_start();
+            $id_usuario = $_SESSION['usuario_id'] ?? null;
+            $ultima_verificacion = $_GET['ultima_verificacion'] ?? null;
+            
+            if (!$id_usuario) {
+                echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+                break;
+            }
+            
+            $sql = "SELECT n.*, 
+                        p.nombres as nombre_origen, 
+                        p.apellidos as apellido_origen,
+                        r.descripcion 
+                    FROM notificacion n 
+                    LEFT JOIN usuario u ON n.id_usuario_origen = u.id_usuario 
+                    LEFT JOIN persona p ON u.id_persona = p.id_persona
+                    LEFT JOIN reporte r ON n.id_reporte = r.id_reporte 
+                    WHERE n.id_usuario_destino = :id_usuario 
+                    AND n.leida = FALSE";
+            
+            $params = [':id_usuario' => $id_usuario];
+            
+            if ($ultima_verificacion) {
+                $sql .= " AND n.fecha > :ultima_verificacion";
+                $params[':ultima_verificacion'] = $ultima_verificacion;
+            }
+            
+            $sql .= " ORDER BY n.fecha DESC LIMIT 10";
+            
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            $notificaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            foreach ($notificaciones as &$notif) {
+                if ($notif['nombre_origen']) {
+                    $notif['nombre_origen'] = trim($notif['nombre_origen'] . ' ' . $notif['apellido_origen']);
+                }
+                unset($notif['apellido_origen']);
+            }
+            unset($notif);
+            
+            $sqlCount = "SELECT COUNT(*) as total FROM notificacion 
+                        WHERE id_usuario_destino = :id_usuario AND leida = FALSE";
+            $stmtCount = $db->prepare($sqlCount);
+            $stmtCount->execute([':id_usuario' => $id_usuario]);
+            $total = $stmtCount->fetch(PDO::FETCH_ASSOC);
+            
+            echo json_encode([
+                'success' => true,
+                'notificaciones' => $notificaciones,
+                'total_nuevas' => $total['total']
+            ]);
+            break;
+
+        // ✅ Marcar una notificación como leída
         case 'marcar_leida':
             session_start();
             $id_notificacion = $_POST['id_notificacion'] ?? null;
@@ -178,7 +179,7 @@ try {
                 break;
             }
             
-            $sql = "UPDATE notificacion SET leido = 1, fecha_leido = NOW() 
+            $sql = "UPDATE notificacion SET leida = TRUE 
                     WHERE id_notificacion = :id_notificacion";
             $stmt = $db->prepare($sql);
             $stmt->execute([':id_notificacion' => $id_notificacion]);
@@ -186,6 +187,7 @@ try {
             echo json_encode(['success' => true, 'mensaje' => 'Notificación marcada como leída']);
             break;
 
+        // ✅ Marcar todas como leídas
         case 'marcar_todas_leidas':
             session_start();
             $id_usuario = $_SESSION['usuario_id'] ?? null;
@@ -195,14 +197,16 @@ try {
                 break;
             }
             
-            $sql = "UPDATE notificacion SET leido = 1, fecha_leido = NOW() 
-                    WHERE id_usuario_destino = :id_usuario AND leido = 0";
+            $sql = "UPDATE notificacion SET leida = TRUE 
+                    WHERE id_usuario_destino = :id_usuario AND leida = FALSE";
             $stmt = $db->prepare($sql);
             $stmt->execute([':id_usuario' => $id_usuario]);
             
             echo json_encode(['success' => true, 'mensaje' => 'Todas las notificaciones marcadas como leídas']);
             break;
-            case 'crear_notificacion_sse':
+
+        // ✅ Crear notificación manual vía SSE
+        case 'crear_notificacion_sse':
             $id_reporte = $_POST['id_reporte'] ?? '';
             $mensaje = $_POST['mensaje'] ?? '';
             
@@ -211,7 +215,6 @@ try {
                 break;
             }
             
-            // Obtener todos los administradores activos
             $sqlAdmins = "SELECT id_usuario FROM usuario WHERE id_rol = 1 AND id_estado = 1";
             $stmtAdmins = $db->prepare($sqlAdmins);
             $stmtAdmins->execute();
@@ -221,8 +224,8 @@ try {
             
             foreach ($admins as $admin) {
                 $sqlInsert = "INSERT INTO notificacion 
-                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje, fecha_creacion) 
-                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje, NOW())";
+                            (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje) 
+                            VALUES (:id_destino, :id_origen, :id_reporte, 'nuevo_reporte', :mensaje)";
                 
                 $stmtInsert = $db->prepare($sqlInsert);
                 $stmtInsert->execute([
@@ -240,32 +243,32 @@ try {
                 'mensaje' => "{$notificaciones_creadas} notificaciones creadas"
             ]);
             break;
-            // Agregar al switch existente
-case 'generate_sse_token':
-    session_start();
-    
-    if (!isset($_SESSION['usuario_id']) || ($_SESSION['rol'] ?? 0) != 1) {
-        echo json_encode(['success' => false, 'error' => 'No autorizado']);
-        break;
-    }
-    
-    require_once __DIR__ . '/../config/session_manager.php';
-    $token = SessionManager::generateSSEToken($_SESSION['usuario_id']);
-    
-    echo json_encode([
-        'success' => true,
-        'token' => $token,
-        'expires_in' => 3600
-    ]);
-    break;
+
+        // ✅ Generar token SSE
+        case 'generate_sse_token':
+            session_start();
+            
+            if (!isset($_SESSION['usuario_id']) || ($_SESSION['rol'] ?? 0) != 1) {
+                echo json_encode(['success' => false, 'error' => 'No autorizado']);
+                break;
+            }
+            
+            require_once __DIR__ . '/../config/session_manager.php';
+            $token = SessionManager::generateSSEToken($_SESSION['usuario_id']);
+            
+            echo json_encode([
+                'success' => true,
+                'token' => $token,
+                'expires_in' => 3600
+            ]);
+            break;
 
         default:
             echo json_encode(['success' => false, 'error' => 'Acción no válida']);
     }
 
 } catch (Exception $e) {
-     $mensajeError = $e->getMessage();
-     
+    $mensajeError = $e->getMessage();
     if (stripos($mensajeError, 'SQLSTATE') !== false || stripos($mensajeError, 'failed') !== false) {
         http_response_code(500);
     }
