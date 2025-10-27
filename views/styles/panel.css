@@ -1331,7 +1331,7 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    order: 2; /* En móvil, el sidebar va primero */
+    order: 1; /* En móvil, el sidebar va primero */
 }
 
 /* Sidebar */
@@ -1339,10 +1339,15 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    order: 1; /* En móvil, el sidebar va primero */
+    order: 2; /* En móvil, el sidebar va primero */
     position: static;
 }
-
+.profile-sidebar .profile-card:nth-child(1) {
+    order: 1; /* Estadísticas primero */
+}
+.profile-sidebar .profile-card:nth-child(2) {
+    order: 2; /* Acciones después */
+}
 /* Tarjetas de información */
 .profile-card {
     background: var(--bg-primary);
