@@ -6,8 +6,8 @@ if (!isset($_SESSION['usuario_id'])) {
 }
 
 // Determinar la URL base para el iframe
-$baseUrl = 'http://' . $_SERVER['HTTP_HOST'];
-if ($_SERVER['HTTP_HOST'] === 'localhost:8080') {
+$baseUrl = 'http://' . $_SERVER['HTTPS_HOST'];
+if ($_SERVER['HTTPS_HOST'] === 'localhost:8080') {
     $baseUrl = 'http://localhost:8080';
 }
 $mapUrl = $baseUrl . '/views/vermapa.php';
