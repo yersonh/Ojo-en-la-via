@@ -1212,17 +1212,17 @@ body, html {
     width: 100%;
 }
 
-/* Header del perfil - MOBILE FIRST */
+/* Header del perfil - ANCHO COMPLETO EN MÓVILES */
 .profile-hero {
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
-    padding: 20px 15px;
-    margin: 15px;
+    padding: 25px 20px;
+    margin: 0; /* Sin margen para ancho completo */
     color: white;
     position: relative;
     overflow: hidden;
     box-shadow: var(--shadow-lg);
-    border-radius: var(--border-radius);
-    width: calc(100% - 30px);
+    border-radius: 0; /* Sin bordes redondeados para ancho completo */
+    width: 100%; /* Ancho completo */
 }
 
 .profile-hero::before {
@@ -1243,6 +1243,8 @@ body, html {
     align-items: center;
     gap: 15px;
     text-align: center;
+    max-width: 600px; /* Máximo ancho para el contenido */
+    margin: 0 auto; /* Centrado pero con fondo completo */
 }
 
 .profile-avatar-container {
@@ -1317,13 +1319,15 @@ body, html {
     width: 16px;
 }
 
-/* Layout de columnas - MOBILE FIRST */
+/* Layout de columnas - ANCHO COMPLETO EN MÓVILES */
 .profile-content {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    padding: 15px;
+    padding: 20px; /* Padding para espacio interno */
     min-height: calc(100vh - 44px - 140px);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 /* Columna principal */
@@ -1331,7 +1335,8 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    order: 1; /* En móvil, el sidebar va primero */
+    order: 1;
+    width: 100%;
 }
 
 /* Sidebar */
@@ -1339,16 +1344,20 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 16px;
-    order: 2; /* En móvil, el sidebar va primero */
+    order: 2;
     position: static;
+    width: 100%;
 }
+
 .profile-sidebar .profile-card:nth-child(1) {
-    order: 1; /* Estadísticas primero */
+    order: 1;
 }
+
 .profile-sidebar .profile-card:nth-child(2) {
-    order: 2; /* Acciones después */
+    order: 2;
 }
-/* Tarjetas de información */
+
+/* Tarjetas de información - ANCHO COMPLETO */
 .profile-card {
     background: var(--bg-primary);
     border-radius: var(--border-radius);
@@ -1357,6 +1366,7 @@ body, html {
     border: 1px solid var(--border-color);
     transition: var(--transition);
     width: 100%;
+    box-sizing: border-box; /* Incluir padding en el ancho */
 }
 
 .profile-card:hover {
@@ -1389,6 +1399,7 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
 }
 
 .contact-item {
@@ -1398,6 +1409,8 @@ body, html {
     padding: 12px;
     border-radius: var(--border-radius-sm);
     transition: var(--transition);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .contact-item:hover {
@@ -1419,7 +1432,7 @@ body, html {
 
 .contact-details {
     flex: 1;
-    min-width: 0; /* Permitir que el texto se ajuste */
+    min-width: 0;
 }
 
 .contact-label {
@@ -1434,14 +1447,15 @@ body, html {
     font-size: 14px;
     color: var(--text-primary);
     font-weight: 500;
-    word-break: break-word; /* Romper palabras largas */
+    word-break: break-word;
 }
 
-/* Estadísticas - MOBILE */
+/* Estadísticas - ANCHO COMPLETO */
 .stats-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
+    width: 100%;
 }
 
 .stat-card {
@@ -1451,6 +1465,8 @@ body, html {
     text-align: center;
     border: 1px solid var(--border-color);
     transition: var(--transition);
+    width: 100%;
+    box-sizing: border-box;
 }
 
 .stat-card:hover {
@@ -1485,11 +1501,12 @@ body, html {
     letter-spacing: 0.5px;
 }
 
-/* Acciones rápidas */
+/* Acciones rápidas - ANCHO COMPLETO */
 .quick-actions {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    width: 100%;
 }
 
 .quick-action-btn {
@@ -1504,6 +1521,7 @@ body, html {
     transition: var(--transition);
     text-align: left;
     width: 100%;
+    box-sizing: border-box;
 }
 
 .quick-action-btn:hover {
@@ -1543,7 +1561,7 @@ body, html {
     line-height: 1.3;
 }
 
-/* Formulario de edición */
+/* Formulario de edición - ANCHO COMPLETO */
 .edit-form {
     animation: slideInUp 0.3s ease-out;
 }
@@ -1563,11 +1581,13 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 12px;
+    width: 100%;
 }
 
 .form-group {
     display: flex;
     flex-direction: column;
+    width: 100%;
 }
 
 .form-label {
@@ -1586,6 +1606,7 @@ body, html {
     font-size: 14px;
     transition: var(--transition);
     width: 100%;
+    box-sizing: border-box;
 }
 
 .form-input:focus {
@@ -1602,17 +1623,24 @@ body, html {
     margin-top: 20px;
     padding-top: 20px;
     border-top: 1px solid var(--border-color);
+    width: 100%;
+}
+
+/* Botones - ANCHO COMPLETO EN MÓVILES */
+.form-actions .btn {
+    width: 100%;
+    justify-content: center;
 }
 
 /* ============================================= */
-/* RESPONSIVE - TABLETS */
+/* RESPONSIVE - TABLETS (volver a diseño normal) */
 /* ============================================= */
 
 @media (min-width: 768px) {
     .profile-hero {
-        padding: 25px 20px;
-        margin: 20px;
-        width: calc(100% - 40px);
+        margin: 20px 20px 0 20px; /* Volver márgenes */
+        border-radius: var(--border-radius); /* Volver bordes redondeados */
+        width: calc(100% - 40px); /* Ancho con márgenes */
     }
     
     .profile-hero-content {
@@ -1699,6 +1727,10 @@ body, html {
     .form-actions {
         flex-direction: row;
     }
+    
+    .form-actions .btn {
+        width: auto; /* Botones no ocupan ancho completo en tablets+ */
+    }
 }
 
 /* ============================================= */
@@ -1730,13 +1762,11 @@ body, html {
 
 @media (max-width: 360px) {
     .profile-hero {
-        padding: 15px 12px;
-        margin: 10px;
-        width: calc(100% - 20px);
+        padding: 20px 15px;
     }
     
     .profile-content {
-        padding: 10px;
+        padding: 15px;
     }
     
     .profile-card {
@@ -1792,94 +1822,5 @@ body, html {
         width: 32px;
         height: 32px;
         font-size: 12px;
-    }
-}
-/* ============================================= */
-/* RESPONSIVE */
-/* ============================================= */
-
-@media (max-width: 1024px) {
-    .profile-content {
-        grid-template-columns: 1fr;
-        gap: 20px;
-        max-width: none;
-        margin: 0;
-        padding: 20px;
-    }
-    
-    .profile-sidebar {
-        position: static;
-    }
-    
-    .profile-hero-content {
-        flex-direction: column;
-        text-align: center;
-        max-width: none;
-        margin: 0 20px;
-    }
-    
-    .profile-hero-stats {
-        justify-content: center;
-    }
-}
-
-@media (max-width: 768px) {
-    #profileView {
-        top: 44px;
-    }
-    
-    .profile-hero {
-        padding: 30px 20px;
-    }
-    
-    .profile-main-avatar {
-        width: 100px;
-        height: 100px;
-    }
-    
-    .profile-content {
-        padding: 15px;
-    }
-    
-    .profile-card {
-        padding: 20px;
-    }
-    
-    .form-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .stats-grid {
-        grid-template-columns: 1fr;
-    }
-    
-    .form-actions {
-        flex-direction: column;
-    }
-    
-    .form-actions .btn {
-        width: 100%;
-    }
-}
-
-@media (max-width: 480px) {
-    .profile-hero-stats {
-        flex-direction: column;
-        gap: 12px;
-        align-items: center;
-    }
-    
-    .profile-card-header {
-        flex-direction: column;
-        gap: 12px;
-        align-items: flex-start;
-    }
-    
-    .profile-content {
-        padding: 10px;
-    }
-    
-    .profile-hero {
-        padding: 25px 15px;
     }
 }
