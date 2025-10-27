@@ -347,7 +347,59 @@ body, html {
     transform: scale(1.1);
     background: var(--primary-dark);
 }
+/* ============================================= */
+/* AJUSTES ESPECÍFICOS PARA MÓVIL - BOTÓN FLOTANTE */
+/* ============================================= */
 
+/* Móviles en portrait */
+@media (max-width: 768px) and (orientation: portrait) {
+    .map-floating-button {
+        bottom: 100px; /* Subir el botón para que sea visible */
+        left: 15px;
+        width: 44px; /* Un poco más grande para mejor tacto */
+        height: 44px;
+    }
+}
+
+/* Móviles pequeños en portrait */
+@media (max-width: 480px) and (orientation: portrait) {
+    .map-floating-button {
+        bottom: 90px; /* Posición aún más alta en móviles pequeños */
+        left: 12px;
+        width: 42px;
+        height: 42px;
+    }
+}
+
+/* Móviles muy pequeños */
+@media (max-width: 360px) and (orientation: portrait) {
+    .map-floating-button {
+        bottom: 85px; /* Ajuste final para pantallas muy pequeñas */
+        left: 10px;
+        width: 40px;
+        height: 40px;
+    }
+}
+
+/* Tablets en portrait */
+@media (min-width: 769px) and (max-width: 1024px) and (orientation: portrait) {
+    .map-floating-button {
+        bottom: 95px; /* Ajuste para tablets en vertical */
+        left: 20px;
+        width: 46px;
+        height: 46px;
+    }
+}
+
+/* Para landscape en móviles (opcional, si también tiene problemas) */
+@media (max-width: 768px) and (orientation: landscape) {
+    .map-floating-button {
+        bottom: 70px; /* En landscape puede necesitar menos ajuste */
+        left: 15px;
+        width: 40px;
+        height: 40px;
+    }
+}
 /* ============================================= */
 /* 7. VISTA: PERFIL */
 /* ============================================= */
