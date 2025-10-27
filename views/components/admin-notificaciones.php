@@ -67,11 +67,17 @@ $notificaciones = $adminControlador->obtenerNotificacionesNoLeidas($idUsuarioAct
                         </div>
                         <div class="notificacion-acciones">
                             <?php if ($notif['id_reporte']): ?>
-                                <a href="admin.php?ver_reporte=<?php echo $notif['id_reporte']; ?>" 
-                                   class="btn-ver-reporte">Ver Reporte</a>
+                                <!-- 🆕 CORREGIDO: Ir a pestaña de reportes con ID específico -->
+                                <a href="#" class="btn-ver-reporte" 
+                                   data-tab="reportes" 
+                                   data-reporte-id="<?php echo $notif['id_reporte']; ?>">
+                                    <i class="fas fa-eye"></i> Ver Reporte
+                                </a>
                             <?php endif; ?>
                             <?php if (!$notif['leida']): ?>
-                                <button class="btn-marcar-leida">Marcar leída</button>
+                                <button class="btn-marcar-leida">
+                                    <i class="fas fa-check"></i> Marcar leída
+                                </button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -86,7 +92,7 @@ $notificaciones = $adminControlador->obtenerNotificacionesNoLeidas($idUsuarioAct
         </div>
         
         <div class="notificaciones-footer">
-            <a href="admin.php?ver_todas_notificaciones=1">Ver todas las notificaciones</a>
+            <a href="#" data-tab="reportes">Ver todas las notificaciones</a>
         </div>
     </div>
 </div>

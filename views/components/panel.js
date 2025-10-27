@@ -1,6 +1,20 @@
 // Panel.js - gestiona navegación inferior, feed, notificaciones y perfil
 document.addEventListener('DOMContentLoaded', function() {
     const navItems = document.querySelectorAll('.nav-item');
+    const bottomNav = document.querySelector('.bottom-nav');
+    const mainContent = document.querySelector('.main');
+    const navActivationZone = document.createElement('div');
+    
+    // Crear zona de activación
+    navActivationZone.className = 'nav-activation-zone';
+    document.body.appendChild(navActivationZone);
+    
+    // Estado de la navegación
+    let isNavHidden = false;
+    let hideTimeout = null;
+    let lastScrollTop = 0;
+    let scrollDirection = 'down';
+
     navItems.forEach(i => i.addEventListener('click', onNavClick));
 
     // Referencias
@@ -8,7 +22,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const notificationsView = document.getElementById('notificationsView');
     const profileView = document.getElementById('profileView');
 
-    // Inicializar feed
+    // Inicializar
+    initAutoHideNav();
     cargarFeed();
     cargarPerfil();
 
@@ -29,42 +44,185 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('fotoPerfil').click();
     });
 
-    async function onNavClick(e) {
-        navItems.forEach(n => n.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-
-        const target = e.currentTarget.getAttribute('data-target');
-        document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
+    // Función para inicializar el auto-ocultado de la navegación
+    function initAutoHideNav() {
+        // Ocultar después de 3 segundos de inactividad
+        hideTimeout = setTimeout(hideNavigation, 3000);
         
-        const targetElement = document.getElementById(target);
-        if (targetElement) {
-            targetElement.style.display = 'block';
-        }
-
-        if (target === 'feedView') cargarFeed();
-        if (target === 'notificationsView') cargarNotificaciones();
-        if (target === 'mapView') {
-            // mapa está dentro de iframe en esta vista
-        }
-        if (target === 'profileView') cargarPerfil();
+        // Mostrar navegación al hacer hover en la zona de activación
+        navActivationZone.addEventListener('mouseenter', showNavigation);
+        navActivationZone.addEventListener('touchstart', showNavigation);
+        
+        // Mostrar navegación al hacer hover sobre ella misma
+        bottomNav.addEventListener('mouseenter', showNavigation);
+        bottomNav.addEventListener('touchstart', showNavigation);
+        
+        // Ocultar al salir del área de la navegación
+        bottomNav.addEventListener('mouseleave', () => {
+            if (!isUserInteracting()) {
+                hideTimeout = setTimeout(hideNavigation, 1000);
+            }
+        });
+        
+        // Detectar scroll para auto-ocultar
+        mainContent.addEventListener('scroll', handleScroll);
+        
+        // Resetear timer en interacciones
+        document.addEventListener('mousemove', resetHideTimer);
+        document.addEventListener('touchstart', resetHideTimer);
+        document.addEventListener('click', resetHideTimer);
     }
+
+    function handleScroll() {
+        const scrollTop = mainContent.scrollTop;
+        
+        // Determinar dirección del scroll
+        if (scrollTop > lastScrollTop) {
+            scrollDirection = 'down';
+        } else {
+            scrollDirection = 'up';
+        }
+        lastScrollTop = scrollTop;
+        
+        // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
+        if (scrollDirection === 'down' && !isNavHidden) {
+            hideNavigation();
+        } else if (scrollDirection === 'up' && isNavHidden) {
+            showNavigation();
+        }
+        
+        resetHideTimer();
+    }
+
+    function resetHideTimer() {
+        clearTimeout(hideTimeout);
+        if (!isNavHidden) {
+            hideTimeout = setTimeout(hideNavigation, 3000);
+        }
+    }
+function actualizarPosicionBoton() {
+    const mapButton = document.querySelector('.map-floating-button');
+    const bottomNav = document.querySelector('.bottom-nav');
+    
+    if (mapButton && bottomNav) {
+        if (bottomNav.classList.contains('hidden')) {
+            // Navegación oculta - botón más abajo
+            mapButton.style.bottom = '20px';
+        } else {
+            // Navegación visible - botón arriba de la navegación
+            mapButton.style.bottom = '80px';
+        }
+    }
+}
+function hideNavigation() {
+    if (!isNavHidden) {
+        bottomNav.classList.remove('visible');
+        bottomNav.classList.add('hidden');
+        navActivationZone.classList.add('active');
+        mainContent.classList.remove('with-visible-nav');
+        mainContent.classList.add('with-hidden-nav');
+        isNavHidden = true;
+        
+        // Actualizar posición del botón
+        actualizarPosicionBoton();
+    }
+}
+
+function showNavigation() {
+    clearTimeout(hideTimeout);
+    if (isNavHidden) {
+        bottomNav.classList.remove('hidden');
+        bottomNav.classList.add('visible');
+        navActivationZone.classList.remove('active');
+        mainContent.classList.remove('with-hidden-nav');
+        mainContent.classList.add('with-visible-nav');
+        isNavHidden = false;
+        
+        // Actualizar posición del botón
+        actualizarPosicionBoton();
+        
+        hideTimeout = setTimeout(hideNavigation, 3000);
+    }
+}
+
+    function isUserInteracting() {
+        // Verificar si el usuario está interactuando con la navegación
+        return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
+    }
+
+   async function onNavClick(e) {
+    navItems.forEach(n => n.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+
+    const target = e.currentTarget.getAttribute('data-target');
+    document.querySelectorAll('#mainContent > div').forEach(d => {
+        d.style.display = 'none';
+    });
+    
+    const targetElement = document.getElementById(target);
+    if (targetElement) {
+        targetElement.style.display = 'block';
+        
+        // Manejar el botón flotante
+        const mapButton = document.querySelector('.map-floating-button');
+        
+        if (target === 'mapView') {
+            // Configurar mapa en pantalla completa
+            targetElement.style.position = 'fixed';
+            targetElement.style.top = '44px';
+            targetElement.style.left = '0';
+            targetElement.style.right = '0';
+            targetElement.style.bottom = '0';
+            targetElement.style.width = '100%';
+            targetElement.style.height = 'calc(100vh - 44px)';
+            targetElement.style.zIndex = '998';
+            
+            // Mostrar botón
+            if (mapButton) {
+                mapButton.style.display = 'flex';
+                mapButton.classList.add('visible');
+                mapButton.classList.remove('hidden');
+            }
+            
+            // Asegurar que el iframe ocupe todo
+            const iframe = targetElement.querySelector('iframe');
+            if (iframe) {
+                iframe.style.width = '100%';
+                iframe.style.height = '100%';
+            }
+        } else {
+            // Ocultar botón en otras vistas
+            if (mapButton) {
+                mapButton.style.display = 'none';
+                mapButton.classList.remove('visible');
+                mapButton.classList.add('hidden');
+            }
+        }
+    }
+
+    showNavigation();
+
+    if (target === 'feedView') cargarFeed();
+    if (target === 'notificationsView') cargarNotificaciones();
+    if (target === 'profileView') cargarPerfil();
+}
 
     // Cargar feed de reportes
     async function cargarFeed() {
         if (!feedView) return;
         
-        feedView.innerHTML = '<p style="text-align:center; color:#666;">Cargando...</p>';
+        feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando publicaciones...</p></div>';
         try {
             const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
             const data = await resp.json();
 
             if (!Array.isArray(data)) {
-                feedView.innerHTML = '<p style="text-align:center; color:red;">Error al cargar feed</p>';
+                feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar feed</p>';
                 return;
             }
 
             if (data.length === 0) {
-                feedView.innerHTML = '<p style="text-align:center; color:#666;">No hay publicaciones aún.</p>';
+                feedView.innerHTML = '<p style="text-align:center; color:var(--gray-600); padding: 20px;">No hay publicaciones aún.</p>';
                 return;
             }
 
@@ -78,16 +236,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 div.innerHTML = `
                     <div class="post-header">
                         <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/fiveicon.png'">
-                        <div>
-                            <div style="font-weight:700">${escapeHtml(post.nombres || post.usuario_correo)} ${escapeHtml(post.apellidos || '')}</div>
-                            <div class="post-meta">${post.latitud}, ${post.longitud} · ${timeText}</div>
+                        <div class="user-info">
+                            <div class="user-name">${escapeHtml(post.nombres || post.usuario_correo)} ${escapeHtml(post.apellidos || '')}</div>
+                            <div class="post-meta">
+                                <i class="fas fa-map-marker-alt"></i>
+                                ${post.latitud}, ${post.longitud} · ${timeText}
+                            </div>
                         </div>
                     </div>
                     <div class="post-desc">${escapeHtml(post.descripcion)}</div>
                     ${post.imagen_url ? `<img class="post-img" src="${post.imagen_url}" onerror="this.style.display='none'">` : ''}
                     <div class="post-actions">
-                        <button class="btn-small" data-id="${post.id_reporte}" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">💬 Comentar</button>
-                        <button class="btn-small" onclick="toggleLike(${post.id_reporte}, this)">♡ Me gusta</button>
+                        <button class="btn-small" data-id="${post.id_reporte}" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
+                            <i class="fas fa-comment"></i> Comentar
+                        </button>
+                        <button class="btn-small" onclick="toggleLike(${post.id_reporte}, this)">
+                            <i class="far fa-heart"></i> Me gusta
+                        </button>
                     </div>
                 `;
 
@@ -99,7 +264,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         } catch (err) {
             console.error(err);
-            feedView.innerHTML = '<p style="text-align:center; color:red;">Error al cargar publicaciones</p>';
+            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar publicaciones</p>';
         }
     }
 
@@ -107,7 +272,7 @@ document.addEventListener('DOMContentLoaded', function() {
     async function cargarNotificaciones() {
         if (!notificationsView) return;
         
-        notificationsView.innerHTML = '<p style="text-align:center; color:#666;">Cargando notificaciones...</p>';
+        notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
         try {
             const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
             const data = await resp.json();
@@ -151,9 +316,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!user) return;
 
             document.getElementById('profileAvatar').src = user.foto_perfil || '/imagenes/fiveicon.png';
-            document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`; // 👈 CORREGIDO
-            document.getElementById('profileEmail').textContent = user.correo || '';
-            document.getElementById('profilePhone').textContent = 'Teléfono: ' + (user.telefono || '-');
+            document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`;
+            document.getElementById('profileEmail').innerHTML = `<i class="fas fa-envelope"></i> ${user.correo || ''}`;
+            document.getElementById('profilePhone').innerHTML = `<i class="fas fa-phone"></i> ${user.telefono || 'Sin teléfono'}`;
+            document.getElementById('profileLocation').innerHTML = `<i class="fas fa-map-marker-alt"></i> ${user.ubicacion || 'Sin ubicación'}`;
             document.getElementById('profileBio').textContent = user.biografia || 'Sin biografía';
 
             // Prefill form
@@ -194,7 +360,72 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('Error al guardar perfil');
         }
     }
+// Función para abrir mapa en pantalla completa
+function abrirMapaCompleto() {
+    const ventanaMapa = window.open(mapUrl, 'MapaOjoEnLaVia', 
+        'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (ventanaMapa) {
+        ventanaMapa.focus();
+    } else {
+        alert('Por favor permite las ventanas emergentes para esta función');
+    }
+}
 
+// Y mantén esta modificación en onNavClick para ajustar la altura:
+async function onNavClick(e) {
+    navItems.forEach(n => n.classList.remove('active'));
+    e.currentTarget.classList.add('active');
+
+    const target = e.currentTarget.getAttribute('data-target');
+    document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
+    
+    const targetElement = document.getElementById(target);
+    if (targetElement) {
+        targetElement.style.display = 'block';
+        
+        // Si es el mapa, ajustar altura después de mostrarlo
+        if (target === 'mapView') {
+            setTimeout(ajustarAlturaMapa, 100);
+        }
+    }
+
+    showNavigation();
+
+    if (target === 'feedView') cargarFeed();
+    if (target === 'notificationsView') cargarNotificaciones();
+    if (target === 'profileView') cargarPerfil();
+}
+
+function ajustarAlturaMapa() {
+    const mapContainer = document.querySelector('.map-container');
+    const mapView = document.getElementById('mapView');
+    
+    if (mapContainer && mapView) {
+        // Ocupar toda la altura disponible
+        const viewportHeight = window.innerHeight;
+        const headerHeight = document.querySelector('.app-header').offsetHeight;
+        
+        // Altura completa menos el header
+        const alturaCalculada = viewportHeight - headerHeight;
+        mapContainer.style.height = alturaCalculada + 'px';
+        mapView.style.height = alturaCalculada + 'px';
+        
+        // También asegurarnos que el iframe ocupe todo
+        const iframe = mapContainer.querySelector('iframe');
+        if (iframe) {
+            iframe.style.height = '100%';
+            iframe.style.minHeight = alturaCalculada + 'px';
+        }
+    }
+}
+
+// Ajustar mapa al redimensionar
+window.addEventListener('resize', function() {
+    if (document.getElementById('mapView').style.display === 'block') {
+        ajustarAlturaMapa();
+    }
+});
     // Utilidades
     function tiempoRelativo(date) {
         const now = new Date();
@@ -222,8 +453,13 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             const r = await resp.json();
             if (r.success) {
-                if (r.action === 'liked') btn.textContent = '♥ Ya me gusta';
-                else btn.textContent = '♡ Me gusta';
+                if (r.action === 'liked') {
+                    btn.innerHTML = '<i class="fas fa-heart"></i> Ya me gusta';
+                    btn.style.color = 'var(--danger)';
+                } else {
+                    btn.innerHTML = '<i class="far fa-heart"></i> Me gusta';
+                    btn.style.color = '';
+                }
             } else {
                 alert('Error al procesar like');
             }
@@ -265,4 +501,19 @@ document.addEventListener('DOMContentLoaded', function() {
             alert('No hay información de reporte asociada');
         }
     }
+
+    // Función global para mostrar/ocultar navegación manualmente
+    window.toggleNavigation = function() {
+        if (isNavHidden) {
+            showNavigation();
+        } else {
+            hideNavigation();
+        }
+    };
+
+    // Función global para forzar mostrar la navegación
+    window.showNavigation = showNavigation;
+
+    // Función global para forzar ocultar la navegación
+    window.hideNavigation = hideNavigation;
 });
