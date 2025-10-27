@@ -209,64 +209,80 @@ function showNavigation() {
 
     // Cargar feed de reportes
     async function cargarFeed() {
-        if (!feedView) return;
-        
-        feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando publicaciones...</p></div>';
-        try {
-            const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
-            const data = await resp.json();
+    if (!feedView) return;
+    
+    feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando publicaciones...</p></div>';
+    try {
+        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
+        const data = await resp.json();
 
-            if (!Array.isArray(data)) {
-                feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar feed</p>';
-                return;
-            }
+        if (!Array.isArray(data)) {
+            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar feed</p>';
+            return;
+        }
 
-            if (data.length === 0) {
-                feedView.innerHTML = '<p style="text-align:center; color:var(--gray-600); padding: 20px;">No hay publicaciones aún.</p>';
-                return;
-            }
+        if (data.length === 0) {
+            feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay publicaciones aún. ¡Sé el primero en reportar!</p>';
+            return;
+        }
 
-            feedView.innerHTML = '';
-            data.forEach(post => {
-                const avatar = post.imagen_url ? post.imagen_url : '/imagenes/fiveicon.png';
-                const timeText = tiempoRelativo(new Date(post.fecha_reporte));
+        feedView.innerHTML = '';
+        data.forEach(post => {
+            const avatar = post.imagen_url ? post.imagen_url : '/imagenes/fiveicon.png';
+            const timeText = tiempoRelativo(new Date(post.fecha_reporte));
+            const descripcionCorta = post.descripcion.length > 150 ? 
+                post.descripcion.substring(0, 150) + '...' : post.descripcion;
 
-                const div = document.createElement('div');
-                div.className = 'post';
-                div.innerHTML = `
-                    <div class="post-header">
-                        <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/fiveicon.png'">
-                        <div class="user-info">
-                            <div class="user-name">${escapeHtml(post.nombres || post.usuario_correo)} ${escapeHtml(post.apellidos || '')}</div>
-                            <div class="post-meta">
-                                <i class="fas fa-map-marker-alt"></i>
-                                ${post.latitud}, ${post.longitud} · ${timeText}
-                            </div>
+            const div = document.createElement('div');
+            div.className = 'post';
+            div.innerHTML = `
+                <div class="post-header">
+                    <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/fiveicon.png'">
+                    <div class="user-info">
+                        <div class="user-name">${escapeHtml(post.nombres || post.usuario_correo)} ${escapeHtml(post.apellidos || '')}</div>
+                        <div class="post-meta">
+                            <i class="fas fa-map-marker-alt"></i>
+                            ${post.latitud}, ${post.longitud} · ${timeText}
                         </div>
                     </div>
-                    <div class="post-desc">${escapeHtml(post.descripcion)}</div>
-                    ${post.imagen_url ? `<img class="post-img" src="${post.imagen_url}" onerror="this.style.display='none'">` : ''}
-                    <div class="post-actions">
-                        <button class="btn-small" data-id="${post.id_reporte}" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
-                            <i class="fas fa-comment"></i> Comentar
-                        </button>
-                        <button class="btn-small" onclick="toggleLike(${post.id_reporte}, this)">
-                            <i class="far fa-heart"></i> Me gusta
-                        </button>
-                    </div>
-                `;
+                </div>
+                <div class="post-desc" title="${escapeHtml(post.descripcion)}">${escapeHtml(descripcionCorta)}</div>
+                ${post.imagen_url ? `
+                    <img class="post-img" src="${post.imagen_url}" 
+                         onerror="this.style.display='none'" 
+                         alt="Imagen del reporte"
+                         loading="lazy">
+                ` : ''}
+                <div class="post-actions">
+                    <button class="btn-small" data-id="${post.id_reporte}" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
+                        <i class="fas fa-comment"></i> Comentar
+                    </button>
+                    <button class="btn-small" onclick="toggleLike(${post.id_reporte}, this)">
+                        <i class="far fa-heart"></i> Me gusta
+                    </button>
+                </div>
+            `;
 
-                feedView.appendChild(div);
+            // Agregar funcionalidad de expandir descripción
+            const descElement = div.querySelector('.post-desc');
+            descElement.addEventListener('click', function() {
+                if (this.style.webkitLineClamp) {
+                    this.style.webkitLineClamp = 'unset';
+                    this.title = '';
+                } else {
+                    this.style.webkitLineClamp = '4';
+                    this.title = escapeHtml(post.descripcion);
+                }
             });
 
-            // Scroll to top
-            feedView.scrollTop = 0;
+            feedView.appendChild(div);
+        });
 
-        } catch (err) {
-            console.error(err);
-            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar publicaciones</p>';
-        }
+    } catch (err) {
+        console.error(err);
+        feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar publicaciones</p>';
     }
+}
 
     // Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
     async function cargarNotificaciones() {

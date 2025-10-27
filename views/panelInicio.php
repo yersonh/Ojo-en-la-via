@@ -21,7 +21,6 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <link rel="stylesheet" href="styles/mapa.css">
     <link rel="stylesheet" href="styles/panel.css">
-   
 </head>
 <body>
     <div class="app">
@@ -37,7 +36,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
             </div>
         </header>
 
-        <!-- CAMBIO 1: Agregar clase with-visible-nav al main -->
+        <!-- CONTENEDOR PRINCIPAL -->
         <div class="main with-visible-nav" id="mainContent">
             <!-- Estados de carga -->
             <div id="loadingState" class="loading" style="display: none;">
@@ -45,11 +44,117 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 <p>Cargando...</p>
             </div>
 
-            <!-- Inicio por defecto -->
+            <!-- FEED DE INICIO - ESTRUCTURA CORREGIDA -->
             <div id="feedView">
-                <div class="loading">
-                    <div class="loading-spinner"></div>
-                    <p>Cargando publicaciones...</p>
+                <div class="feed-container">
+                    <div class="posts-grid">
+                        <!-- EJEMPLO DE POST 1 -->
+                        <div class="post">
+                            <div class="post-header">
+                                <img class="avatar" src="/imagenes/user-avatar.jpg" alt="Maria García">
+                                <div class="user-info">
+                                    <div class="user-name">Maria García</div>
+                                    <div class="post-meta">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>Corito, Ciudad</span>
+                                        <i class="fas fa-clock"></i>
+                                        <span>Hace 2 horas</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="post-desc">
+                                Bache grande en la calle principal que necesita reparación urgente. Es peligroso para vehículos y peatones.
+                            </div>
+                            
+                            <div class="post-actions">
+                                <button class="btn-small">
+                                    <i class="fas fa-heart"></i>
+                                    <span>Me gusta</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-comment"></i>
+                                    <span>Comentar</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-share"></i>
+                                    <span>Compartir</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- EJEMPLO DE POST 2 -->
+                        <div class="post">
+                            <div class="post-header">
+                                <img class="avatar" src="/imagenes/user-avatar2.jpg" alt="Carlos Rodríguez">
+                                <div class="user-info">
+                                    <div class="user-name">Carlos Rodríguez</div>
+                                    <div class="post-meta">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>Centro, Ciudad</span>
+                                        <i class="fas fa-clock"></i>
+                                        <span>Hace 4 horas</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="post-desc">
+                                Semáforo dañado en la intersección de la Avenida Principal con Calle 5. Genera mucho tráfico y riesgo de accidentes.
+                            </div>
+                            
+                            <div class="post-actions">
+                                <button class="btn-small">
+                                    <i class="fas fa-heart"></i>
+                                    <span>Me gusta</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-comment"></i>
+                                    <span>Comentar</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-share"></i>
+                                    <span>Compartir</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- EJEMPLO DE POST 3 -->
+                        <div class="post">
+                            <div class="post-header">
+                                <img class="avatar" src="/imagenes/user-avatar3.jpg" alt="Ana Martínez">
+                                <div class="user-info">
+                                    <div class="user-name">Ana Martínez</div>
+                                    <div class="post-meta">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span>Zona Norte, Ciudad</span>
+                                        <i class="fas fa-clock"></i>
+                                        <span>Hace 1 día</span>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="post-desc">
+                                Alumbrado público defectuoso en el parque central. La zona está muy oscura por las noches, representa un riesgo para la seguridad.
+                            </div>
+                            
+                            <div class="post-actions">
+                                <button class="btn-small">
+                                    <i class="fas fa-heart"></i>
+                                    <span>Me gusta</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-comment"></i>
+                                    <span>Comentar</span>
+                                </button>
+                                <button class="btn-small">
+                                    <i class="fas fa-share"></i>
+                                    <span>Compartir</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Más posts se cargarán aquí dinámicamente -->
+                    </div>
                 </div>
             </div>
 
@@ -61,100 +166,214 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 </div>
             </div>
 
-<!-- Mapa -->
-<div id="mapView" style="display:none;">
-    <iframe 
-        src="<?php echo $mapUrl; ?>" 
-        title="Mapa de reportes de Ojo en la Vía"
-    ></iframe>
-    <!-- Botón DENTRO del mapa -->
-    <button class="map-floating-button" 
-            onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
-        <i class="fas fa-expand"></i>
-    </button>
-</div>
-</div>
+            <!-- Mapa -->
+            <div id="mapView" style="display:none;">
+                <iframe 
+                    src="<?php echo $mapUrl; ?>" 
+                    title="Mapa de reportes de Ojo en la Vía"
+                ></iframe>
+                <!-- Botón DENTRO del mapa -->
+                <button class="map-floating-button" 
+                        onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
 
-            <!-- Perfil -->
+            <!-- Perfil - DENTRO del mainContent -->
             <div id="profileView" style="display:none;">
-                <div class="profile">
-                    <div class="profile-header">
-                        <div class="edit-pencil">
-                            <img id="profileAvatar" class="avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
-                            <div class="pencil" id="editAvatarBtn" title="Cambiar foto de perfil">
-                                <i class="fas fa-camera"></i>
+                <div class="profile-container">
+                    <!-- Header Hero -->
+                    <div class="profile-hero">
+                        <div class="profile-hero-content">
+                            <div class="profile-avatar-container">
+                                <img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
+                                <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
+                                    <i class="fas fa-camera"></i>
+                                </div>
                             </div>
-                        </div>
-                        <div class="profile-info">
-                            <h3 id="profileName">Cargando...</h3>
-                            <p id="profileEmail"><i class="fas fa-envelope"></i> cargando...</p>
-                            <p id="profilePhone"><i class="fas fa-phone"></i> Cargando...</p>
-                            <p id="profileLocation"><i class="fas fa-map-marker-alt"></i> Cargando...</p>
+                            <div class="profile-hero-info">
+                                <h1 id="profileName">Cargando...</h1>
+                                <div class="profile-hero-stats">
+                                    <div class="hero-stat">
+                                        <i class="fas fa-envelope"></i>
+                                        <span id="profileEmail">cargando...</span>
+                                    </div>
+                                    <div class="hero-stat">
+                                        <i class="fas fa-phone"></i>
+                                        <span id="profilePhone">Cargando...</span>
+                                    </div>
+                                    <div class="hero-stat">
+                                        <i class="fas fa-map-marker-alt"></i>
+                                        <span id="profileLocation">Cargando...</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="profile-section">
-                        <h4><i class="fas fa-user"></i> Biografía</h4>
-                        <p id="profileBio" style="line-height: 1.6; color: var(--gray-600);">Sin biografía...</p>
-                    </div>
+                    <div class="profile-content">
+                        <!-- Columna Principal -->
+                        <div class="profile-main">
+                            <!-- Información de Contacto -->
+                            <div class="profile-card">
+                                <div class="profile-card-header">
+                                    <h3><i class="fas fa-id-card"></i> Información de Contacto</h3>
+                                </div>
+                                <div class="contact-info">
+                                    <div class="contact-item">
+                                        <div class="contact-icon">
+                                            <i class="fas fa-envelope"></i>
+                                        </div>
+                                        <div class="contact-details">
+                                            <div class="contact-label">Correo Electrónico</div>
+                                            <div class="contact-value" id="profileEmailCard">cargando...</div>
+                                        </div>
+                                    </div>
+                                    <div class="contact-item">
+                                        <div class="contact-icon">
+                                            <i class="fas fa-phone"></i>
+                                        </div>
+                                        <div class="contact-details">
+                                            <div class="contact-label">Teléfono</div>
+                                            <div class="contact-value" id="profilePhoneCard">Cargando...</div>
+                                        </div>
+                                    </div>
+                                    <div class="contact-item">
+                                        <div class="contact-icon">
+                                            <i class="fas fa-map-marker-alt"></i>
+                                        </div>
+                                        <div class="contact-details">
+                                            <div class="contact-label">Ubicación</div>
+                                            <div class="contact-value" id="profileLocationCard">Cargando...</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div class="profile-section">
-                        <h4><i class="fas fa-edit"></i> Acciones</h4>
-                        <div class="profile-actions">
-                            <button id="btnEditProfile" class="btn btn-primary">
-                                <i class="fas fa-edit"></i> Editar perfil
-                            </button>
-                            <button class="btn" onclick="cerrarSesion()">
-                                <i class="fas fa-sign-out-alt"></i> Cerrar sesión
-                            </button>
+                            <!-- Biografía -->
+                            <div class="profile-card">
+                                <div class="profile-card-header">
+                                    <h3><i class="fas fa-user"></i> Biografía</h3>
+                                </div>
+                                <p id="profileBio" class="bio-content">Sin biografía...</p>
+                            </div>
+
+                            <!-- Formulario de Edición (oculto inicialmente) -->
+                            <form id="profileForm" style="display:none;" class="profile-card edit-form">
+                                <div class="profile-card-header">
+                                    <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
+                                </div>
+                                <input type="file" id="fotoPerfil" name="foto" accept="image/*" style="display: none;">
+                                
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label for="inpNombres" class="form-label">Nombres</label>
+                                        <input type="text" name="nombres" id="inpNombres" class="form-input" placeholder="Tus nombres">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inpApellidos" class="form-label">Apellidos</label>
+                                        <input type="text" name="apellidos" id="inpApellidos" class="form-input" placeholder="Tus apellidos">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inpTelefono" class="form-label">Teléfono</label>
+                                        <input type="tel" name="telefono" id="inpTelefono" class="form-input" placeholder="Tu teléfono">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="inpUbicacion" class="form-label">Ubicación</label>
+                                        <input type="text" name="ubicacion" id="inpUbicacion" class="form-input" placeholder="Tu ubicación">
+                                    </div>
+                                    <div class="form-group form-textarea">
+                                        <label for="inpBio" class="form-label">Biografía</label>
+                                        <textarea name="biografia" id="inpBio" class="form-input" placeholder="Cuéntanos sobre ti..." rows="4"></textarea>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-actions">
+                                    <button type="button" id="btnSaveProfile" class="btn btn-primary">
+                                        <i class="fas fa-save"></i> Guardar Cambios
+                                    </button>
+                                    <button type="button" id="btnCancelProfile" class="btn">
+                                        <i class="fas fa-times"></i> Cancelar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        <!-- Sidebar -->
+                        <div class="profile-sidebar">
+                            <!-- Estadísticas -->
+                            <div class="profile-card">
+                                <div class="profile-card-header">
+                                    <h3><i class="fas fa-chart-bar"></i> Estadísticas</h3>
+                                </div>
+                                <div class="stats-grid">
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-flag"></i>
+                                        </div>
+                                        <div class="stat-number" id="statReports">0</div>
+                                        <div class="stat-label">Reportes</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-heart"></i>
+                                        </div>
+                                        <div class="stat-number" id="statLikes">0</div>
+                                        <div class="stat-label">Likes</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-comments"></i>
+                                        </div>
+                                        <div class="stat-number" id="statComments">0</div>
+                                        <div class="stat-label">Comentarios</div>
+                                    </div>
+                                    <div class="stat-card">
+                                        <div class="stat-icon">
+                                            <i class="fas fa-eye"></i>
+                                        </div>
+                                        <div class="stat-number" id="statViews">0</div>
+                                        <div class="stat-label">Visitas</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Acciones Rápidas -->
+                            <div class="profile-card">
+                                <div class="profile-card-header">
+                                    <h3><i class="fas fa-bolt"></i> Acciones Rápidas</h3>
+                                </div>
+                                <div class="quick-actions">
+                                    <button class="quick-action-btn" id="btnEditProfile">
+                                        <div class="quick-action-icon">
+                                            <i class="fas fa-edit"></i>
+                                        </div>
+                                        <div class="quick-action-text">
+                                            <div class="quick-action-title">Editar Perfil</div>
+                                            <div class="quick-action-desc">Actualiza tu información personal</div>
+                                        </div>
+                                    </button>
+                                    <button class="quick-action-btn" onclick="cerrarSesion()">
+                                        <div class="quick-action-icon">
+                                            <i class="fas fa-sign-out-alt"></i>
+                                        </div>
+                                        <div class="quick-action-text">
+                                            <div class="quick-action-title">Cerrar Sesión</div>
+                                            <div class="quick-action-desc">Salir de tu cuenta</div>
+                                        </div>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-
-                    <form id="profileForm" style="display:none;" class="profile-section">
-                        <h4><i class="fas fa-cog"></i> Editar información</h4>
-                        <input type="file" id="fotoPerfil" name="foto" accept="image/*" style="display: none;">
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="inpNombres" style="display: block; margin-bottom: 4px; font-weight: 500;">Nombres</label>
-                                <input type="text" name="nombres" id="inpNombres" placeholder="Tus nombres">
-                            </div>
-                            <div class="form-group">
-                                <label for="inpApellidos" style="display: block; margin-bottom: 4px; font-weight: 500;">Apellidos</label>
-                                <input type="text" name="apellidos" id="inpApellidos" placeholder="Tus apellidos">
-                            </div>
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="inpTelefono" style="display: block; margin-bottom: 4px; font-weight: 500;">Teléfono</label>
-                                <input type="tel" name="telefono" id="inpTelefono" placeholder="Tu teléfono">
-                            </div>
-                            <div class="form-group">
-                                <label for="inpUbicacion" style="display: block; margin-bottom: 4px; font-weight: 500;">Ubicación</label>
-                                <input type="text" name="ubicacion" id="inpUbicacion" placeholder="Tu ubicación">
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label for="inpBio" style="display: block; margin-bottom: 4px; font-weight: 500;">Biografía</label>
-                            <textarea name="biografia" id="inpBio" placeholder="Cuéntanos sobre ti..." rows="3"></textarea>
-                        </div>
-                        
-                        <div class="profile-actions">
-                            <button type="button" id="btnSaveProfile" class="btn btn-primary">
-                                <i class="fas fa-save"></i> Guardar cambios
-                            </button>
-                            <button type="button" id="btnCancelProfile" class="btn">
-                                <i class="fas fa-times"></i> Cancelar
-                            </button>
-                        </div>
-                    </form>
                 </div>
             </div>
+            <!-- FIN del profileView -->
+            
         </div>
+        <!-- FIN del mainContent -->
 
-        <!-- CAMBIO 2: Agregar clase visible al bottom-nav -->
+        <!-- Navegación inferior -->
         <nav class="bottom-nav visible">
             <div class="nav-item active" data-target="feedView">
                 <i class="fas fa-home"></i>
@@ -173,9 +392,6 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 <span>Perfil</span>
             </div>
         </nav>
-        
-        <!-- CAMBIO 3: La zona de activación se crea automáticamente con JavaScript -->
-        <!-- No necesitas agregar nada aquí, el JavaScript la creará -->
     </div>
 
     <script>
@@ -191,6 +407,35 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
 
         // Variable global con la URL del mapa
         const mapUrl = '<?php echo $mapUrl; ?>';
+
+        // Navegación entre vistas
+        document.addEventListener('DOMContentLoaded', function() {
+            const navItems = document.querySelectorAll('.nav-item');
+            const views = document.querySelectorAll('#feedView, #notificationsView, #mapView, #profileView');
+            
+            navItems.forEach(item => {
+                item.addEventListener('click', function() {
+                    const target = this.getAttribute('data-target');
+                    
+                    // Remover clase active de todos los items
+                    navItems.forEach(nav => nav.classList.remove('active'));
+                    // Agregar clase active al item clickeado
+                    this.classList.add('active');
+                    
+                    // Ocultar todas las vistas
+                    views.forEach(view => view.style.display = 'none');
+                    
+                    // Mostrar la vista objetivo
+                    const targetView = document.getElementById(target);
+                    if (targetView) {
+                        targetView.style.display = 'block';
+                    }
+                });
+            });
+
+            // Mostrar feedView por defecto
+            document.getElementById('feedView').style.display = 'block';
+        });
     </script>
 
     <script src="components/panel.js"></script>
