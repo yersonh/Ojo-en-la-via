@@ -211,154 +211,170 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cargar feed de reportes - VERSIÓN ACTUALIZADA Y CORREGIDA
     async function cargarFeed() {
-        if (!feedView) return;
-        
-        // Mostrar estados de carga
-        const postsContainer = document.getElementById('postsContainer');
-        const loadingPosts = document.getElementById('loadingPosts');
-        const noPosts = document.getElementById('noPosts');
-        
-        if (postsContainer && loadingPosts && noPosts) {
-            postsContainer.innerHTML = '';
-            loadingPosts.style.display = 'block';
-            noPosts.style.display = 'none';
-        } else {
-            // Fallback si no existen los contenedores
-            feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
-        }
-        
-        try {
-            const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
-            const data = await resp.json();
-
-            if (!Array.isArray(data)) {
-                if (postsContainer && loadingPosts && noPosts) {
-                    loadingPosts.style.display = 'none';
-                    noPosts.style.display = 'block';
-                    noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
-                } else {
-                    feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
-                }
-                return;
-            }
-
-            if (data.length === 0) {
-                if (postsContainer && loadingPosts && noPosts) {
-                    loadingPosts.style.display = 'none';
-                    noPosts.style.display = 'block';
-                } else {
-                    feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles. ¡Sé el primero en reportar!</p>';
-                }
-                return;
-            }
-
-            // Limpiar y mostrar posts
-            if (postsContainer && loadingPosts && noPosts) {
-                loadingPosts.style.display = 'none';
-                postsContainer.innerHTML = '';
-                
-                data.forEach(reporte => {
-                    const postElement = crearPostElement(reporte);
-                    postsContainer.appendChild(postElement);
-                });
-            } else {
-                // Fallback: usar la estructura antigua
-                feedView.innerHTML = '';
-                data.forEach(post => {
-                    const avatar = '/imagenes/default-avatar.png';
-                    const timeText = tiempoRelativo(new Date(post.fecha_reporte));
-                    const descripcionCorta = post.descripcion && post.descripcion.length > 150 ? 
-                        post.descripcion.substring(0, 150) + '...' : post.descripcion;
-
-                    const div = document.createElement('div');
-                    div.className = 'post';
-                    div.innerHTML = `
-                        <div class="post-header">
-                            <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/default-avatar.png'">
-                            <div class="user-info">
-                                <div class="user-name">${escapeHtml(post.usuario || 'Usuario')}</div>
-                                <div class="post-meta">
-                                    <i class="fas fa-map-marker-alt"></i>
-                                    <span>Ubicación en mapa</span>
-                                    <i class="fas fa-clock"></i>
-                                    <span>${timeText}</span>
-                                    <i class="fas fa-exclamation-triangle"></i>
-                                    <span class="post-incident-type">${escapeHtml(post.tipo_incidente || 'Incidente')}</span>
-                                </div>
-                                <div class="post-status">
-                                    <span class="status-badge ${(post.estado || 'pendiente').toLowerCase().replace(' ', '-')}">${post.estado || 'pendiente'}</span>
-                                </div>
-                            </div>
-                        </div>
-                        ${post.imagenes && post.imagenes.length > 0 ? `
-                            <div class="post-images">
-                                ${crearEstructuraImagenesSimple(post.imagenes)}
-                            </div>
-                        ` : ''}
-                        <div class="post-desc">${escapeHtml(post.descripcion || 'Sin descripción')}</div>
-                        <div class="post-additional-info">
-                            <div class="info-item">
-                                <i class="fas fa-road"></i>
-                                <span class="street-info">Coordenadas: ${formatearCoordenada(post.latitud)}, ${formatearCoordenada(post.longitud)}</span>
-                            </div>
-                            <div class="info-item">
-                                <i class="fas fa-calendar-day"></i>
-                                <span>${formatearFecha(post.fecha_reporte)}</span>
-                            </div>
-                        </div>
-                        <div class="post-actions">
-                            <button class="btn-small like-btn" onclick="toggleLike(${post.id_reporte}, this)">
-                                <i class="fas fa-heart"></i>
-                                <span class="like-count">0</span>
-                            </button>
-                            <button class="btn-small comment-btn" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
-                                <i class="fas fa-comment"></i>
-                                <span>Comentar</span>
-                            </button>
-                            <button class="btn-small view-map-btn" onclick="navegarAlMapa(${JSON.stringify(post).replace(/"/g, '&quot;')})">
-                                <i class="fas fa-map-marker-alt"></i>
-                                <span>Ver en Mapa</span>
-                            </button>
-                        </div>
-                    `;
-
-                    // Hacer clickeable la información de coordenadas
-                    const streetInfo = div.querySelector('.street-info');
-                    streetInfo.style.cursor = 'pointer';
-                    streetInfo.title = 'Haz clic para ver en el mapa';
-                    streetInfo.addEventListener('click', () => navegarAlMapa(post));
-
-                    // Agregar funcionalidad de expandir descripción
-                    const descElement = div.querySelector('.post-desc');
-                    if (descElement && post.descripcion && post.descripcion.length > 150) {
-                        descElement.style.cursor = 'pointer';
-                        descElement.title = 'Click para expandir';
-                        descElement.addEventListener('click', function() {
-                            if (this.style.webkitLineClamp) {
-                                this.style.webkitLineClamp = 'unset';
-                                this.title = '';
-                            } else {
-                                this.style.webkitLineClamp = '4';
-                                this.title = escapeHtml(post.descripcion);
-                            }
-                        });
-                    }
-
-                    feedView.appendChild(div);
-                });
-            }
-
-        } catch (err) {
-            console.error('Error cargando feed:', err);
-            if (postsContainer && loadingPosts && noPosts) {
-                loadingPosts.style.display = 'none';
-                noPosts.style.display = 'block';
-                noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
-            } else {
-                feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
-            }
+    console.log('📰 Cargando feed de reportes...');
+    
+    if (!feedView) {
+        console.error('❌ feedView no encontrado');
+        return;
+    }
+    
+    // Mostrar estados de carga de forma segura
+    const postsContainer = document.getElementById('postsContainer');
+    const loadingPosts = document.getElementById('loadingPosts');
+    const noPosts = document.getElementById('noPosts');
+    
+    // Función segura para mostrar/ocultar elementos
+    function mostrarElemento(elemento, mostrar) {
+        if (elemento && elemento.style) {
+            elemento.style.display = mostrar ? 'block' : 'none';
         }
     }
+    
+    if (postsContainer && loadingPosts && noPosts) {
+        postsContainer.innerHTML = '';
+        mostrarElemento(loadingPosts, true);
+        mostrarElemento(noPosts, false);
+    } else {
+        // Fallback seguro
+        console.warn('⚠️ Elementos del feed no encontrados, usando fallback');
+        feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
+    }
+    
+    try {
+        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
+        
+        // Verificar respuesta
+        if (!resp.ok) {
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+
+        if (!Array.isArray(data)) {
+            throw new Error('Respuesta inválida del servidor');
+        }
+
+        if (data.length === 0) {
+            if (postsContainer && loadingPosts && noPosts) {
+                mostrarElemento(loadingPosts, false);
+                mostrarElemento(noPosts, true);
+            } else {
+                feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles. ¡Sé el primero en reportar!</p>';
+            }
+            return;
+        }
+
+        // Limpiar y mostrar posts de forma segura
+        if (postsContainer && loadingPosts && noPosts) {
+            mostrarElemento(loadingPosts, false);
+            postsContainer.innerHTML = '';
+            
+            data.forEach(reporte => {
+                try {
+                    const postElement = crearPostElement(reporte);
+                    if (postElement) {
+                        postsContainer.appendChild(postElement);
+                    }
+                } catch (error) {
+                    console.error('Error creando elemento de post:', error);
+                }
+            });
+        } else {
+            // Fallback seguro
+            feedView.innerHTML = '';
+            data.forEach(post => {
+                try {
+                    const postElement = crearPostElementSimple(post);
+                    if (postElement) {
+                        feedView.appendChild(postElement);
+                    }
+                } catch (error) {
+                    console.error('Error creando post fallback:', error);
+                }
+            });
+        }
+
+        console.log(`✅ Feed cargado: ${data.length} reportes`);
+
+    } catch (err) {
+        console.error('❌ Error cargando feed:', err);
+        
+        // Manejo seguro de errores
+        if (postsContainer && loadingPosts && noPosts) {
+            mostrarElemento(loadingPosts, false);
+            mostrarElemento(noPosts, true);
+            noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+        } else {
+            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+        }
+    }
+}
+// Función fallback para crear posts simples
+function crearPostElementSimple(post) {
+    try {
+        const avatar = '/imagenes/default-avatar.png';
+        const timeText = tiempoRelativo(new Date(post.fecha_reporte));
+        const descripcionCorta = post.descripcion && post.descripcion.length > 150 ? 
+            post.descripcion.substring(0, 150) + '...' : post.descripcion;
+
+        const div = document.createElement('div');
+        div.className = 'post';
+        div.innerHTML = `
+            <div class="post-header">
+                <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/default-avatar.png'">
+                <div class="user-info">
+                    <div class="user-name">${escapeHtml(post.usuario || 'Usuario')}</div>
+                    <div class="post-meta">
+                        <i class="fas fa-map-marker-alt"></i>
+                        <span>Ubicación en mapa</span>
+                        <i class="fas fa-clock"></i>
+                        <span>${timeText}</span>
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span class="post-incident-type">${escapeHtml(post.tipo_incidente || 'Incidente')}</span>
+                    </div>
+                    <div class="post-status">
+                        <span class="status-badge ${(post.estado || 'pendiente').toLowerCase().replace(' ', '-')}">${post.estado || 'pendiente'}</span>
+                    </div>
+                </div>
+            </div>
+            ${post.imagenes && post.imagenes.length > 0 ? `
+                <div class="post-images">
+                    ${crearEstructuraImagenesSimple(post.imagenes)}
+                </div>
+            ` : ''}
+            <div class="post-desc">${escapeHtml(post.descripcion || 'Sin descripción')}</div>
+            <div class="post-additional-info">
+                <div class="info-item">
+                    <i class="fas fa-road"></i>
+                    <span class="street-info">Coordenadas: ${formatearCoordenada(post.latitud)}, ${formatearCoordenada(post.longitud)}</span>
+                </div>
+                <div class="info-item">
+                    <i class="fas fa-calendar-day"></i>
+                    <span>${formatearFecha(post.fecha_reporte)}</span>
+                </div>
+            </div>
+            <div class="post-actions">
+                <button class="btn-small like-btn" onclick="toggleLike(${post.id_reporte}, this)">
+                    <i class="fas fa-heart"></i>
+                    <span class="like-count">0</span>
+                </button>
+                <button class="btn-small comment-btn" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
+                    <i class="fas fa-comment"></i>
+                    <span>Comentar</span>
+                </button>
+                <button class="btn-small view-map-btn" onclick="navegarAlMapa(${JSON.stringify(post).replace(/"/g, '&quot;')})">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>Ver en Mapa</span>
+                </button>
+            </div>
+        `;
+
+        return div;
+    } catch (error) {
+        console.error('Error en crearPostElementSimple:', error);
+        return null;
+    }
+}
 
     // Función para crear elemento de post (para la nueva estructura) - CORREGIDA
     function crearPostElement(reporte) {
@@ -593,42 +609,126 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Cargar perfil
     async function cargarPerfil() {
-        try {
-            const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
-            
-            // Verificar si la respuesta es JSON
-            const contentType = resp.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                console.warn('El servidor devolvió HTML en lugar de JSON');
-                return;
-            }
-            
-            const user = await resp.json();
-
-            if (!user) return;
-
-            // Solo mostrar datos que existen en la BD
-            document.getElementById('profileAvatar').src = '/imagenes/fiveicon.png'; // Avatar por defecto
-            document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`.trim();
-            document.getElementById('profileEmail').textContent = user.correo || 'No disponible';
-            document.getElementById('profilePhone').textContent = user.telefono || 'Sin teléfono';
-            
-            // Información personal en la tarjeta
-            document.getElementById('profileNames').textContent = user.nombres || 'No disponible';
-            document.getElementById('profileLastnames').textContent = user.apellidos || 'No disponible';
-            document.getElementById('profileEmailCard').textContent = user.correo || 'No disponible';
-            document.getElementById('profilePhoneCard').textContent = user.telefono || 'Sin teléfono';
-
-            // Prefill form solo con datos existentes
-            document.getElementById('inpNombres').value = user.nombres || '';
-            document.getElementById('inpApellidos').value = user.apellidos || '';
-            document.getElementById('inpTelefono').value = user.telefono || '';
-
-        } catch (err) {
-            console.warn('Error cargar perfil (no crítico):', err);
-            // No hacer nada, dejar que la aplicación continúe
+    try {
+        console.log('👤 Cargando información del perfil...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
+        
+        // Verificar si la respuesta es JSON
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.warn('⚠️ El servidor devolvió HTML en lugar de JSON');
+            mostrarErrorPerfil('Error al cargar perfil: respuesta inválida del servidor');
+            return;
         }
+        
+        const user = await resp.json();
+
+        if (!user || user.error) {
+            console.warn('❌ No se pudo obtener información del usuario:', user?.error);
+            mostrarErrorPerfil('No se pudo cargar la información del perfil');
+            return;
+        }
+
+        console.log('✅ Datos del usuario recibidos:', user);
+
+        // Función auxiliar para actualizar elementos de forma segura
+        function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.textContent = valor || valorPorDefecto;
+            } else {
+                console.warn(`⚠️ Elemento no encontrado: ${id}`);
+            }
+        }
+
+        // Actualizar avatar
+        const profileAvatar = document.getElementById('profileAvatar');
+        const headerAvatar = document.getElementById('headerAvatar');
+        if (profileAvatar) {
+            profileAvatar.src = '/imagenes/fiveicon.png';
+        }
+        if (headerAvatar) {
+            headerAvatar.src = '/imagenes/fiveicon.png';
+        }
+
+        // Actualizar información principal
+        actualizarElemento('profileName', `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario');
+        actualizarElemento('profileEmail', user.correo, 'Correo no disponible');
+        actualizarElemento('profilePhone', user.telefono, 'Sin teléfono');
+        
+        // Información personal en la tarjeta
+        actualizarElemento('profileNames', user.nombres);
+        actualizarElemento('profileLastnames', user.apellidos);
+        actualizarElemento('profileEmailCard', user.correo);
+        actualizarElemento('profilePhoneCard', user.telefono, 'Sin teléfono');
+
+        // Prefill form solo con datos existentes
+        const inpNombres = document.getElementById('inpNombres');
+        const inpApellidos = document.getElementById('inpApellidos');
+        const inpTelefono = document.getElementById('inpTelefono');
+        
+        if (inpNombres) inpNombres.value = user.nombres || '';
+        if (inpApellidos) inpApellidos.value = user.apellidos || '';
+        if (inpTelefono) inpTelefono.value = user.telefono || '';
+
+        console.log('✅ Perfil cargado exitosamente');
+
+    } catch (err) {
+        console.error('❌ Error crítico al cargar perfil:', err);
+        mostrarErrorPerfil('Error al conectar con el servidor');
     }
+}
+function mostrarErrorPerfil(mensaje) {
+    console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
+    
+    // Intentar mostrar el error en diferentes lugares
+    const elementosError = [
+        'profileName',
+        'profileEmail', 
+        'profilePhone',
+        'profileNames',
+        'profileLastnames'
+    ];
+    
+    elementosError.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            elemento.textContent = 'Error al cargar';
+            elemento.style.color = '#e74c3c';
+        }
+    });
+    
+    // Mostrar notificación temporal
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 60px;
+        right: 20px;
+        background: #e74c3c;
+        color: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        z-index: 10000;
+        font-family: Arial;
+        font-size: 14px;
+        max-width: 300px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    `;
+    notification.innerHTML = `
+        <strong>⚠️ Error</strong>
+        <p style="margin: 5px 0; font-size: 12px;">${mensaje}</p>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-eliminar después de 5 segundos
+    setTimeout(() => {
+        if (notification.parentElement) {
+            notification.remove();
+        }
+    }, 5000);
+}
 
     async function guardarPerfil() {
         const form = new FormData();
