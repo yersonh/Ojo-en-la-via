@@ -20,11 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
             let lastScrollTop = 0;
             let scrollDirection = 'down';
 
-            // Referencias
-            const feedView = document.getElementById('feedView');
-            const notificationsView = document.getElementById('notificationsView');
-            const profileView = document.getElementById('profileView');
-
             // Inicializar navegación
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
@@ -698,7 +693,10 @@ function mostrarErrorPerfil(mensaje) {
 // Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
 async function cargarNotificaciones() {
     const notificationsView = document.getElementById('notificationsView');
-    if (!notificationsView) return;
+    if (!notificationsView) {
+        console.warn('❌ notificationsView no encontrado');
+        return;
+    }
     
     notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
     try {
