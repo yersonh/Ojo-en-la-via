@@ -595,40 +595,74 @@ async function cargarPerfil() {
             const elemento = document.getElementById(id);
             if (elemento) {
                 elemento.textContent = valor || valorPorDefecto;
+                console.log(`✅ Actualizado ${id}: ${valor || valorPorDefecto}`);
             } else {
                 console.warn(`⚠️ Elemento no encontrado: ${id}`);
             }
         }
 
-        // Actualizar avatar
+        // Lista de todos los elementos que podríamos necesitar actualizar
+        const elementosPerfil = [
+            // Información principal
+            { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
+            { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
+            { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
+            
+            // Información personal en la tarjeta
+            { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
+            { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
+            { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
+            { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
+        ];
+
+        // Actualizar todos los elementos
+        elementosPerfil.forEach(item => {
+            actualizarElemento(item.id, item.valor, item.defecto);
+        });
+
+        // Actualizar avatars
         const profileAvatar = document.getElementById('profileAvatar');
         const headerAvatar = document.getElementById('headerAvatar');
+        
         if (profileAvatar) {
             profileAvatar.src = '/imagenes/fiveicon.png';
+            console.log('✅ Avatar del perfil actualizado');
+        } else {
+            console.warn('⚠️ profileAvatar no encontrado');
         }
+        
         if (headerAvatar) {
             headerAvatar.src = '/imagenes/fiveicon.png';
+            console.log('✅ Avatar del header actualizado');
+        } else {
+            console.warn('⚠️ headerAvatar no encontrado');
         }
-
-        // Actualizar información principal
-        actualizarElemento('profileName', `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario');
-        actualizarElemento('profileEmail', user.correo, 'Correo no disponible');
-        actualizarElemento('profilePhone', user.telefono, 'Sin teléfono');
-        
-        // Información personal en la tarjeta
-        actualizarElemento('profileNames', user.nombres);
-        actualizarElemento('profileLastnames', user.apellidos);
-        actualizarElemento('profileEmailCard', user.correo);
-        actualizarElemento('profilePhoneCard', user.telefono, 'Sin teléfono');
 
         // Prefill form solo con datos existentes
         const inpNombres = document.getElementById('inpNombres');
         const inpApellidos = document.getElementById('inpApellidos');
         const inpTelefono = document.getElementById('inpTelefono');
         
-        if (inpNombres) inpNombres.value = user.nombres || '';
-        if (inpApellidos) inpApellidos.value = user.apellidos || '';
-        if (inpTelefono) inpTelefono.value = user.telefono || '';
+        if (inpNombres) {
+            inpNombres.value = user.nombres || '';
+            console.log('✅ Campo nombres del formulario actualizado');
+        } else {
+            console.warn('⚠️ inpNombres no encontrado');
+        }
+        
+        if (inpApellidos) {
+            inpApellidos.value = user.apellidos || '';
+            console.log('✅ Campo apellidos del formulario actualizado');
+        } else {
+            console.warn('⚠️ inpApellidos no encontrado');
+        }
+        
+        if (inpTelefono) {
+            inpTelefono.value = user.telefono || '';
+            console.log('✅ Campo teléfono del formulario actualizado');
+        } else {
+            console.warn('⚠️ inpTelefono no encontrado');
+        }
 
         console.log('✅ Perfil cargado exitosamente');
 
@@ -637,6 +671,7 @@ async function cargarPerfil() {
         mostrarErrorPerfil('Error al conectar con el servidor');
     }
 }
+
 
 // Función para mostrar errores en el perfil
 function mostrarErrorPerfil(mensaje) {
@@ -648,46 +683,56 @@ function mostrarErrorPerfil(mensaje) {
         'profileEmail', 
         'profilePhone',
         'profileNames',
-        'profileLastnames'
+        'profileLastnames',
+        'profileEmailCard',
+        'profilePhoneCard'
     ];
+    
+    let elementosActualizados = 0;
     
     elementosError.forEach(id => {
         const elemento = document.getElementById(id);
         if (elemento) {
             elemento.textContent = 'Error al cargar';
             elemento.style.color = '#e74c3c';
+            elementosActualizados++;
         }
     });
     
-    // Mostrar notificación temporal
-    const notification = document.createElement('div');
-    notification.style.cssText = `
-        position: fixed;
-        top: 60px;
-        right: 20px;
-        background: #e74c3c;
-        color: white;
-        padding: 12px 16px;
-        border-radius: 8px;
-        z-index: 10000;
-        font-family: Arial;
-        font-size: 14px;
-        max-width: 300px;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    `;
-    notification.innerHTML = `
-        <strong>⚠️ Error</strong>
-        <p style="margin: 5px 0; font-size: 12px;">${mensaje}</p>
-    `;
+    console.log(`✅ ${elementosActualizados} elementos de error actualizados`);
     
-    document.body.appendChild(notification);
-    
-    // Auto-eliminar después de 5 segundos
-    setTimeout(() => {
-        if (notification.parentElement) {
-            notification.remove();
-        }
-    }, 5000);
+    // Mostrar notificación temporal solo si estamos en una vista visible
+    const profileView = document.getElementById('profileView');
+    if (profileView && profileView.style.display !== 'none') {
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 60px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: Arial;
+            font-size: 14px;
+            max-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        `;
+        notification.innerHTML = `
+            <strong>⚠️ Error</strong>
+            <p style="margin: 5px 0; font-size: 12px;">${mensaje}</p>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
 }
 
 // Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
