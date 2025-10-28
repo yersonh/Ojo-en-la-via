@@ -26,10 +26,13 @@
     
     --shadow: 0 2px 10px rgba(0,0,0,0.1);
     --shadow-lg: 0 4px 20px rgba(0,0,0,0.15);
+    --shadow-hover: 0 8px 30px rgba(0,0,0,0.12);
     
     --border-radius: 16px;
     --border-radius-sm: 12px;
+    --border-radius-xs: 8px;
     --transition: all 0.3s ease;
+    --transition-fast: all 0.15s ease;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -57,6 +60,7 @@
         
         --shadow: 0 2px 10px rgba(0,0,0,0.3);
         --shadow-lg: 0 4px 20px rgba(0,0,0,0.4);
+        --shadow-hover: 0 8px 30px rgba(0,0,0,0.5);
     }
 }
 
@@ -73,6 +77,7 @@ body, html {
     background: var(--bg-secondary);
     color: var(--text-primary);
     transition: background-color 0.3s ease, color 0.3s ease;
+    overflow-x: hidden;
 }
 
 .app { 
@@ -80,6 +85,7 @@ body, html {
     flex-direction: column; 
     height: 100vh; 
     background: var(--bg-secondary);
+    overflow-x: hidden;
 }
 
 /* ============================================= */
@@ -127,7 +133,22 @@ body, html {
     border-color: var(--primary);
     transform: scale(1.05);
 }
+/* Estilos específicos para el botón de ver en mapa */
+.view-map-btn {
+    background: var(--primary-light);
+    border-color: var(--primary-light);
+    color: var(--primary-dark);
+}
 
+.view-map-btn:hover {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: white;
+}
+
+.view-map-btn i {
+    color: inherit;
+}
 /* ============================================= */
 /* 3. CONTENEDOR PRINCIPAL */
 /* ============================================= */
@@ -136,6 +157,7 @@ body, html {
     flex: 1 1 auto; 
     overflow-y: auto; 
     padding: 10px 12px; 
+    overflow-x: hidden;
 }
 
 .main:has(#mapView[style*="display: block"]),
@@ -153,7 +175,7 @@ body, html {
 }
 
 /* ============================================= */
-/* 4. VISTA: INICIO (FEED) */
+/* 4. VISTA: INICIO (FEED) - MEJORADO */
 /* ============================================= */
 
 #feedView {
@@ -167,14 +189,16 @@ body, html {
     z-index: 997;
     display: none;
     padding: 0;
+    overflow-x: hidden;
 }
 
 .feed-container {
     min-height: 100%;
     padding: 20px 16px;
     width: 100%;
-    max-width: 600px; /* Más estrecho para mejor legibilidad */
+    max-width: 600px;
     margin: 0 auto;
+    box-sizing: border-box;
 }
 
 /* Grid de posts */
@@ -182,23 +206,43 @@ body, html {
     display: flex;
     flex-direction: column;
     gap: 20px;
+    width: 100%;
+    max-width: 100%;
 }
 
-/* Post individual - CON MÁRGENES LATERALES */
+/* Post individual - MEJORADO */
 .post {
     background: var(--bg-primary);
     border-radius: var(--border-radius);
     padding: 20px;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    box-shadow: var(--shadow);
     border: 1px solid var(--border-light);
     transition: var(--transition);
     width: 100%;
-    /* No hay margin-left/right para que ocupe el ancho del contenedor */
+    position: relative;
+    overflow: hidden;
+}
+
+.post::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    border-radius: var(--border-radius) var(--border-radius) 0 0;
+    opacity: 0;
+    transition: var(--transition);
 }
 
 .post:hover {
-    box-shadow: 0 4px 20px rgba(0,0,0,0.12);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
+    transform: translateY(-4px);
+}
+
+.post:hover::before {
+    opacity: 1;
 }
 
 .post-header {
@@ -216,10 +260,17 @@ body, html {
     background: var(--bg-tertiary);
     flex-shrink: 0;
     border: 2px solid var(--border-light);
+    transition: var(--transition);
+}
+
+.avatar:hover {
+    border-color: var(--primary);
+    transform: scale(1.05);
 }
 
 .user-info {
     flex: 1;
+    min-width: 0;
 }
 
 .user-name {
@@ -227,6 +278,7 @@ body, html {
     color: var(--text-primary);
     margin-bottom: 4px;
     font-size: 16px;
+    line-height: 1.3;
 }
 
 .post-meta {
@@ -235,6 +287,7 @@ body, html {
     display: flex;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
 }
 
 .post-meta i {
@@ -242,30 +295,360 @@ body, html {
     opacity: 0.7;
 }
 
+.post-incident-type {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: capitalize;
+}
+
 .post-desc {
     margin: 16px 0;
     font-size: 15px;
     color: var(--text-primary);
     line-height: 1.6;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
 }
 
-.post-img {
+/* ============================================= */
+/* CORRECCIÓN PARA IMÁGENES - NO SE SALGAN */
+/* ============================================= */
+
+.post-images {
     margin: 16px 0;
-    max-width: 100%;
-    max-height: 300px;
     border-radius: var(--border-radius-sm);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    border: 1px solid var(--border-color);
-    object-fit: cover;
+    overflow: hidden;
     width: 100%;
+    max-width: 100%;
+    position: relative;
 }
 
+.post-image {
+    width: 100%;
+    height: auto;
+    max-height: 400px;
+    object-fit: cover;
+    cursor: pointer;
+    transition: var(--transition);
+    border-radius: var(--border-radius-sm);
+    display: block;
+    background: var(--bg-tertiary);
+}
+
+.post-image:hover {
+    transform: scale(1.02);
+    filter: brightness(1.05);
+}
+
+/* Grid para múltiples imágenes - CORREGIDO */
+.images-grid {
+    display: grid;
+    gap: 4px;
+    width: 100%;
+    max-width: 100%;
+}
+
+.images-grid.single-image {
+    grid-template-columns: 1fr;
+}
+
+.images-grid.two-images {
+    grid-template-columns: 1fr 1fr;
+}
+
+.images-grid.three-images {
+    grid-template-columns: 1fr 1fr;
+}
+
+.images-grid.three-images .post-image:first-child {
+    grid-column: 1 / -1;
+}
+
+.images-grid.four-images {
+    grid-template-columns: 1fr 1fr;
+}
+
+.images-grid.four-images .post-image:nth-child(n+5) {
+    display: none;
+}
+
+/* Asegurar que las imágenes no se distorsionen */
+.post-image {
+    aspect-ratio: 4/3;
+    object-fit: cover;
+}
+
+/* Para imágenes en grid, mantener proporción cuadrada */
+.images-grid.two-images .post-image,
+.images-grid.three-images .post-image:not(:first-child),
+.images-grid.four-images .post-image {
+    aspect-ratio: 1/1;
+}
+
+/* Contador para más de 4 imágenes */
+.images-grid.has-more-images {
+    position: relative;
+}
+
+.image-count-overlay {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    background: rgba(0, 0, 0, 0.7);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    backdrop-filter: blur(10px);
+}
+
+/* Badge de estado - MEJORADO */
+.post-status {
+    margin-top: 6px;
+}
+
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    display: inline-block;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.status-badge.pendiente {
+    background: var(--warning);
+    color: #000;
+}
+
+.status-badge.en-proceso {
+    background: var(--info);
+    color: white;
+}
+
+.status-badge.resuelto {
+    background: var(--success);
+    color: white;
+}
+
+.status-badge.cerrado {
+    background: var(--secondary);
+    color: white;
+}
+
+/* Información adicional - MEJORADO */
+.post-additional-info {
+    background: var(--bg-secondary);
+    padding: 14px;
+    border-radius: var(--border-radius-sm);
+    margin: 16px 0;
+    border-left: 4px solid var(--primary);
+    transition: var(--transition);
+}
+
+.post-additional-info:hover {
+    background: var(--bg-tertiary);
+    transform: translateX(4px);
+}
+
+.info-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.info-item:last-child {
+    margin-bottom: 0;
+}
+
+.info-item i {
+    width: 16px;
+    color: var(--primary);
+    flex-shrink: 0;
+}
+
+/* Acciones del post - MEJORADO */
 .post-actions {
     display: flex;
-    gap: 16px;
+    gap: 12px;
     margin-top: 16px;
     padding-top: 16px;
     border-top: 1px solid var(--border-light);
+}
+
+.btn-small {
+    padding: 10px 16px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: var(--transition-fast);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--text-primary);
+    flex: 1;
+    justify-content: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.btn-small::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+    transition: var(--transition);
+}
+
+.btn-small:hover::before {
+    left: 100%;
+}
+
+.btn-small:hover {
+    background: var(--bg-secondary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.btn-small.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+.like-btn.active {
+    background: var(--danger);
+    color: white;
+    border-color: var(--danger);
+}
+
+.like-btn.active i {
+    color: white;
+}
+
+/* Sección de comentarios - MEJORADO */
+.post-comments {
+    border-top: 1px solid var(--border-light);
+    margin-top: 16px;
+    padding-top: 16px;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.comments-container {
+    max-height: 200px;
+    overflow-y: auto;
+    margin-bottom: 12px;
+}
+
+.comment {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border-light);
+    animation: fadeIn 0.3s ease-out;
+}
+
+.comment:last-child {
+    border-bottom: none;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+}
+
+.comment-avatar {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.comment-author {
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--text-primary);
+}
+
+.comment-time {
+    font-size: 11px;
+    color: var(--text-muted);
+}
+
+.comment-text {
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+.add-comment {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.comment-input {
+    flex: 1;
+    padding: 10px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: var(--transition);
+    min-width: 0;
+}
+
+.comment-input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.1);
+}
+
+.comment-submit {
+    white-space: nowrap;
+    padding: 10px 16px;
+    background: var(--primary);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    transition: var(--transition);
+}
+
+.comment-submit:hover {
+    background: var(--primary-dark);
+    transform: translateY(-1px);
 }
 
 /* ============================================= */
@@ -326,7 +709,7 @@ body, html {
 
 .map-floating-button {
     position: fixed;
-    bottom: 120px; /* Subido para evitar el nav */
+    bottom: 120px;
     left: 20px;
     z-index: 3000;
     width: 50px;
@@ -340,35 +723,112 @@ body, html {
     border: 2px solid var(--bg-primary);
     box-shadow: var(--shadow-lg);
     transition: all 0.3s ease;
+    cursor: pointer;
 }
 
 .map-floating-button:hover {
     transform: scale(1.1);
     background: var(--primary-dark);
 }
+
 /* ============================================= */
-/* AJUSTES ESPECÍFICOS PARA MÓVIL - BOTÓN FLOTANTE */
+/* AJUSTES ESPECÍFICOS PARA MÓVIL */
 /* ============================================= */
 
 /* Móviles en portrait */
 @media (max-width: 768px) and (orientation: portrait) {
     .map-floating-button {
-        bottom: 130px; /* Subido 30px más */
+        bottom: 130px;
         left: 15px;
-        width: 48px; /* Ligeramente más grande para el dedo */
+        width: 48px;
         height: 48px;
+    }
+    
+    /* En móviles, una sola columna para imágenes */
+    .images-grid.two-images,
+    .images-grid.three-images,
+    .images-grid.four-images {
+        grid-template-columns: 1fr;
+    }
+    
+    .images-grid.three-images .post-image:first-child {
+        grid-column: 1;
+    }
+    
+    /* En móviles, todas las imágenes mantienen la misma proporción */
+    .images-grid .post-image {
+        aspect-ratio: 4/3;
+    }
+    
+    .post-images {
+        margin: 12px 0;
+    }
+    
+    .post-image {
+        max-height: 300px;
+    }
+    
+    .post-actions {
+        gap: 8px;
+    }
+    
+    .btn-small {
+        padding: 8px 12px;
+        font-size: 12px;
     }
 }
 
-/* Móviles pequeños en portrait */
+/* Móviles pequeños */
 @media (max-width: 480px) {
     .map-floating-button {
-        bottom: 140px; /* aún más arriba */
+        bottom: 140px;
         left: 15px;
         width: 46px;
         height: 46px;
     }
+    
+    .feed-container {
+        padding: 16px 12px;
+    }
+    
+    .posts-grid {
+        gap: 16px;
+    }
+    
+    .post {
+        padding: 16px;
+    }
+    
+    .post-header {
+        gap: 10px;
+        margin-bottom: 14px;
+    }
+    
+    .avatar {
+        width: 44px;
+        height: 44px;
+    }
+    
+    .post-desc {
+        margin: 14px 0;
+        font-size: 14px;
+    }
+    
+    .post-meta {
+        font-size: 12px;
+        gap: 6px;
+    }
+    
+    .add-comment {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .comment-submit {
+        width: 100%;
+    }
 }
+
 @supports not (bottom: env(safe-area-inset-bottom)) {
     .map-floating-button {
         bottom: 130px;
@@ -378,10 +838,27 @@ body, html {
 /* Móviles muy pequeños */
 @media (max-width: 360px) and (orientation: portrait) {
     .map-floating-button {
-        bottom: 115px; /* Garantiza que no se oculte */
+        bottom: 115px;
         left: 10px;
         width: 44px;
         height: 44px;
+    }
+    
+    .feed-container {
+        padding: 12px 8px;
+    }
+    
+    .post {
+        padding: 14px;
+    }
+    
+    .post-actions {
+        gap: 6px;
+    }
+    
+    .btn-small {
+        padding: 6px 10px;
+        font-size: 11px;
     }
 }
 
@@ -398,12 +875,13 @@ body, html {
 /* Móviles en landscape */
 @media (max-width: 768px) and (orientation: landscape) {
     .map-floating-button {
-        bottom: 80px; /* Subido un poco */
+        bottom: 80px;
         left: 15px;
         width: 44px;
         height: 44px;
     }
 }
+
 .map-floating-button {
     pointer-events: auto;
     position: fixed !important;
@@ -506,7 +984,7 @@ body, html {
 
 /* Botones */
 .btn { 
-    padding: 8px 16px; 
+    padding: 10px 18px; 
     border: none;
     background: var(--bg-primary);
     border-radius: 20px;
@@ -523,7 +1001,8 @@ body, html {
 
 .btn:hover {
     background: var(--bg-secondary);
-    transform: translateY(-1px);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow);
 }
 
 .btn-primary {
@@ -534,33 +1013,6 @@ body, html {
 
 .btn-primary:hover {
     background: var(--primary-dark);
-}
-
-.btn-small { 
-    padding: 8px 16px;
-    border: 1px solid var(--border-color);
-    background: var(--bg-primary);
-    border-radius: 20px;
-    cursor: pointer;
-    font-size: 13px;
-    transition: var(--transition);
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    color: var(--text-primary);
-    flex: 1;
-    justify-content: center;
-}
-
-.btn-small:hover {
-    background: var(--bg-secondary);
-    transform: translateY(-1px);
-}
-
-.btn-small.active {
-    background: var(--primary);
-    color: white;
-    border-color: var(--primary);
 }
 
 /* Formularios */
@@ -630,6 +1082,11 @@ body, html {
     100% { transform: rotate(360deg); }
 }
 
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 /* ============================================= */
 /* 9. NAVEGACIÓN INFERIOR */
 /* ============================================= */
@@ -677,16 +1134,22 @@ body, html {
     flex-direction: column;
     align-items: center;
     gap: 2px;
+    position: relative;
 }
 
 .nav-item i {
     font-size: 16px;
     margin-bottom: 0;
+    transition: var(--transition);
 }
 
 .nav-item.active { 
     color: var(--primary); 
     font-weight: 600;
+}
+
+.nav-item.active i {
+    transform: scale(1.1);
 }
 
 .nav-item:hover {
@@ -731,7 +1194,7 @@ body, html {
 @media (min-width: 768px) {
     .feed-container {
         padding: 30px 20px;
-        max-width: 650px; /* Un poco más ancho en desktop */
+        max-width: 650px;
     }
     
     .posts-grid {
@@ -772,63 +1235,16 @@ body, html {
 /* Pantallas grandes */
 @media (min-width: 1200px) {
     .feed-container {
-        max-width: 700px; /* Máximo ancho para buena legibilidad */
+        max-width: 700px;
         padding: 40px 30px;
     }
 }
+
 /* Tablets */
 @media (min-width: 768px) and (max-width: 1023px) {
     .feed-container {
         max-width: 600px;
         padding: 25px 20px;
-    }
-}
-/* Móviles pequeños */
-@media (max-width: 480px) {
-    .feed-container {
-        padding: 16px 12px;
-        max-width: 100%; /* En móviles ocupa casi todo el ancho */
-    }
-    
-    .posts-grid {
-        gap: 16px;
-    }
-    
-    .post {
-        padding: 18px;
-    }
-    
-    .post-header {
-        gap: 10px;
-        margin-bottom: 14px;
-    }
-    
-    .avatar {
-        width: 44px;
-        height: 44px;
-    }
-    
-    .post-desc {
-        margin: 14px 0;
-        font-size: 14px;
-    }
-}
-@media (max-width: 360px) {
-    .feed-container {
-        padding: 12px 8px;
-    }
-    
-    .post {
-        padding: 16px;
-    }
-    
-    .post-actions {
-        gap: 12px;
-    }
-    
-    .btn-small {
-        padding: 6px 12px;
-        font-size: 12px;
     }
 }
 
@@ -903,6 +1319,101 @@ body, html {
     background: var(--text-muted);
 }
 
+/* Modal para imagen ampliada */
+.image-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.95);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    padding: 20px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.image-modal img {
+    max-width: 95%;
+    max-height: 95%;
+    object-fit: contain;
+    border-radius: var(--border-radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.image-modal-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: rgba(255, 255, 255, 0.2);
+    color: white;
+    border: none;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    backdrop-filter: blur(10px);
+    transition: var(--transition);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.image-modal-close:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: scale(1.1);
+}
+
+/* Estados de carga y vacío */
+#loadingPosts, #noPosts {
+    text-align: center;
+    padding: 40px 20px;
+}
+
+#noPosts i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+    color: var(--text-muted);
+}
+
+/* Prevenir selección de texto en elementos interactivos */
+.btn, .nav-item, .quick-action-btn, .post-image {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Mejorar rendimiento de animaciones */
+.post, .btn, .nav-item {
+    will-change: transform;
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+    .post, .btn, .nav-item, .post-image, .image-modal {
+        transition: none;
+        animation: none;
+    }
+    
+    .post:hover {
+        transform: none;
+    }
+}
+
+/* Focus styles para accesibilidad */
+.btn-small:focus-visible,
+.comment-input:focus-visible,
+.comment-submit:focus-visible,
+.image-modal-close:focus-visible,
+.nav-item:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+}
 /* ============================================= */
 /* PERFIL PROFESIONAL - PANTALLA COMPLETA */
 /* ============================================= */

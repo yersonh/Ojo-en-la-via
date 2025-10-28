@@ -100,189 +100,457 @@ document.addEventListener('DOMContentLoaded', function() {
             hideTimeout = setTimeout(hideNavigation, 3000);
         }
     }
-function actualizarPosicionBoton() {
-    const mapButton = document.querySelector('.map-floating-button');
-    const bottomNav = document.querySelector('.bottom-nav');
-    
-    if (mapButton && bottomNav) {
-        if (bottomNav.classList.contains('hidden')) {
-            // Navegación oculta - botón más abajo
-            mapButton.style.bottom = '20px';
-        } else {
-            // Navegación visible - botón arriba de la navegación
-            mapButton.style.bottom = '80px';
+
+    function actualizarPosicionBoton() {
+        const mapButton = document.querySelector('.map-floating-button');
+        const bottomNav = document.querySelector('.bottom-nav');
+        
+        if (mapButton && bottomNav) {
+            if (bottomNav.classList.contains('hidden')) {
+                // Navegación oculta - botón más abajo
+                mapButton.style.bottom = '20px';
+            } else {
+                // Navegación visible - botón arriba de la navegación
+                mapButton.style.bottom = '80px';
+            }
         }
     }
-}
-function hideNavigation() {
-    if (!isNavHidden) {
-        bottomNav.classList.remove('visible');
-        bottomNav.classList.add('hidden');
-        navActivationZone.classList.add('active');
-        mainContent.classList.remove('with-visible-nav');
-        mainContent.classList.add('with-hidden-nav');
-        isNavHidden = true;
-        
-        // Actualizar posición del botón
-        actualizarPosicionBoton();
-    }
-}
 
-function showNavigation() {
-    clearTimeout(hideTimeout);
-    if (isNavHidden) {
-        bottomNav.classList.remove('hidden');
-        bottomNav.classList.add('visible');
-        navActivationZone.classList.remove('active');
-        mainContent.classList.remove('with-hidden-nav');
-        mainContent.classList.add('with-visible-nav');
-        isNavHidden = false;
-        
-        // Actualizar posición del botón
-        actualizarPosicionBoton();
-        
-        hideTimeout = setTimeout(hideNavigation, 3000);
+    function hideNavigation() {
+        if (!isNavHidden) {
+            bottomNav.classList.remove('visible');
+            bottomNav.classList.add('hidden');
+            navActivationZone.classList.add('active');
+            mainContent.classList.remove('with-visible-nav');
+            mainContent.classList.add('with-hidden-nav');
+            isNavHidden = true;
+            
+            // Actualizar posición del botón
+            actualizarPosicionBoton();
+        }
     }
-}
+
+    function showNavigation() {
+        clearTimeout(hideTimeout);
+        if (isNavHidden) {
+            bottomNav.classList.remove('hidden');
+            bottomNav.classList.add('visible');
+            navActivationZone.classList.remove('active');
+            mainContent.classList.remove('with-hidden-nav');
+            mainContent.classList.add('with-visible-nav');
+            isNavHidden = false;
+            
+            // Actualizar posición del botón
+            actualizarPosicionBoton();
+            
+            hideTimeout = setTimeout(hideNavigation, 3000);
+        }
+    }
 
     function isUserInteracting() {
         // Verificar si el usuario está interactuando con la navegación
         return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
     }
 
-   async function onNavClick(e) {
-    navItems.forEach(n => n.classList.remove('active'));
-    e.currentTarget.classList.add('active');
+    async function onNavClick(e) {
+        navItems.forEach(n => n.classList.remove('active'));
+        e.currentTarget.classList.add('active');
 
-    const target = e.currentTarget.getAttribute('data-target');
-    document.querySelectorAll('#mainContent > div').forEach(d => {
-        d.style.display = 'none';
-    });
-    
-    const targetElement = document.getElementById(target);
-    if (targetElement) {
-        targetElement.style.display = 'block';
+        const target = e.currentTarget.getAttribute('data-target');
+        document.querySelectorAll('#mainContent > div').forEach(d => {
+            d.style.display = 'none';
+        });
         
-        // Manejar el botón flotante
-        const mapButton = document.querySelector('.map-floating-button');
+        const targetElement = document.getElementById(target);
+        if (targetElement) {
+            targetElement.style.display = 'block';
+            
+            // Manejar el botón flotante
+            const mapButton = document.querySelector('.map-floating-button');
+            
+            if (target === 'mapView') {
+                // Configurar mapa en pantalla completa
+                targetElement.style.position = 'fixed';
+                targetElement.style.top = '44px';
+                targetElement.style.left = '0';
+                targetElement.style.right = '0';
+                targetElement.style.bottom = '0';
+                targetElement.style.width = '100%';
+                targetElement.style.height = 'calc(100vh - 44px)';
+                targetElement.style.zIndex = '998';
+                
+                // Mostrar botón
+                if (mapButton) {
+                    mapButton.style.display = 'flex';
+                    mapButton.classList.add('visible');
+                    mapButton.classList.remove('hidden');
+                }
+                
+                // Asegurar que el iframe ocupe todo
+                const iframe = targetElement.querySelector('iframe');
+                if (iframe) {
+                    iframe.style.width = '100%';
+                    iframe.style.height = '100%';
+                }
+            } else {
+                // Ocultar botón en otras vistas
+                if (mapButton) {
+                    mapButton.style.display = 'none';
+                    mapButton.classList.remove('visible');
+                    mapButton.classList.add('hidden');
+                }
+            }
+        }
+
+        showNavigation();
+
+        if (target === 'feedView') cargarFeed();
+        if (target === 'notificationsView') cargarNotificaciones();
+        if (target === 'profileView') cargarPerfil();
+    }
+
+    // Cargar feed de reportes - VERSIÓN ACTUALIZADA Y CORREGIDA
+    async function cargarFeed() {
+        if (!feedView) return;
         
-        if (target === 'mapView') {
-            // Configurar mapa en pantalla completa
-            targetElement.style.position = 'fixed';
-            targetElement.style.top = '44px';
-            targetElement.style.left = '0';
-            targetElement.style.right = '0';
-            targetElement.style.bottom = '0';
-            targetElement.style.width = '100%';
-            targetElement.style.height = 'calc(100vh - 44px)';
-            targetElement.style.zIndex = '998';
-            
-            // Mostrar botón
-            if (mapButton) {
-                mapButton.style.display = 'flex';
-                mapButton.classList.add('visible');
-                mapButton.classList.remove('hidden');
-            }
-            
-            // Asegurar que el iframe ocupe todo
-            const iframe = targetElement.querySelector('iframe');
-            if (iframe) {
-                iframe.style.width = '100%';
-                iframe.style.height = '100%';
-            }
+        // Mostrar estados de carga
+        const postsContainer = document.getElementById('postsContainer');
+        const loadingPosts = document.getElementById('loadingPosts');
+        const noPosts = document.getElementById('noPosts');
+        
+        if (postsContainer && loadingPosts && noPosts) {
+            postsContainer.innerHTML = '';
+            loadingPosts.style.display = 'block';
+            noPosts.style.display = 'none';
         } else {
-            // Ocultar botón en otras vistas
-            if (mapButton) {
-                mapButton.style.display = 'none';
-                mapButton.classList.remove('visible');
-                mapButton.classList.add('hidden');
+            // Fallback si no existen los contenedores
+            feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
+        }
+        
+        try {
+            const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
+            const data = await resp.json();
+
+            if (!Array.isArray(data)) {
+                if (postsContainer && loadingPosts && noPosts) {
+                    loadingPosts.style.display = 'none';
+                    noPosts.style.display = 'block';
+                    noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+                } else {
+                    feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+                }
+                return;
+            }
+
+            if (data.length === 0) {
+                if (postsContainer && loadingPosts && noPosts) {
+                    loadingPosts.style.display = 'none';
+                    noPosts.style.display = 'block';
+                } else {
+                    feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles. ¡Sé el primero en reportar!</p>';
+                }
+                return;
+            }
+
+            // Limpiar y mostrar posts
+            if (postsContainer && loadingPosts && noPosts) {
+                loadingPosts.style.display = 'none';
+                postsContainer.innerHTML = '';
+                
+                data.forEach(reporte => {
+                    const postElement = crearPostElement(reporte);
+                    postsContainer.appendChild(postElement);
+                });
+            } else {
+                // Fallback: usar la estructura antigua
+                feedView.innerHTML = '';
+                data.forEach(post => {
+                    const avatar = '/imagenes/default-avatar.png';
+                    const timeText = tiempoRelativo(new Date(post.fecha_reporte));
+                    const descripcionCorta = post.descripcion && post.descripcion.length > 150 ? 
+                        post.descripcion.substring(0, 150) + '...' : post.descripcion;
+
+                    const div = document.createElement('div');
+                    div.className = 'post';
+                    div.innerHTML = `
+                        <div class="post-header">
+                            <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/default-avatar.png'">
+                            <div class="user-info">
+                                <div class="user-name">${escapeHtml(post.usuario || 'Usuario')}</div>
+                                <div class="post-meta">
+                                    <i class="fas fa-map-marker-alt"></i>
+                                    <span>Ubicación en mapa</span>
+                                    <i class="fas fa-clock"></i>
+                                    <span>${timeText}</span>
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span class="post-incident-type">${escapeHtml(post.tipo_incidente || 'Incidente')}</span>
+                                </div>
+                                <div class="post-status">
+                                    <span class="status-badge ${(post.estado || 'pendiente').toLowerCase().replace(' ', '-')}">${post.estado || 'pendiente'}</span>
+                                </div>
+                            </div>
+                        </div>
+                        ${post.imagenes && post.imagenes.length > 0 ? `
+                            <div class="post-images">
+                                ${crearEstructuraImagenesSimple(post.imagenes)}
+                            </div>
+                        ` : ''}
+                        <div class="post-desc">${escapeHtml(post.descripcion || 'Sin descripción')}</div>
+                        <div class="post-additional-info">
+                            <div class="info-item">
+                                <i class="fas fa-road"></i>
+                                <span class="street-info">Coordenadas: ${formatearCoordenada(post.latitud)}, ${formatearCoordenada(post.longitud)}</span>
+                            </div>
+                            <div class="info-item">
+                                <i class="fas fa-calendar-day"></i>
+                                <span>${formatearFecha(post.fecha_reporte)}</span>
+                            </div>
+                        </div>
+                        <div class="post-actions">
+                            <button class="btn-small like-btn" onclick="toggleLike(${post.id_reporte}, this)">
+                                <i class="fas fa-heart"></i>
+                                <span class="like-count">0</span>
+                            </button>
+                            <button class="btn-small comment-btn" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
+                                <i class="fas fa-comment"></i>
+                                <span>Comentar</span>
+                            </button>
+                            <button class="btn-small view-map-btn" onclick="navegarAlMapa(${JSON.stringify(post).replace(/"/g, '&quot;')})">
+                                <i class="fas fa-map-marker-alt"></i>
+                                <span>Ver en Mapa</span>
+                            </button>
+                        </div>
+                    `;
+
+                    // Hacer clickeable la información de coordenadas
+                    const streetInfo = div.querySelector('.street-info');
+                    streetInfo.style.cursor = 'pointer';
+                    streetInfo.title = 'Haz clic para ver en el mapa';
+                    streetInfo.addEventListener('click', () => navegarAlMapa(post));
+
+                    // Agregar funcionalidad de expandir descripción
+                    const descElement = div.querySelector('.post-desc');
+                    if (descElement && post.descripcion && post.descripcion.length > 150) {
+                        descElement.style.cursor = 'pointer';
+                        descElement.title = 'Click para expandir';
+                        descElement.addEventListener('click', function() {
+                            if (this.style.webkitLineClamp) {
+                                this.style.webkitLineClamp = 'unset';
+                                this.title = '';
+                            } else {
+                                this.style.webkitLineClamp = '4';
+                                this.title = escapeHtml(post.descripcion);
+                            }
+                        });
+                    }
+
+                    feedView.appendChild(div);
+                });
+            }
+
+        } catch (err) {
+            console.error('Error cargando feed:', err);
+            if (postsContainer && loadingPosts && noPosts) {
+                loadingPosts.style.display = 'none';
+                noPosts.style.display = 'block';
+                noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+            } else {
+                feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
             }
         }
     }
 
-    showNavigation();
-
-    if (target === 'feedView') cargarFeed();
-    if (target === 'notificationsView') cargarNotificaciones();
-    if (target === 'profileView') cargarPerfil();
-}
-
-    // Cargar feed de reportes
-    async function cargarFeed() {
-    if (!feedView) return;
-    
-    feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando publicaciones...</p></div>';
-    try {
-        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
-        const data = await resp.json();
-
-        if (!Array.isArray(data)) {
-            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar feed</p>';
-            return;
-        }
-
-        if (data.length === 0) {
-            feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay publicaciones aún. ¡Sé el primero en reportar!</p>';
-            return;
-        }
-
-        feedView.innerHTML = '';
-        data.forEach(post => {
-            const avatar = post.imagen_url ? post.imagen_url : '/imagenes/fiveicon.png';
-            const timeText = tiempoRelativo(new Date(post.fecha_reporte));
-            const descripcionCorta = post.descripcion.length > 150 ? 
-                post.descripcion.substring(0, 150) + '...' : post.descripcion;
-
+    // Función para crear elemento de post (para la nueva estructura) - CORREGIDA
+    function crearPostElement(reporte) {
+        const template = document.getElementById('postTemplate');
+        if (!template) {
+            // Fallback si no existe el template
             const div = document.createElement('div');
             div.className = 'post';
-            div.innerHTML = `
-                <div class="post-header">
-                    <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/fiveicon.png'">
-                    <div class="user-info">
-                        <div class="user-name">${escapeHtml(post.nombres || post.usuario_correo)} ${escapeHtml(post.apellidos || '')}</div>
-                        <div class="post-meta">
-                            <i class="fas fa-map-marker-alt"></i>
-                            ${post.latitud}, ${post.longitud} · ${timeText}
-                        </div>
-                    </div>
-                </div>
-                <div class="post-desc" title="${escapeHtml(post.descripcion)}">${escapeHtml(descripcionCorta)}</div>
-                ${post.imagen_url ? `
-                    <img class="post-img" src="${post.imagen_url}" 
-                         onerror="this.style.display='none'" 
-                         alt="Imagen del reporte"
-                         loading="lazy">
-                ` : ''}
-                <div class="post-actions">
-                    <button class="btn-small" data-id="${post.id_reporte}" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
-                        <i class="fas fa-comment"></i> Comentar
-                    </button>
-                    <button class="btn-small" onclick="toggleLike(${post.id_reporte}, this)">
-                        <i class="far fa-heart"></i> Me gusta
-                    </button>
+            div.innerHTML = `Template no encontrado`;
+            return div;
+        }
+        
+        const postElement = template.content.cloneNode(true);
+        
+        // Llenar datos básicos
+        const post = postElement.querySelector('.post');
+        post.setAttribute('data-post-id', reporte.id_reporte);
+        
+        // Avatar y nombre de usuario
+        const avatar = postElement.querySelector('.avatar');
+        avatar.src = '/imagenes/default-avatar.png';
+        avatar.alt = reporte.usuario || 'Usuario';
+        
+        postElement.querySelector('.user-name').textContent = reporte.usuario || 'Usuario';
+        postElement.querySelector('.post-incident-type').textContent = reporte.tipo_incidente || 'Tipo no especificado';
+        postElement.querySelector('.post-desc').textContent = reporte.descripcion || 'Sin descripción';
+        
+        // CORRECCIÓN: Manejar latitud y longitud que pueden venir como string
+        postElement.querySelector('.street-info').textContent = `Coordenadas: ${formatearCoordenada(reporte.latitud)}, ${formatearCoordenada(reporte.longitud)}`;
+        
+        postElement.querySelector('.report-date').textContent = formatearFecha(reporte.fecha_reporte);
+        
+        // Estado del reporte
+        const statusBadge = postElement.querySelector('.status-badge');
+        statusBadge.textContent = reporte.estado || 'pendiente';
+        statusBadge.className = `status-badge ${(reporte.estado || 'pendiente').toLowerCase().replace(' ', '-')}`;
+        
+        // Tiempo relativo
+        postElement.querySelector('.post-time').textContent = tiempoRelativo(new Date(reporte.fecha_reporte));
+        
+        // Imágenes
+        const imagesContainer = postElement.querySelector('.post-images');
+        if (reporte.imagenes && reporte.imagenes.length > 0) {
+            imagesContainer.innerHTML = crearEstructuraImagenesSimple(reporte.imagenes);
+        } else {
+            imagesContainer.style.display = 'none';
+        }
+        
+        // Agregar event listeners para los botones
+        const likeBtn = postElement.querySelector('.like-btn');
+        const commentBtn = postElement.querySelector('.comment-btn');
+        const viewMapBtn = postElement.querySelector('.view-map-btn');
+        const streetInfo = postElement.querySelector('.street-info');
+        
+        likeBtn.addEventListener('click', () => toggleLike(reporte.id_reporte, likeBtn));
+        commentBtn.addEventListener('click', () => {
+            if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
+                ComentariosManager.abrirComentarios(reporte.id_reporte);
+            } else {
+                alert('Función de comentarios no disponible');
+            }
+        });
+        
+        // NUEVO: Event listener para el botón de ver en mapa
+        viewMapBtn.addEventListener('click', () => navegarAlMapa(reporte));
+        
+        // NUEVO: También hacer clickeable la información de coordenadas
+        streetInfo.style.cursor = 'pointer';
+        streetInfo.title = 'Haz clic para ver en el mapa';
+        streetInfo.addEventListener('click', () => navegarAlMapa(reporte));
+        
+        return postElement;
+    }
+
+    // Función auxiliar para crear estructura de imágenes simple - CORREGIDA
+    function crearEstructuraImagenesSimple(imagenes) {
+        if (!imagenes || imagenes.length === 0) return '';
+        
+        // Asegurarse de que las URLs sean seguras para HTML
+        const imagenesSeguras = imagenes.map(img => {
+            return img.replace(/'/g, "&#39;").replace(/"/g, "&#34;");
+        });
+        
+        if (imagenesSeguras.length === 1) {
+            return `<img src="${imagenesSeguras[0]}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${imagenesSeguras[0]}')">`;
+        } else if (imagenesSeguras.length === 2) {
+            return `
+                <div class="images-grid two-images">
+                    ${imagenesSeguras.map(img => 
+                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                    ).join('')}
                 </div>
             `;
+        } else if (imagenesSeguras.length === 3) {
+            return `
+                <div class="images-grid three-images">
+                    ${imagenesSeguras.map(img => 
+                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                    ).join('')}
+                </div>
+            `;
+        } else {
+            const totalImagenes = imagenesSeguras.length;
+            const imagenesMostradas = imagenesSeguras.slice(0, 4);
+            const imagenesExtra = totalImagenes - 4;
+            
+            return `
+                <div class="images-grid four-images ${imagenesExtra > 0 ? 'has-more-images' : ''}">
+                    ${imagenesMostradas.map(img => 
+                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                    ).join('')}
+                    ${imagenesExtra > 0 ? `
+                        <div class="image-count-overlay">+${imagenesExtra}</div>
+                    ` : ''}
+                </div>
+            `;
+        }
+    }
 
-            // Agregar funcionalidad de expandir descripción
-            const descElement = div.querySelector('.post-desc');
-            descElement.addEventListener('click', function() {
-                if (this.style.webkitLineClamp) {
-                    this.style.webkitLineClamp = 'unset';
-                    this.title = '';
-                } else {
-                    this.style.webkitLineClamp = '4';
-                    this.title = escapeHtml(post.descripcion);
+    // Función para navegar al mapa con el reporte específico
+    function navegarAlMapa(reporte) {
+        // Navegar a la vista del mapa
+        const mapNavItem = document.querySelector('.nav-item[data-target="mapView"]');
+        if (mapNavItem) {
+            mapNavItem.click();
+            
+            // Esperar un poco a que se cargue el mapa y luego enviar el mensaje
+            setTimeout(() => {
+                enviarCoordenadasAlMapa(reporte);
+            }, 1000);
+        }
+    }
+
+    // Función para enviar las coordenadas al iframe del mapa
+    function enviarCoordenadasAlMapa(reporte) {
+    const mapIframe = document.querySelector('#mapView iframe');
+    if (mapIframe && mapIframe.contentWindow) {
+        try {
+            // Convertir coordenadas a números
+            const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
+            const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
+            
+            console.log('📍 Enviando al mapa:', { reportId: reporte.id_reporte, lat, lng });
+            
+            // Enviar mensaje al iframe con las coordenadas
+            const message = {
+                type: 'SHOW_REPORT',
+                coordinates: {
+                    lat: lat,
+                    lng: lng
+                },
+                reportId: reporte.id_reporte,
+                reportData: {
+                    tipo_incidente: reporte.tipo_incidente,
+                    descripcion: reporte.descripcion,
+                    estado: reporte.estado,
+                    usuario: reporte.usuario,
+                    fecha_reporte: reporte.fecha_reporte
                 }
-            });
-
-            feedView.appendChild(div);
-        });
-
-    } catch (err) {
-        console.error(err);
-        feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar publicaciones</p>';
+            };
+            
+            mapIframe.contentWindow.postMessage(message, '*');
+            
+            // Reintentar después de 2 segundos por si el mapa no está listo
+            setTimeout(() => {
+                mapIframe.contentWindow.postMessage(message, '*');
+            }, 2000);
+            
+        } catch (error) {
+            console.error('Error enviando coordenadas al mapa:', error);
+            // Fallback: abrir el mapa con parámetros en la URL
+            abrirMapaConCoordenadas(reporte);
+        }
+    } else {
+        console.error('❌ No se puede acceder al iframe del mapa');
+        // Fallback si no se puede comunicar con el iframe
+        abrirMapaConCoordenadas(reporte);
     }
 }
+
+    // Función fallback para abrir mapa con coordenadas en parámetros URL
+    function abrirMapaConCoordenadas(reporte) {
+        const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
+        const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
+        
+        const mapUrl = `<?php echo $mapUrl; ?>?lat=${lat}&lng=${lng}&reportId=${reporte.id_reporte}`;
+        const mapIframe = document.querySelector('#mapView iframe');
+        
+        if (mapIframe) {
+            mapIframe.src = mapUrl;
+        }
+    }
 
     // Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
     async function cargarNotificaciones() {
@@ -324,43 +592,43 @@ function showNavigation() {
     }
 
     // Cargar perfil
-   async function cargarPerfil() {
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
-        
-        // Verificar si la respuesta es JSON
-        const contentType = resp.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            console.warn('El servidor devolvió HTML en lugar de JSON');
-            return;
+    async function cargarPerfil() {
+        try {
+            const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
+            
+            // Verificar si la respuesta es JSON
+            const contentType = resp.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                console.warn('El servidor devolvió HTML en lugar de JSON');
+                return;
+            }
+            
+            const user = await resp.json();
+
+            if (!user) return;
+
+            // Solo mostrar datos que existen en la BD
+            document.getElementById('profileAvatar').src = '/imagenes/fiveicon.png'; // Avatar por defecto
+            document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`.trim();
+            document.getElementById('profileEmail').textContent = user.correo || 'No disponible';
+            document.getElementById('profilePhone').textContent = user.telefono || 'Sin teléfono';
+            
+            // Información personal en la tarjeta
+            document.getElementById('profileNames').textContent = user.nombres || 'No disponible';
+            document.getElementById('profileLastnames').textContent = user.apellidos || 'No disponible';
+            document.getElementById('profileEmailCard').textContent = user.correo || 'No disponible';
+            document.getElementById('profilePhoneCard').textContent = user.telefono || 'Sin teléfono';
+
+            // Prefill form solo con datos existentes
+            document.getElementById('inpNombres').value = user.nombres || '';
+            document.getElementById('inpApellidos').value = user.apellidos || '';
+            document.getElementById('inpTelefono').value = user.telefono || '';
+
+        } catch (err) {
+            console.warn('Error cargar perfil (no crítico):', err);
+            // No hacer nada, dejar que la aplicación continúe
         }
-        
-        const user = await resp.json();
-
-        if (!user) return;
-
-        // Solo mostrar datos que existen en la BD
-        document.getElementById('profileAvatar').src = '/imagenes/fiveicon.png'; // Avatar por defecto
-        document.getElementById('profileName').textContent = `${user.nombres || ''} ${user.apellidos || ''}`.trim();
-        document.getElementById('profileEmail').textContent = user.correo || 'No disponible';
-        document.getElementById('profilePhone').textContent = user.telefono || 'Sin teléfono';
-        
-        // Información personal en la tarjeta
-        document.getElementById('profileNames').textContent = user.nombres || 'No disponible';
-        document.getElementById('profileLastnames').textContent = user.apellidos || 'No disponible';
-        document.getElementById('profileEmailCard').textContent = user.correo || 'No disponible';
-        document.getElementById('profilePhoneCard').textContent = user.telefono || 'Sin teléfono';
-
-        // Prefill form solo con datos existentes
-        document.getElementById('inpNombres').value = user.nombres || '';
-        document.getElementById('inpApellidos').value = user.apellidos || '';
-        document.getElementById('inpTelefono').value = user.telefono || '';
-
-    } catch (err) {
-        console.warn('Error cargar perfil (no crítico):', err);
-        // No hacer nada, dejar que la aplicación continúe
     }
-}
 
     async function guardarPerfil() {
         const form = new FormData();
@@ -389,72 +657,74 @@ function showNavigation() {
             alert('Error al guardar perfil');
         }
     }
-// Función para abrir mapa en pantalla completa
-function abrirMapaCompleto() {
-    const ventanaMapa = window.open(mapUrl, 'MapaOjoEnLaVia', 
-        'width=1200,height=800,scrollbars=yes,resizable=yes');
-    
-    if (ventanaMapa) {
-        ventanaMapa.focus();
-    } else {
-        alert('Por favor permite las ventanas emergentes para esta función');
-    }
-}
 
-// Y mantén esta modificación en onNavClick para ajustar la altura:
-async function onNavClick(e) {
-    navItems.forEach(n => n.classList.remove('active'));
-    e.currentTarget.classList.add('active');
-
-    const target = e.currentTarget.getAttribute('data-target');
-    document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
-    
-    const targetElement = document.getElementById(target);
-    if (targetElement) {
-        targetElement.style.display = 'block';
+    // Función para abrir mapa en pantalla completa
+    function abrirMapaCompleto() {
+        const ventanaMapa = window.open(mapUrl, 'MapaOjoEnLaVia', 
+            'width=1200,height=800,scrollbars=yes,resizable=yes');
         
-        // Si es el mapa, ajustar altura después de mostrarlo
-        if (target === 'mapView') {
-            setTimeout(ajustarAlturaMapa, 100);
+        if (ventanaMapa) {
+            ventanaMapa.focus();
+        } else {
+            alert('Por favor permite las ventanas emergentes para esta función');
         }
     }
 
-    showNavigation();
+    // Y mantén esta modificación en onNavClick para ajustar la altura:
+    async function onNavClick(e) {
+        navItems.forEach(n => n.classList.remove('active'));
+        e.currentTarget.classList.add('active');
 
-    if (target === 'feedView') cargarFeed();
-    if (target === 'notificationsView') cargarNotificaciones();
-    if (target === 'profileView') cargarPerfil();
-}
+        const target = e.currentTarget.getAttribute('data-target');
+        document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
+        
+        const targetElement = document.getElementById(target);
+        if (targetElement) {
+            targetElement.style.display = 'block';
+            
+            // Si es el mapa, ajustar altura después de mostrarlo
+            if (target === 'mapView') {
+                setTimeout(ajustarAlturaMapa, 100);
+            }
+        }
 
-function ajustarAlturaMapa() {
-    const mapContainer = document.querySelector('.map-container');
-    const mapView = document.getElementById('mapView');
-    
-    if (mapContainer && mapView) {
-        // Ocupar toda la altura disponible
-        const viewportHeight = window.innerHeight;
-        const headerHeight = document.querySelector('.app-header').offsetHeight;
+        showNavigation();
+
+        if (target === 'feedView') cargarFeed();
+        if (target === 'notificationsView') cargarNotificaciones();
+        if (target === 'profileView') cargarPerfil();
+    }
+
+    function ajustarAlturaMapa() {
+        const mapContainer = document.querySelector('.map-container');
+        const mapView = document.getElementById('mapView');
         
-        // Altura completa menos el header
-        const alturaCalculada = viewportHeight - headerHeight;
-        mapContainer.style.height = alturaCalculada + 'px';
-        mapView.style.height = alturaCalculada + 'px';
-        
-        // También asegurarnos que el iframe ocupe todo
-        const iframe = mapContainer.querySelector('iframe');
-        if (iframe) {
-            iframe.style.height = '100%';
-            iframe.style.minHeight = alturaCalculada + 'px';
+        if (mapContainer && mapView) {
+            // Ocupar toda la altura disponible
+            const viewportHeight = window.innerHeight;
+            const headerHeight = document.querySelector('.app-header').offsetHeight;
+            
+            // Altura completa menos el header
+            const alturaCalculada = viewportHeight - headerHeight;
+            mapContainer.style.height = alturaCalculada + 'px';
+            mapView.style.height = alturaCalculada + 'px';
+            
+            // También asegurarnos que el iframe ocupe todo
+            const iframe = mapContainer.querySelector('iframe');
+            if (iframe) {
+                iframe.style.height = '100%';
+                iframe.style.minHeight = alturaCalculada + 'px';
+            }
         }
     }
-}
 
-// Ajustar mapa al redimensionar
-window.addEventListener('resize', function() {
-    if (document.getElementById('mapView').style.display === 'block') {
-        ajustarAlturaMapa();
-    }
-});
+    // Ajustar mapa al redimensionar
+    window.addEventListener('resize', function() {
+        if (document.getElementById('mapView').style.display === 'block') {
+            ajustarAlturaMapa();
+        }
+    });
+
     // Utilidades
     function tiempoRelativo(date) {
         const now = new Date();
@@ -470,6 +740,37 @@ window.addEventListener('resize', function() {
         return text.replace(/[&<>"']/g, function(m) { 
             return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; 
         });
+    }
+
+    // Función auxiliar para formatear coordenadas de forma segura
+    function formatearCoordenada(coord) {
+        if (coord === null || coord === undefined) {
+            return 'No disponible';
+        }
+        
+        // Convertir a número si es string
+        const num = typeof coord === 'string' ? parseFloat(coord) : coord;
+        
+        // Verificar si es un número válido
+        if (isNaN(num)) {
+            return 'Inválida';
+        }
+        
+        return num.toFixed(6);
+    }
+
+    // Función para formatear fecha
+    function formatearFecha(fechaString) {
+        try {
+            const fecha = new Date(fechaString);
+            return fecha.toLocaleDateString('es-ES', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+        } catch (e) {
+            return 'Fecha no disponible';
+        }
     }
 
     window.toggleLike = async function(id_reporte, btn) {
@@ -530,6 +831,42 @@ window.addEventListener('resize', function() {
             alert('No hay información de reporte asociada');
         }
     }
+
+    // Función para compartir reporte
+    window.compartirReporte = function(reporte) {
+        const texto = `Reporte de ${reporte.tipo_incidente}: ${reporte.descripcion}`;
+        
+        if (navigator.share) {
+            navigator.share({
+                title: 'Ojo en la Vía - Reporte',
+                text: texto,
+                url: window.location.href
+            });
+        } else {
+            navigator.clipboard.writeText(texto).then(() => {
+                alert('Reporte copiado al portapapeles');
+            });
+        }
+    }
+
+    // Función para ampliar imagen
+    window.ampliarImagen = function(src) {
+        const modal = document.createElement('div');
+        modal.className = 'image-modal';
+        modal.innerHTML = `
+            <img src="${src}" alt="Imagen ampliada">
+            <button class="image-modal-close" onclick="this.parentElement.remove()">
+                <i class="fas fa-times"></i>
+            </button>
+        `;
+        modal.onclick = (e) => {
+            if (e.target === modal) modal.remove();
+        };
+        document.body.appendChild(modal);
+    }
+
+    // Función global para navegar al mapa (para uso externo)
+    window.navegarAlMapa = navegarAlMapa;
 
     // Función global para mostrar/ocultar navegación manualmente
     window.toggleNavigation = function() {

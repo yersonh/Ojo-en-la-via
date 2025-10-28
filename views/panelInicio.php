@@ -54,116 +54,23 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 <p>Cargando...</p>
             </div>
 
-            <!-- FEED DE INICIO - ESTRUCTURA CORREGIDA -->
+            <!-- FEED DE INICIO - ESTRUCTURA ACTUALIZADA -->
             <div id="feedView">
                 <div class="feed-container">
-                    <div class="posts-grid">
-                        <!-- EJEMPLO DE POST 1 -->
-                        <div class="post">
-                            <div class="post-header">
-                                <img class="avatar" src="/imagenes/user-avatar.jpg" alt="Maria García">
-                                <div class="user-info">
-                                    <div class="user-name">Maria García</div>
-                                    <div class="post-meta">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span>Corito, Ciudad</span>
-                                        <i class="fas fa-clock"></i>
-                                        <span>Hace 2 horas</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="post-desc">
-                                Bache grande en la calle principal que necesita reparación urgente. Es peligroso para vehículos y peatones.
-                            </div>
-                            
-                            <div class="post-actions">
-                                <button class="btn-small">
-                                    <i class="fas fa-heart"></i>
-                                    <span>Me gusta</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-comment"></i>
-                                    <span>Comentar</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-share"></i>
-                                    <span>Compartir</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- EJEMPLO DE POST 2 -->
-                        <div class="post">
-                            <div class="post-header">
-                                <img class="avatar" src="/imagenes/user-avatar2.jpg" alt="Carlos Rodríguez">
-                                <div class="user-info">
-                                    <div class="user-name">Carlos Rodríguez</div>
-                                    <div class="post-meta">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span>Centro, Ciudad</span>
-                                        <i class="fas fa-clock"></i>
-                                        <span>Hace 4 horas</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="post-desc">
-                                Semáforo dañado en la intersección de la Avenida Principal con Calle 5. Genera mucho tráfico y riesgo de accidentes.
-                            </div>
-                            
-                            <div class="post-actions">
-                                <button class="btn-small">
-                                    <i class="fas fa-heart"></i>
-                                    <span>Me gusta</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-comment"></i>
-                                    <span>Comentar</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-share"></i>
-                                    <span>Compartir</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- EJEMPLO DE POST 3 -->
-                        <div class="post">
-                            <div class="post-header">
-                                <img class="avatar" src="/imagenes/user-avatar3.jpg" alt="Ana Martínez">
-                                <div class="user-info">
-                                    <div class="user-name">Ana Martínez</div>
-                                    <div class="post-meta">
-                                        <i class="fas fa-map-marker-alt"></i>
-                                        <span>Zona Norte, Ciudad</span>
-                                        <i class="fas fa-clock"></i>
-                                        <span>Hace 1 día</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <div class="post-desc">
-                                Alumbrado público defectuoso en el parque central. La zona está muy oscura por las noches, representa un riesgo para la seguridad.
-                            </div>
-                            
-                            <div class="post-actions">
-                                <button class="btn-small">
-                                    <i class="fas fa-heart"></i>
-                                    <span>Me gusta</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-comment"></i>
-                                    <span>Comentar</span>
-                                </button>
-                                <button class="btn-small">
-                                    <i class="fas fa-share"></i>
-                                    <span>Compartir</span>
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Más posts se cargarán aquí dinámicamente -->
+                    <div class="posts-grid" id="postsContainer">
+                        <!-- Los reportes se cargarán aquí dinámicamente -->
+                    </div>
+                    
+                    <!-- Estado de carga -->
+                    <div id="loadingPosts" class="loading" style="display: none;">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando reportes...</p>
+                    </div>
+                    
+                    <!-- Estado sin resultados -->
+                    <div id="noPosts" class="loading" style="display: none;">
+                        <i class="fas fa-inbox" style="font-size: 3rem; margin-bottom: 1rem; opacity: 0.5;"></i>
+                        <p>No hay reportes disponibles</p>
                     </div>
                 </div>
             </div>
@@ -178,16 +85,16 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
 
             <!-- Mapa -->
             <div id="mapView" style="display:none;">
-        <iframe 
-            src="<?php echo $mapUrl; ?>" 
-            title="Mapa de reportes de Ojo en la Vía"
-        ></iframe>
-        <!-- Botón DENTRO del mapa -->
-        <button class="map-floating-button" 
-                onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
-            <i class="fas fa-expand"></i>
-        </button>
-    </div>
+                <iframe 
+                    src="<?php echo $mapUrl; ?>" 
+                    title="Mapa de reportes de Ojo en la Vía"
+                ></iframe>
+                <!-- Botón DENTRO del mapa -->
+                <button class="map-floating-button" 
+                        onclick="window.open('<?php echo $mapUrl; ?>', '_blank')">
+                    <i class="fas fa-expand"></i>
+                </button>
+            </div>
 
             <!-- Perfil - DENTRO del mainContent -->
             <div id="profileView" style="display:none;">
@@ -392,6 +299,74 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
             </div>
         </nav>
     </div>
+
+    <!-- TEMPLATE PARA CADA POST (oculto) -->
+    <template id="postTemplate">
+    <div class="post" data-post-id="">
+        <div class="post-header">
+            <img class="avatar" src="/imagenes/default-avatar.png" alt="Avatar del usuario">
+            <div class="user-info">
+                <div class="user-name"></div>
+                <div class="post-meta">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span class="post-location">Ubicación en mapa</span>
+                    <i class="fas fa-clock"></i>
+                    <span class="post-time"></span>
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span class="post-incident-type"></span>
+                </div>
+                <div class="post-status">
+                    <span class="status-badge"></span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Imágenes del reporte -->
+        <div class="post-images">
+            <!-- Las imágenes se insertarán aquí dinámicamente -->
+        </div>
+        
+        <!-- Descripción del reporte -->
+        <div class="post-desc"></div>
+        
+        <!-- Información adicional -->
+        <div class="post-additional-info">
+            <div class="info-item">
+                <i class="fas fa-road"></i>
+                <span class="street-info"></span>
+            </div>
+            <div class="info-item">
+                <i class="fas fa-calendar-day"></i>
+                <span class="report-date"></span>
+            </div>
+        </div>
+        
+        <!-- Acciones -->
+        <div class="post-actions">
+            <button class="btn-small like-btn">
+                <i class="fas fa-heart"></i>
+                <span class="like-count">0</span>
+            </button>
+            <button class="btn-small comment-btn">
+                <i class="fas fa-comment"></i>
+                <span>Comentar</span>
+            </button>
+            <button class="btn-small view-map-btn">
+                <i class="fas fa-map-marker-alt"></i>
+                <span>Ver en Mapa</span>
+            </button>
+        </div>
+        
+        <!-- Sección de comentarios (inicialmente oculta) -->
+        <div class="post-comments" style="display: none;">
+            <div class="comments-container"></div>
+            <div class="add-comment">
+                <input type="text" placeholder="Escribe un comentario..." class="comment-input">
+                <button class="btn-small comment-submit">Enviar</button>
+            </div>
+        </div>
+    </div>
+</template>
 
     <script>
         // Función para cerrar sesión

@@ -63,31 +63,36 @@ export class MarkerManager {
 }
     
     agregarReporte(reporte) {
-        try {
-            const icono = this._crearIconoPersonalizado(reporte.tipo_incidente, reporte.estado);
-            const marker = L.marker([reporte.latitud, reporte.longitud], { icon: icono });
-            
-            if (this.popupManager) {
-                marker.bindPopup(this.popupManager.crearPopupContent(reporte));
-            }
-            
-            // Efectos interactivos
-            marker.on('mouseover', function() {
-                this.openPopup();
-            });
-            
-            this.markerCluster.addLayer(marker);
-            this.markers.push({
-                marker: marker,
-                data: reporte
-            });
-            
-            return marker;
-        } catch (error) {
-            ErrorHandler.mostrarError(`Error al agregar reporte ${reporte.id_reporte}`, error);
-            return null;
+    try {
+        const icono = this._crearIconoPersonalizado(reporte.tipo_incidente, reporte.estado);
+        
+        // 🆕 AGREGAR ESTA LÍNEA - Asignar reportId al marcador
+        const marker = L.marker([reporte.latitud, reporte.longitud], { 
+            icon: icono,
+            reportId: reporte.id_reporte  // ← ESTA ES LA LÍNEA CLAVE
+        });
+        
+        if (this.popupManager) {
+            marker.bindPopup(this.popupManager.crearPopupContent(reporte));
         }
+        
+        // Efectos interactivos
+        marker.on('mouseover', function() {
+            this.openPopup();
+        });
+        
+        this.markerCluster.addLayer(marker);
+        this.markers.push({
+            marker: marker,
+            data: reporte
+        });
+        
+        return marker;
+    } catch (error) {
+        ErrorHandler.mostrarError(`Error al agregar reporte ${reporte.id_reporte}`, error);
+        return null;
     }
+}
     
     _crearIconoPersonalizado(tipoIncidente, estado) {
         const emoji = TipoIconos[tipoIncidente] || TipoIconos.default;
