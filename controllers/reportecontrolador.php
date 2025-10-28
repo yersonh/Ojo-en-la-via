@@ -217,12 +217,18 @@ case 'registrar':
                     // Ruta para guardar en servidor
                     $rutaDestino = $directorio . $nombreArchivo;
                     
-                    // Crear URL absoluta
-                    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off' ? 'https' : 'http';
+                    // 🆕 SOLUCIÓN: Crear URL absoluta CON HTTPS FORZADO EN PRODUCCIÓN
                     $host = $_SERVER['HTTP_HOST'];
+                    // Si es localhost, usar HTTP; si es producción, forzar HTTPS
+                    if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
+                        $protocol = 'http';
+                    } else {
+                        $protocol = 'https'; // ← FORZAR HTTPS EN PRODUCCIÓN
+                    }
                     $urlImagen = $protocol . '://' . $host . '/imagenes/reportes/' . $nombreArchivo;
 
                     error_log("🖼️ Procesando imagen $i: " . $_FILES['imagen']['name'][$i] . " -> " . $rutaDestino);
+                    error_log("🔒 URL generada: " . $urlImagen . " (Protocolo: " . $protocol . ")");
 
                     // Mover archivo (CON ÍNDICE [$i])
                     if (move_uploaded_file($_FILES['imagen']['tmp_name'][$i], $rutaDestino)) { // ← CORREGIDO
