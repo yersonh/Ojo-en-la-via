@@ -1,218 +1,265 @@
 // Panel.js - gestiona navegación inferior, feed, notificaciones y perfil
 document.addEventListener('DOMContentLoaded', function() {
-    const navItems = document.querySelectorAll('.nav-item');
-    const bottomNav = document.querySelector('.bottom-nav');
-    const mainContent = document.querySelector('.main');
-    const navActivationZone = document.createElement('div');
+    console.log('🚀 Inicializando panel...');
     
-    // Crear zona de activación
-    navActivationZone.className = 'nav-activation-zone';
-    document.body.appendChild(navActivationZone);
-    
-    // Estado de la navegación
-    let isNavHidden = false;
-    let hideTimeout = null;
-    let lastScrollTop = 0;
-    let scrollDirection = 'down';
+    // Esperar un poco más para que el DOM esté completamente cargado
+    setTimeout(() => {
+        try {
+            const navItems = document.querySelectorAll('.nav-item');
+            const bottomNav = document.querySelector('.bottom-nav');
+            const mainContent = document.querySelector('.main');
+            const navActivationZone = document.createElement('div');
+            
+            // Crear zona de activación
+            navActivationZone.className = 'nav-activation-zone';
+            document.body.appendChild(navActivationZone);
+            
+            // Estado de la navegación
+            let isNavHidden = false;
+            let hideTimeout = null;
+            let lastScrollTop = 0;
+            let scrollDirection = 'down';
 
-    navItems.forEach(i => i.addEventListener('click', onNavClick));
+            // Referencias
+            const feedView = document.getElementById('feedView');
+            const notificationsView = document.getElementById('notificationsView');
+            const profileView = document.getElementById('profileView');
 
-    // Referencias
-    const feedView = document.getElementById('feedView');
-    const notificationsView = document.getElementById('notificationsView');
-    const profileView = document.getElementById('profileView');
+            // Inicializar navegación
+            navItems.forEach(i => i.addEventListener('click', onNavClick));
+            initAutoHideNav();
+            
+            // Cargar datos iniciales
+            cargarFeed();
+            cargarPerfil();
 
-    // Inicializar
-    initAutoHideNav();
-    cargarFeed();
-    cargarPerfil();
-
-    // Botones perfil
-    document.getElementById('btnEditProfile').addEventListener('click', () => {
-        document.getElementById('profileForm').style.display = 'block';
-    });
-
-    document.getElementById('btnCancelProfile').addEventListener('click', () => {
-        document.getElementById('profileForm').style.display = 'none';
-    });
-
-    document.getElementById('btnSaveProfile').addEventListener('click', async () => {
-        await guardarPerfil();
-    });
-
-    document.getElementById('editAvatarBtn').addEventListener('click', () => {
-        document.getElementById('fotoPerfil').click();
-    });
-
-    // Función para inicializar el auto-ocultado de la navegación
-    function initAutoHideNav() {
-        // Ocultar después de 3 segundos de inactividad
-        hideTimeout = setTimeout(hideNavigation, 3000);
-        
-        // Mostrar navegación al hacer hover en la zona de activación
-        navActivationZone.addEventListener('mouseenter', showNavigation);
-        navActivationZone.addEventListener('touchstart', showNavigation);
-        
-        // Mostrar navegación al hacer hover sobre ella misma
-        bottomNav.addEventListener('mouseenter', showNavigation);
-        bottomNav.addEventListener('touchstart', showNavigation);
-        
-        // Ocultar al salir del área de la navegación
-        bottomNav.addEventListener('mouseleave', () => {
-            if (!isUserInteracting()) {
-                hideTimeout = setTimeout(hideNavigation, 1000);
+            // Configurar botones del perfil de forma SEGURA
+            const btnEditProfile = document.getElementById('btnEditProfile');
+            const btnCancelProfile = document.getElementById('btnCancelProfile');
+            const btnSaveProfile = document.getElementById('btnSaveProfile');
+            const editAvatarBtn = document.getElementById('editAvatarBtn');
+            
+            if (btnEditProfile) {
+                btnEditProfile.addEventListener('click', () => {
+                    const profileForm = document.getElementById('profileForm');
+                    if (profileForm) profileForm.style.display = 'block';
+                });
             }
-        });
-        
-        // Detectar scroll para auto-ocultar
-        mainContent.addEventListener('scroll', handleScroll);
-        
-        // Resetear timer en interacciones
-        document.addEventListener('mousemove', resetHideTimer);
-        document.addEventListener('touchstart', resetHideTimer);
-        document.addEventListener('click', resetHideTimer);
-    }
-
-    function handleScroll() {
-        const scrollTop = mainContent.scrollTop;
-        
-        // Determinar dirección del scroll
-        if (scrollTop > lastScrollTop) {
-            scrollDirection = 'down';
-        } else {
-            scrollDirection = 'up';
-        }
-        lastScrollTop = scrollTop;
-        
-        // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
-        if (scrollDirection === 'down' && !isNavHidden) {
-            hideNavigation();
-        } else if (scrollDirection === 'up' && isNavHidden) {
-            showNavigation();
-        }
-        
-        resetHideTimer();
-    }
-
-    function resetHideTimer() {
-        clearTimeout(hideTimeout);
-        if (!isNavHidden) {
-            hideTimeout = setTimeout(hideNavigation, 3000);
-        }
-    }
-
-    function actualizarPosicionBoton() {
-        const mapButton = document.querySelector('.map-floating-button');
-        const bottomNav = document.querySelector('.bottom-nav');
-        
-        if (mapButton && bottomNav) {
-            if (bottomNav.classList.contains('hidden')) {
-                // Navegación oculta - botón más abajo
-                mapButton.style.bottom = '20px';
-            } else {
-                // Navegación visible - botón arriba de la navegación
-                mapButton.style.bottom = '80px';
+            
+            if (btnCancelProfile) {
+                btnCancelProfile.addEventListener('click', () => {
+                    const profileForm = document.getElementById('profileForm');
+                    if (profileForm) profileForm.style.display = 'none';
+                });
             }
-        }
-    }
-
-    function hideNavigation() {
-        if (!isNavHidden) {
-            bottomNav.classList.remove('visible');
-            bottomNav.classList.add('hidden');
-            navActivationZone.classList.add('active');
-            mainContent.classList.remove('with-visible-nav');
-            mainContent.classList.add('with-hidden-nav');
-            isNavHidden = true;
             
-            // Actualizar posición del botón
-            actualizarPosicionBoton();
-        }
-    }
-
-    function showNavigation() {
-        clearTimeout(hideTimeout);
-        if (isNavHidden) {
-            bottomNav.classList.remove('hidden');
-            bottomNav.classList.add('visible');
-            navActivationZone.classList.remove('active');
-            mainContent.classList.remove('with-hidden-nav');
-            mainContent.classList.add('with-visible-nav');
-            isNavHidden = false;
+            if (btnSaveProfile) {
+                btnSaveProfile.addEventListener('click', async () => {
+                    await guardarPerfil();
+                });
+            }
             
-            // Actualizar posición del botón
-            actualizarPosicionBoton();
-            
-            hideTimeout = setTimeout(hideNavigation, 3000);
-        }
-    }
+            if (editAvatarBtn) {
+                editAvatarBtn.addEventListener('click', () => {
+                    const fotoPerfil = document.getElementById('fotoPerfil');
+                    if (fotoPerfil) fotoPerfil.click();
+                });
+            }
 
-    function isUserInteracting() {
-        // Verificar si el usuario está interactuando con la navegación
-        return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
-    }
+            console.log('✅ Panel inicializado correctamente');
 
-    async function onNavClick(e) {
-        navItems.forEach(n => n.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-
-        const target = e.currentTarget.getAttribute('data-target');
-        document.querySelectorAll('#mainContent > div').forEach(d => {
-            d.style.display = 'none';
-        });
-        
-        const targetElement = document.getElementById(target);
-        if (targetElement) {
-            targetElement.style.display = 'block';
-            
-            // Manejar el botón flotante
-            const mapButton = document.querySelector('.map-floating-button');
-            
-            if (target === 'mapView') {
-                // Configurar mapa en pantalla completa
-                targetElement.style.position = 'fixed';
-                targetElement.style.top = '44px';
-                targetElement.style.left = '0';
-                targetElement.style.right = '0';
-                targetElement.style.bottom = '0';
-                targetElement.style.width = '100%';
-                targetElement.style.height = 'calc(100vh - 44px)';
-                targetElement.style.zIndex = '998';
+            // Función para inicializar el auto-ocultado de la navegación
+            function initAutoHideNav() {
+                // Ocultar después de 3 segundos de inactividad
+                hideTimeout = setTimeout(hideNavigation, 3000);
                 
-                // Mostrar botón
-                if (mapButton) {
-                    mapButton.style.display = 'flex';
-                    mapButton.classList.add('visible');
-                    mapButton.classList.remove('hidden');
+                // Mostrar navegación al hacer hover en la zona de activación
+                navActivationZone.addEventListener('mouseenter', showNavigation);
+                navActivationZone.addEventListener('touchstart', showNavigation);
+                
+                // Mostrar navegación al hacer hover sobre ella misma
+                bottomNav.addEventListener('mouseenter', showNavigation);
+                bottomNav.addEventListener('touchstart', showNavigation);
+                
+                // Ocultar al salir del área de la navegación
+                bottomNav.addEventListener('mouseleave', () => {
+                    if (!isUserInteracting()) {
+                        hideTimeout = setTimeout(hideNavigation, 1000);
+                    }
+                });
+                
+                // Detectar scroll para auto-ocultar
+                if (mainContent) {
+                    mainContent.addEventListener('scroll', handleScroll);
                 }
                 
-                // Asegurar que el iframe ocupe todo
-                const iframe = targetElement.querySelector('iframe');
-                if (iframe) {
-                    iframe.style.width = '100%';
-                    iframe.style.height = '100%';
+                // Resetear timer en interacciones
+                document.addEventListener('mousemove', resetHideTimer);
+                document.addEventListener('touchstart', resetHideTimer);
+                document.addEventListener('click', resetHideTimer);
+            }
+
+            function handleScroll() {
+                const scrollTop = mainContent.scrollTop;
+                
+                // Determinar dirección del scroll
+                if (scrollTop > lastScrollTop) {
+                    scrollDirection = 'down';
+                } else {
+                    scrollDirection = 'up';
                 }
-            } else {
-                // Ocultar botón en otras vistas
-                if (mapButton) {
-                    mapButton.style.display = 'none';
-                    mapButton.classList.remove('visible');
-                    mapButton.classList.add('hidden');
+                lastScrollTop = scrollTop;
+                
+                // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
+                if (scrollDirection === 'down' && !isNavHidden) {
+                    hideNavigation();
+                } else if (scrollDirection === 'up' && isNavHidden) {
+                    showNavigation();
+                }
+                
+                resetHideTimer();
+            }
+
+            function resetHideTimer() {
+                clearTimeout(hideTimeout);
+                if (!isNavHidden) {
+                    hideTimeout = setTimeout(hideNavigation, 3000);
                 }
             }
+
+            function actualizarPosicionBoton() {
+                const mapButton = document.querySelector('.map-floating-button');
+                const bottomNav = document.querySelector('.bottom-nav');
+                
+                if (mapButton && bottomNav) {
+                    if (bottomNav.classList.contains('hidden')) {
+                        // Navegación oculta - botón más abajo
+                        mapButton.style.bottom = '20px';
+                    } else {
+                        // Navegación visible - botón arriba de la navegación
+                        mapButton.style.bottom = '80px';
+                    }
+                }
+            }
+
+            function hideNavigation() {
+                if (!isNavHidden && bottomNav) {
+                    bottomNav.classList.remove('visible');
+                    bottomNav.classList.add('hidden');
+                    navActivationZone.classList.add('active');
+                    if (mainContent) {
+                        mainContent.classList.remove('with-visible-nav');
+                        mainContent.classList.add('with-hidden-nav');
+                    }
+                    isNavHidden = true;
+                    
+                    // Actualizar posición del botón
+                    actualizarPosicionBoton();
+                }
+            }
+
+            function showNavigation() {
+                clearTimeout(hideTimeout);
+                if (isNavHidden && bottomNav) {
+                    bottomNav.classList.remove('hidden');
+                    bottomNav.classList.add('visible');
+                    navActivationZone.classList.remove('active');
+                    if (mainContent) {
+                        mainContent.classList.remove('with-hidden-nav');
+                        mainContent.classList.add('with-visible-nav');
+                    }
+                    isNavHidden = false;
+                    
+                    // Actualizar posición del botón
+                    actualizarPosicionBoton();
+                    
+                    hideTimeout = setTimeout(hideNavigation, 3000);
+                }
+            }
+
+            function isUserInteracting() {
+                // Verificar si el usuario está interactuando con la navegación
+                return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
+            }
+
+            async function onNavClick(e) {
+                navItems.forEach(n => n.classList.remove('active'));
+                e.currentTarget.classList.add('active');
+
+                const target = e.currentTarget.getAttribute('data-target');
+                document.querySelectorAll('#mainContent > div').forEach(d => {
+                    d.style.display = 'none';
+                });
+                
+                const targetElement = document.getElementById(target);
+                if (targetElement) {
+                    targetElement.style.display = 'block';
+                    
+                    // Manejar el botón flotante
+                    const mapButton = document.querySelector('.map-floating-button');
+                    
+                    if (target === 'mapView') {
+                        // Configurar mapa en pantalla completa
+                        targetElement.style.position = 'fixed';
+                        targetElement.style.top = '44px';
+                        targetElement.style.left = '0';
+                        targetElement.style.right = '0';
+                        targetElement.style.bottom = '0';
+                        targetElement.style.width = '100%';
+                        targetElement.style.height = 'calc(100vh - 44px)';
+                        targetElement.style.zIndex = '998';
+                        
+                        // Mostrar botón
+                        if (mapButton) {
+                            mapButton.style.display = 'flex';
+                            mapButton.classList.add('visible');
+                            mapButton.classList.remove('hidden');
+                        }
+                        
+                        // Asegurar que el iframe ocupe todo
+                        const iframe = targetElement.querySelector('iframe');
+                        if (iframe) {
+                            iframe.style.width = '100%';
+                            iframe.style.height = '100%';
+                        }
+                    } else {
+                        // Ocultar botón en otras vistas
+                        if (mapButton) {
+                            mapButton.style.display = 'none';
+                            mapButton.classList.remove('visible');
+                            mapButton.classList.add('hidden');
+                        }
+                    }
+                }
+
+                showNavigation();
+
+                if (target === 'feedView') cargarFeed();
+                if (target === 'notificationsView') cargarNotificaciones();
+                if (target === 'profileView') cargarPerfil();
+            }
+
+        } catch (error) {
+            console.error('❌ Error durante la inicialización:', error);
         }
+    }, 100);
+});
 
-        showNavigation();
-
-        if (target === 'feedView') cargarFeed();
-        if (target === 'notificationsView') cargarNotificaciones();
-        if (target === 'profileView') cargarPerfil();
+// Función para cerrar sesión
+function cerrarSesion() {
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        window.location.href = '../logout.php';
     }
+}
 
-    // Cargar feed de reportes - VERSIÓN ACTUALIZADA Y CORREGIDA
-    async function cargarFeed() {
+// Mejorar la experiencia en móviles
+document.addEventListener('touchstart', function() {}, { passive: true });
+
+// Cargar feed de reportes - VERSIÓN MEJORADA
+async function cargarFeed() {
     console.log('📰 Cargando feed de reportes...');
     
+    const feedView = document.getElementById('feedView');
     if (!feedView) {
         console.error('❌ feedView no encontrado');
         return;
@@ -284,7 +331,7 @@ document.addEventListener('DOMContentLoaded', function() {
             feedView.innerHTML = '';
             data.forEach(post => {
                 try {
-                    const postElement = crearPostElementSimple(post);
+                    const postElement = crearPostElement(post);
                     if (postElement) {
                         feedView.appendChild(postElement);
                     }
@@ -309,207 +356,161 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 }
-// Función fallback para crear posts simples
-function crearPostElementSimple(post) {
+
+// Función para crear elemento de post - VERSIÓN SIMPLIFICADA Y ROBUSTA
+function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
-        const timeText = tiempoRelativo(new Date(post.fecha_reporte));
-        const descripcionCorta = post.descripcion && post.descripcion.length > 150 ? 
-            post.descripcion.substring(0, 150) + '...' : post.descripcion;
+        const timeText = tiempoRelativo(new Date(reporte.fecha_reporte));
+        const descripcionCorta = reporte.descripcion && reporte.descripcion.length > 150 ? 
+            reporte.descripcion.substring(0, 150) + '...' : reporte.descripcion;
 
         const div = document.createElement('div');
         div.className = 'post';
+        div.setAttribute('data-post-id', reporte.id_reporte);
+        
         div.innerHTML = `
             <div class="post-header">
-                <img src="${avatar}" class="avatar" onerror="this.src='/imagenes/default-avatar.png'">
+                <img src="${avatar}" class="avatar" alt="${reporte.usuario || 'Usuario'}" onerror="this.src='/imagenes/default-avatar.png'">
                 <div class="user-info">
-                    <div class="user-name">${escapeHtml(post.usuario || 'Usuario')}</div>
+                    <div class="user-name">${escapeHtml(reporte.usuario || 'Usuario')}</div>
                     <div class="post-meta">
                         <i class="fas fa-map-marker-alt"></i>
                         <span>Ubicación en mapa</span>
                         <i class="fas fa-clock"></i>
                         <span>${timeText}</span>
                         <i class="fas fa-exclamation-triangle"></i>
-                        <span class="post-incident-type">${escapeHtml(post.tipo_incidente || 'Incidente')}</span>
+                        <span class="post-incident-type">${escapeHtml(reporte.tipo_incidente || 'Tipo no especificado')}</span>
                     </div>
                     <div class="post-status">
-                        <span class="status-badge ${(post.estado || 'pendiente').toLowerCase().replace(' ', '-')}">${post.estado || 'pendiente'}</span>
+                        <span class="status-badge ${(reporte.estado || 'pendiente').toLowerCase().replace(' ', '-')}">${reporte.estado || 'pendiente'}</span>
                     </div>
                 </div>
             </div>
-            ${post.imagenes && post.imagenes.length > 0 ? `
+            
+            ${reporte.imagenes && reporte.imagenes.length > 0 ? `
                 <div class="post-images">
-                    ${crearEstructuraImagenesSimple(post.imagenes)}
+                    ${crearEstructuraImagenesSimple(reporte.imagenes)}
                 </div>
             ` : ''}
-            <div class="post-desc">${escapeHtml(post.descripcion || 'Sin descripción')}</div>
+            
+            <div class="post-desc">${escapeHtml(reporte.descripcion || 'Sin descripción')}</div>
+            
             <div class="post-additional-info">
                 <div class="info-item">
                     <i class="fas fa-road"></i>
-                    <span class="street-info">Coordenadas: ${formatearCoordenada(post.latitud)}, ${formatearCoordenada(post.longitud)}</span>
+                    <span class="street-info">Coordenadas: ${formatearCoordenada(reporte.latitud)}, ${formatearCoordenada(reporte.longitud)}</span>
                 </div>
                 <div class="info-item">
                     <i class="fas fa-calendar-day"></i>
-                    <span>${formatearFecha(post.fecha_reporte)}</span>
+                    <span class="report-date">${formatearFecha(reporte.fecha_reporte)}</span>
                 </div>
             </div>
+            
             <div class="post-actions">
-                <button class="btn-small like-btn" onclick="toggleLike(${post.id_reporte}, this)">
+                <button class="btn-small like-btn">
                     <i class="fas fa-heart"></i>
                     <span class="like-count">0</span>
                 </button>
-                <button class="btn-small comment-btn" onclick="ComentariosManager.abrirComentarios(${post.id_reporte})">
+                <button class="btn-small comment-btn">
                     <i class="fas fa-comment"></i>
                     <span>Comentar</span>
                 </button>
-                <button class="btn-small view-map-btn" onclick="navegarAlMapa(${JSON.stringify(post).replace(/"/g, '&quot;')})">
+                <button class="btn-small view-map-btn">
                     <i class="fas fa-map-marker-alt"></i>
                     <span>Ver en Mapa</span>
                 </button>
             </div>
         `;
 
+        // Agregar event listeners
+        const likeBtn = div.querySelector('.like-btn');
+        const commentBtn = div.querySelector('.comment-btn');
+        const viewMapBtn = div.querySelector('.view-map-btn');
+        const streetInfo = div.querySelector('.street-info');
+        
+        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(reporte.id_reporte, likeBtn));
+        if (commentBtn) commentBtn.addEventListener('click', () => {
+            if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
+                ComentariosManager.abrirComentarios(reporte.id_reporte);
+            }
+        });
+        if (viewMapBtn) viewMapBtn.addEventListener('click', () => navegarAlMapa(reporte));
+        if (streetInfo) {
+            streetInfo.style.cursor = 'pointer';
+            streetInfo.title = 'Haz clic para ver en el mapa';
+            streetInfo.addEventListener('click', () => navegarAlMapa(reporte));
+        }
+
         return div;
+        
     } catch (error) {
-        console.error('Error en crearPostElementSimple:', error);
+        console.error('Error creando post:', error);
         return null;
     }
 }
 
-    // Función para crear elemento de post (para la nueva estructura) - CORREGIDA
-    function crearPostElement(reporte) {
-        const template = document.getElementById('postTemplate');
-        if (!template) {
-            // Fallback si no existe el template
-            const div = document.createElement('div');
-            div.className = 'post';
-            div.innerHTML = `Template no encontrado`;
-            return div;
-        }
+// Función auxiliar para crear estructura de imágenes simple
+function crearEstructuraImagenesSimple(imagenes) {
+    if (!imagenes || imagenes.length === 0) return '';
+    
+    // Asegurarse de que las URLs sean seguras para HTML
+    const imagenesSeguras = imagenes.map(img => {
+        return img.replace(/'/g, "&#39;").replace(/"/g, "&#34;");
+    });
+    
+    if (imagenesSeguras.length === 1) {
+        return `<img src="${imagenesSeguras[0]}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${imagenesSeguras[0]}')">`;
+    } else if (imagenesSeguras.length === 2) {
+        return `
+            <div class="images-grid two-images">
+                ${imagenesSeguras.map(img => 
+                    `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                ).join('')}
+            </div>
+        `;
+    } else if (imagenesSeguras.length === 3) {
+        return `
+            <div class="images-grid three-images">
+                ${imagenesSeguras.map(img => 
+                    `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                ).join('')}
+            </div>
+        `;
+    } else {
+        const totalImagenes = imagenesSeguras.length;
+        const imagenesMostradas = imagenesSeguras.slice(0, 4);
+        const imagenesExtra = totalImagenes - 4;
         
-        const postElement = template.content.cloneNode(true);
-        
-        // Llenar datos básicos
-        const post = postElement.querySelector('.post');
-        post.setAttribute('data-post-id', reporte.id_reporte);
-        
-        // Avatar y nombre de usuario
-        const avatar = postElement.querySelector('.avatar');
-        avatar.src = '/imagenes/default-avatar.png';
-        avatar.alt = reporte.usuario || 'Usuario';
-        
-        postElement.querySelector('.user-name').textContent = reporte.usuario || 'Usuario';
-        postElement.querySelector('.post-incident-type').textContent = reporte.tipo_incidente || 'Tipo no especificado';
-        postElement.querySelector('.post-desc').textContent = reporte.descripcion || 'Sin descripción';
-        
-        // CORRECCIÓN: Manejar latitud y longitud que pueden venir como string
-        postElement.querySelector('.street-info').textContent = `Coordenadas: ${formatearCoordenada(reporte.latitud)}, ${formatearCoordenada(reporte.longitud)}`;
-        
-        postElement.querySelector('.report-date').textContent = formatearFecha(reporte.fecha_reporte);
-        
-        // Estado del reporte
-        const statusBadge = postElement.querySelector('.status-badge');
-        statusBadge.textContent = reporte.estado || 'pendiente';
-        statusBadge.className = `status-badge ${(reporte.estado || 'pendiente').toLowerCase().replace(' ', '-')}`;
-        
-        // Tiempo relativo
-        postElement.querySelector('.post-time').textContent = tiempoRelativo(new Date(reporte.fecha_reporte));
-        
-        // Imágenes
-        const imagesContainer = postElement.querySelector('.post-images');
-        if (reporte.imagenes && reporte.imagenes.length > 0) {
-            imagesContainer.innerHTML = crearEstructuraImagenesSimple(reporte.imagenes);
-        } else {
-            imagesContainer.style.display = 'none';
-        }
-        
-        // Agregar event listeners para los botones
-        const likeBtn = postElement.querySelector('.like-btn');
-        const commentBtn = postElement.querySelector('.comment-btn');
-        const viewMapBtn = postElement.querySelector('.view-map-btn');
-        const streetInfo = postElement.querySelector('.street-info');
-        
-        likeBtn.addEventListener('click', () => toggleLike(reporte.id_reporte, likeBtn));
-        commentBtn.addEventListener('click', () => {
-            if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
-                ComentariosManager.abrirComentarios(reporte.id_reporte);
-            } else {
-                alert('Función de comentarios no disponible');
-            }
-        });
-        
-        // NUEVO: Event listener para el botón de ver en mapa
-        viewMapBtn.addEventListener('click', () => navegarAlMapa(reporte));
-        
-        // NUEVO: También hacer clickeable la información de coordenadas
-        streetInfo.style.cursor = 'pointer';
-        streetInfo.title = 'Haz clic para ver en el mapa';
-        streetInfo.addEventListener('click', () => navegarAlMapa(reporte));
-        
-        return postElement;
+        return `
+            <div class="images-grid four-images ${imagenesExtra > 0 ? 'has-more-images' : ''}">
+                ${imagenesMostradas.map(img => 
+                    `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
+                ).join('')}
+                ${imagenesExtra > 0 ? `
+                    <div class="image-count-overlay">+${imagenesExtra}</div>
+                ` : ''}
+            </div>
+        `;
     }
+}
 
-    // Función auxiliar para crear estructura de imágenes simple - CORREGIDA
-    function crearEstructuraImagenesSimple(imagenes) {
-        if (!imagenes || imagenes.length === 0) return '';
+// Función para navegar al mapa con el reporte específico
+function navegarAlMapa(reporte) {
+    // Navegar a la vista del mapa
+    const mapNavItem = document.querySelector('.nav-item[data-target="mapView"]');
+    if (mapNavItem) {
+        mapNavItem.click();
         
-        // Asegurarse de que las URLs sean seguras para HTML
-        const imagenesSeguras = imagenes.map(img => {
-            return img.replace(/'/g, "&#39;").replace(/"/g, "&#34;");
-        });
-        
-        if (imagenesSeguras.length === 1) {
-            return `<img src="${imagenesSeguras[0]}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${imagenesSeguras[0]}')">`;
-        } else if (imagenesSeguras.length === 2) {
-            return `
-                <div class="images-grid two-images">
-                    ${imagenesSeguras.map(img => 
-                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
-                    ).join('')}
-                </div>
-            `;
-        } else if (imagenesSeguras.length === 3) {
-            return `
-                <div class="images-grid three-images">
-                    ${imagenesSeguras.map(img => 
-                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
-                    ).join('')}
-                </div>
-            `;
-        } else {
-            const totalImagenes = imagenesSeguras.length;
-            const imagenesMostradas = imagenesSeguras.slice(0, 4);
-            const imagenesExtra = totalImagenes - 4;
-            
-            return `
-                <div class="images-grid four-images ${imagenesExtra > 0 ? 'has-more-images' : ''}">
-                    ${imagenesMostradas.map(img => 
-                        `<img src="${img}" alt="Imagen del reporte" class="post-image" onclick="ampliarImagen('${img}')">`
-                    ).join('')}
-                    ${imagenesExtra > 0 ? `
-                        <div class="image-count-overlay">+${imagenesExtra}</div>
-                    ` : ''}
-                </div>
-            `;
-        }
+        // Esperar un poco a que se cargue el mapa y luego enviar el mensaje
+        setTimeout(() => {
+            enviarCoordenadasAlMapa(reporte);
+        }, 1000);
     }
+}
 
-    // Función para navegar al mapa con el reporte específico
-    function navegarAlMapa(reporte) {
-        // Navegar a la vista del mapa
-        const mapNavItem = document.querySelector('.nav-item[data-target="mapView"]');
-        if (mapNavItem) {
-            mapNavItem.click();
-            
-            // Esperar un poco a que se cargue el mapa y luego enviar el mensaje
-            setTimeout(() => {
-                enviarCoordenadasAlMapa(reporte);
-            }, 1000);
-        }
-    }
-
-    // Función para enviar las coordenadas al iframe del mapa
-    function enviarCoordenadasAlMapa(reporte) {
+// Función para enviar las coordenadas al iframe del mapa
+function enviarCoordenadasAlMapa(reporte) {
     const mapIframe = document.querySelector('#mapView iframe');
     if (mapIframe && mapIframe.contentWindow) {
         try {
@@ -555,60 +556,22 @@ function crearPostElementSimple(post) {
     }
 }
 
-    // Función fallback para abrir mapa con coordenadas en parámetros URL
-    function abrirMapaConCoordenadas(reporte) {
-        const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
-        const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
-        
-        const mapUrl = `<?php echo $mapUrl; ?>?lat=${lat}&lng=${lng}&reportId=${reporte.id_reporte}`;
-        const mapIframe = document.querySelector('#mapView iframe');
-        
-        if (mapIframe) {
-            mapIframe.src = mapUrl;
-        }
+// Función fallback para abrir mapa con coordenadas en parámetros URL
+function abrirMapaConCoordenadas(reporte) {
+    const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
+    const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
+    
+    // Usar la variable mapUrl que ya está definida en el scope global desde PHP
+    const mapUrlWithParams = `${window.mapUrl || '<?php echo $mapUrl; ?>'}?lat=${lat}&lng=${lng}&reportId=${reporte.id_reporte}`;
+    const mapIframe = document.querySelector('#mapView iframe');
+    
+    if (mapIframe) {
+        mapIframe.src = mapUrlWithParams;
     }
+}
 
-    // Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
-    async function cargarNotificaciones() {
-        if (!notificationsView) return;
-        
-        notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
-        try {
-            const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
-            const data = await resp.json();
-
-            if (!Array.isArray(data) || data.length === 0) {
-                notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
-                return;
-            }
-
-            notificationsView.innerHTML = '';
-            data.forEach(n => {
-                const div = document.createElement('div');
-                div.className = 'notification';
-                div.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                        <div>
-                            <strong>${escapeHtml(n.origen_nombres || 'Usuario')}</strong>
-                            <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
-                            <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
-                        </div>
-                        <div style="display:flex; flex-direction:column; gap:6px;">
-                            <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
-                            <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
-                        </div>
-                    </div>
-                `;
-                notificationsView.appendChild(div);
-            });
-        } catch (err) {
-            console.error(err);
-            notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
-        }
-    }
-
-    // Cargar perfil
-    async function cargarPerfil() {
+// Cargar perfil - VERSIÓN MEJORADA Y ROBUSTA
+async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
         
@@ -679,6 +642,8 @@ function crearPostElementSimple(post) {
         mostrarErrorPerfil('Error al conectar con el servidor');
     }
 }
+
+// Función para mostrar errores en el perfil
 function mostrarErrorPerfil(mensaje) {
     console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
     
@@ -730,256 +695,231 @@ function mostrarErrorPerfil(mensaje) {
     }, 5000);
 }
 
-    async function guardarPerfil() {
-        const form = new FormData();
-        const foto = document.getElementById('fotoPerfil').files[0];
-        if (foto) form.append('foto', foto);
-        form.append('nombres', document.getElementById('inpNombres').value);
-        form.append('apellidos', document.getElementById('inpApellidos').value);
-        form.append('telefono', document.getElementById('inpTelefono').value);
-        form.append('ubicacion', document.getElementById('inpUbicacion').value);
-        form.append('biografia', document.getElementById('inpBio').value);
+// Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
+async function cargarNotificaciones() {
+    const notificationsView = document.getElementById('notificationsView');
+    if (!notificationsView) return;
+    
+    notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
+    try {
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
+        const data = await resp.json();
 
-        try {
-            const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-                method: 'POST', body: form
-            });
-            const res = await resp.json();
-            if (res.success) {
-                alert('Perfil actualizado');
-                document.getElementById('profileForm').style.display = 'none';
-                await cargarPerfil();
-            } else {
-                alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error al guardar perfil');
+        if (!Array.isArray(data) || data.length === 0) {
+            notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
+            return;
         }
-    }
 
-    // Función para abrir mapa en pantalla completa
-    function abrirMapaCompleto() {
-        const ventanaMapa = window.open(mapUrl, 'MapaOjoEnLaVia', 
-            'width=1200,height=800,scrollbars=yes,resizable=yes');
-        
-        if (ventanaMapa) {
-            ventanaMapa.focus();
+        notificationsView.innerHTML = '';
+        data.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'notification';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${escapeHtml(n.origen_nombres || 'Usuario')}</strong>
+                        <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
+                        <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
+                        <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
+                    </div>
+                </div>
+            `;
+            notificationsView.appendChild(div);
+        });
+    } catch (err) {
+        console.error(err);
+        notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
+    }
+}
+
+async function guardarPerfil() {
+    const form = new FormData();
+    const foto = document.getElementById('fotoPerfil');
+    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
+    
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) form.append('nombres', inpNombres.value);
+    if (inpApellidos) form.append('apellidos', inpApellidos.value);
+    if (inpTelefono) form.append('telefono', inpTelefono.value);
+
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
+            method: 'POST', body: form
+        });
+        const res = await resp.json();
+        if (res.success) {
+            alert('Perfil actualizado');
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) profileForm.style.display = 'none';
+            await cargarPerfil();
         } else {
-            alert('Por favor permite las ventanas emergentes para esta función');
+            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
         }
+    } catch (err) {
+        console.error(err);
+        alert('Error al guardar perfil');
     }
+}
 
-    // Y mantén esta modificación en onNavClick para ajustar la altura:
-    async function onNavClick(e) {
-        navItems.forEach(n => n.classList.remove('active'));
-        e.currentTarget.classList.add('active');
-
-        const target = e.currentTarget.getAttribute('data-target');
-        document.querySelectorAll('#mainContent > div').forEach(d => d.style.display = 'none');
-        
-        const targetElement = document.getElementById(target);
-        if (targetElement) {
-            targetElement.style.display = 'block';
-            
-            // Si es el mapa, ajustar altura después de mostrarlo
-            if (target === 'mapView') {
-                setTimeout(ajustarAlturaMapa, 100);
-            }
-        }
-
-        showNavigation();
-
-        if (target === 'feedView') cargarFeed();
-        if (target === 'notificationsView') cargarNotificaciones();
-        if (target === 'profileView') cargarPerfil();
+// Función para abrir mapa en pantalla completa
+function abrirMapaCompleto() {
+    // Usar la variable mapUrl que ya está definida en el scope global desde PHP
+    const url = window.mapUrl || '<?php echo $mapUrl; ?>';
+    const ventanaMapa = window.open(url, 'MapaOjoEnLaVia', 
+        'width=1200,height=800,scrollbars=yes,resizable=yes');
+    
+    if (ventanaMapa) {
+        ventanaMapa.focus();
+    } else {
+        alert('Por favor permite las ventanas emergentes para esta función');
     }
+}
 
-    function ajustarAlturaMapa() {
-        const mapContainer = document.querySelector('.map-container');
-        const mapView = document.getElementById('mapView');
-        
-        if (mapContainer && mapView) {
-            // Ocupar toda la altura disponible
-            const viewportHeight = window.innerHeight;
-            const headerHeight = document.querySelector('.app-header').offsetHeight;
-            
-            // Altura completa menos el header
-            const alturaCalculada = viewportHeight - headerHeight;
-            mapContainer.style.height = alturaCalculada + 'px';
-            mapView.style.height = alturaCalculada + 'px';
-            
-            // También asegurarnos que el iframe ocupe todo
-            const iframe = mapContainer.querySelector('iframe');
-            if (iframe) {
-                iframe.style.height = '100%';
-                iframe.style.minHeight = alturaCalculada + 'px';
-            }
-        }
-    }
+// Utilidades
+function tiempoRelativo(date) {
+    const now = new Date();
+    const diff = Math.floor((now - date) / 1000);
+    if (diff < 60) return diff + 's';
+    if (diff < 3600) return Math.floor(diff/60) + 'm';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h';
+    return date.toLocaleDateString();
+}
 
-    // Ajustar mapa al redimensionar
-    window.addEventListener('resize', function() {
-        if (document.getElementById('mapView').style.display === 'block') {
-            ajustarAlturaMapa();
-        }
+function escapeHtml(text) {
+    if (!text) return '';
+    return text.replace(/[&<>"']/g, function(m) { 
+        return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; 
     });
+}
 
-    // Utilidades
-    function tiempoRelativo(date) {
-        const now = new Date();
-        const diff = Math.floor((now - date) / 1000);
-        if (diff < 60) return diff + 's';
-        if (diff < 3600) return Math.floor(diff/60) + 'm';
-        if (diff < 86400) return Math.floor(diff/3600) + 'h';
-        return date.toLocaleDateString();
+// Función auxiliar para formatear coordenadas de forma segura
+function formatearCoordenada(coord) {
+    if (coord === null || coord === undefined) {
+        return 'No disponible';
     }
+    
+    // Convertir a número si es string
+    const num = typeof coord === 'string' ? parseFloat(coord) : coord;
+    
+    // Verificar si es un número válido
+    if (isNaN(num)) {
+        return 'Inválida';
+    }
+    
+    return num.toFixed(6);
+}
 
-    function escapeHtml(text) {
-        if (!text) return '';
-        return text.replace(/[&<>"']/g, function(m) { 
-            return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]; 
+// Función para formatear fecha
+function formatearFecha(fechaString) {
+    try {
+        const fecha = new Date(fechaString);
+        return fecha.toLocaleDateString('es-ES', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        });
+    } catch (e) {
+        return 'Fecha no disponible';
+    }
+}
+
+window.toggleLike = async function(id_reporte, btn) {
+    try {
+        const form = new FormData();
+        form.append('id_reporte', id_reporte);
+
+        const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
+            method: 'POST', body: form
+        });
+        const r = await resp.json();
+        if (r.success) {
+            if (r.action === 'liked') {
+                btn.innerHTML = '<i class="fas fa-heart"></i> Ya me gusta';
+                btn.style.color = 'var(--danger)';
+            } else {
+                btn.innerHTML = '<i class="far fa-heart"></i> Me gusta';
+                btn.style.color = '';
+            }
+        } else {
+            alert('Error al procesar like');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectar con el servidor');
+    }
+}
+
+window.marcarLeida = async function(id, btn) {
+    try {
+        const form = new FormData(); 
+        form.append('id_notificacion', id);
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=marcar_leida', { 
+            method: 'POST', 
+            body: form 
+        });
+        const r = await resp.json();
+        if (r.success) {
+            btn.textContent = 'Leída';
+            btn.disabled = true;
+        }
+    } catch (e) { 
+        console.error(e); 
+        alert('Error al marcar como leída');
+    }
+}
+
+window.verNotificacion = function(id_notificacion, id_reporte) {
+    // Marcar como leída y abrir la info del reporte
+    if (id_reporte && id_reporte !== 'null') {
+        // Abrir comentarios para ese reporte
+        if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
+            ComentariosManager.abrirComentarios(id_reporte);
+        } else {
+            alert('Función de comentarios no disponible');
+        }
+    } else {
+        alert('No hay información de reporte asociada');
+    }
+}
+
+// Función para compartir reporte
+window.compartirReporte = function(reporte) {
+    const texto = `Reporte de ${reporte.tipo_incidente}: ${reporte.descripcion}`;
+    
+    if (navigator.share) {
+        navigator.share({
+            title: 'Ojo en la Vía - Reporte',
+            text: texto,
+            url: window.location.href
+        });
+    } else {
+        navigator.clipboard.writeText(texto).then(() => {
+            alert('Reporte copiado al portapapeles');
         });
     }
+}
 
-    // Función auxiliar para formatear coordenadas de forma segura
-    function formatearCoordenada(coord) {
-        if (coord === null || coord === undefined) {
-            return 'No disponible';
-        }
-        
-        // Convertir a número si es string
-        const num = typeof coord === 'string' ? parseFloat(coord) : coord;
-        
-        // Verificar si es un número válido
-        if (isNaN(num)) {
-            return 'Inválida';
-        }
-        
-        return num.toFixed(6);
-    }
-
-    // Función para formatear fecha
-    function formatearFecha(fechaString) {
-        try {
-            const fecha = new Date(fechaString);
-            return fecha.toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        } catch (e) {
-            return 'Fecha no disponible';
-        }
-    }
-
-    window.toggleLike = async function(id_reporte, btn) {
-        try {
-            const form = new FormData();
-            form.append('id_reporte', id_reporte);
-
-            const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
-                method: 'POST', body: form
-            });
-            const r = await resp.json();
-            if (r.success) {
-                if (r.action === 'liked') {
-                    btn.innerHTML = '<i class="fas fa-heart"></i> Ya me gusta';
-                    btn.style.color = 'var(--danger)';
-                } else {
-                    btn.innerHTML = '<i class="far fa-heart"></i> Me gusta';
-                    btn.style.color = '';
-                }
-            } else {
-                alert('Error al procesar like');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Error al conectar con el servidor');
-        }
-    }
-
-    window.marcarLeida = async function(id, btn) {
-        try {
-            const form = new FormData(); 
-            form.append('id_notificacion', id);
-            const resp = await fetch('../controllers/notificacion_controlador.php?action=marcar_leida', { 
-                method: 'POST', 
-                body: form 
-            });
-            const r = await resp.json();
-            if (r.success) {
-                btn.textContent = 'Leída';
-                btn.disabled = true;
-            }
-        } catch (e) { 
-            console.error(e); 
-            alert('Error al marcar como leída');
-        }
-    }
-
-    window.verNotificacion = function(id_notificacion, id_reporte) {
-        // Marcar como leída y abrir la info del reporte
-        if (id_reporte && id_reporte !== 'null') {
-            // Abrir comentarios para ese reporte
-            if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
-                ComentariosManager.abrirComentarios(id_reporte);
-            } else {
-                alert('Función de comentarios no disponible');
-            }
-        } else {
-            alert('No hay información de reporte asociada');
-        }
-    }
-
-    // Función para compartir reporte
-    window.compartirReporte = function(reporte) {
-        const texto = `Reporte de ${reporte.tipo_incidente}: ${reporte.descripcion}`;
-        
-        if (navigator.share) {
-            navigator.share({
-                title: 'Ojo en la Vía - Reporte',
-                text: texto,
-                url: window.location.href
-            });
-        } else {
-            navigator.clipboard.writeText(texto).then(() => {
-                alert('Reporte copiado al portapapeles');
-            });
-        }
-    }
-
-    // Función para ampliar imagen
-    window.ampliarImagen = function(src) {
-        const modal = document.createElement('div');
-        modal.className = 'image-modal';
-        modal.innerHTML = `
-            <img src="${src}" alt="Imagen ampliada">
-            <button class="image-modal-close" onclick="this.parentElement.remove()">
-                <i class="fas fa-times"></i>
-            </button>
-        `;
-        modal.onclick = (e) => {
-            if (e.target === modal) modal.remove();
-        };
-        document.body.appendChild(modal);
-    }
-
-    // Función global para navegar al mapa (para uso externo)
-    window.navegarAlMapa = navegarAlMapa;
-
-    // Función global para mostrar/ocultar navegación manualmente
-    window.toggleNavigation = function() {
-        if (isNavHidden) {
-            showNavigation();
-        } else {
-            hideNavigation();
-        }
+// Función para ampliar imagen
+window.ampliarImagen = function(src) {
+    const modal = document.createElement('div');
+    modal.className = 'image-modal';
+    modal.innerHTML = `
+        <img src="${src}" alt="Imagen ampliada">
+        <button class="image-modal-close" onclick="this.parentElement.remove()">
+            <i class="fas fa-times"></i>
+        </button>
+    `;
+    modal.onclick = (e) => {
+        if (e.target === modal) modal.remove();
     };
+    document.body.appendChild(modal);
+}
 
-    // Función global para forzar mostrar la navegación
-    window.showNavigation = showNavigation;
-
-    // Función global para forzar ocultar la navegación
-    window.hideNavigation = hideNavigation;
-});
+// Función global para navegar al mapa (para uso externo)
+window.navegarAlMapa = navegarAlMapa;
