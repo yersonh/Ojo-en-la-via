@@ -9,46 +9,17 @@ services:
     volumes:
       - .:/var/www/html
       - ./logs:/var/www/html/logs
-    depends_on:
-      db:
-        condition: service_healthy
     environment:
-      # PARA DESARROLLO LOCAL - SIMULA DATABASE_PUBLIC_URL pero apunta a DB local
-      - PGHOST=db
-      - PGPORT=5432
+      - PGHOST=nozomi.proxy.rlwy.net
+      - PGPORT=55963
       - PGDATABASE=railway
       - PGUSER=postgres
-      - PGPASSWORD=VdQIFsxyyydFBXocPZixREthKPSXCVKe
+      - PGPASSWORD=kDPxQveFCjClOVCFFZlrAiTsEWfWWJQu
       - PORT=8080
     networks:
       - app-network
 
-  db:
-    image: postgres:15
-    container_name: postgres-db
-    restart: always
-    environment:
-      
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: VdQIFsxyyydFBXocPZixREthKPSXCVKe
-      POSTGRES_DB: railway
-    ports:
-      - "5432:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql 
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d railway"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-      start_period: 10s
-    networks:
-      - app-network
-
-volumes:
-  postgres_data:
-
+# ELIMINAR completamente el servicio de base de datos local
 networks:
   app-network:
     driver: bridge

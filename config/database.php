@@ -30,11 +30,11 @@ class Database {
             error_log("🔗 PRODUCCIÓN - Conectando a PostgreSQL en Railway INTERNO: " . $this->host);
         } else {
             // Configuración LOCAL usando DATABASE_PUBLIC_URL
-            $this->host = getenv('PGHOST') ?: 'switchyard.proxy.rlwy.net';
-            $this->port = getenv('PGPORT') ?: '35124';
+            $this->host = getenv('PGHOST') ?: 'nozomi.proxy.rlwy.net';
+            $this->port = getenv('PGPORT') ?: '55963';
             $this->dbname = getenv('PGDATABASE') ?: 'railway';
             $this->user = getenv('PGUSER') ?: 'postgres';
-            $this->password = getenv('PGPASSWORD') ?: 'VdQIFsxyyydFBXocPZixREthKPSXCVKe';
+            $this->password = getenv('PGPASSWORD') ?: 'kDPxQveFCjClOVCFFZlrAiTsEWfWWJQu';
             
             error_log("🔗 LOCAL - Conectando a PostgreSQL PÚBLICO: " . $this->host);
         }
