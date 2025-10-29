@@ -35,27 +35,27 @@ try {
         INNER JOIN usuario u ON r.id_usuario = u.id_usuario
         ORDER BY r.fecha_reporte DESC
     ";
-    
+
     $stmt = $db->query($query);
     $reportes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-    
+
     // Obtener TODAS las imágenes para cada reporte
     foreach ($reportes as &$reporte) {
         $queryImg = "SELECT url_imagen FROM imagen_reporte WHERE id_reporte = :id_reporte ORDER BY id_imagen";
         $stmtImg = $db->prepare($queryImg);
         $stmtImg->execute([':id_reporte' => $reporte['id_reporte']]);
         $imagenes = $stmtImg->fetchAll(PDO::FETCH_ASSOC);
-        
+
         $reporte['imagenes'] = array_column($imagenes, 'url_imagen');
     }
     unset($reporte);
-    
+
     $unexpected_output = ob_get_contents();
     if (!empty($unexpected_output)) {
         error_log("⚠️ Output inesperado en listar: " . $unexpected_output);
         ob_clean();
     }
-    
+
     echo json_encode($reportes);
     break;
 
@@ -83,7 +83,7 @@ case 'registrar':
         $queryUser = "SELECT id_usuario FROM usuario WHERE id_usuario = :id_usuario";
         $stmtUser = $db->prepare($queryUser);
         $stmtUser->execute([':id_usuario' => $id_usuario]);
-        
+
         if (!$stmtUser->fetch()) {
             throw new Exception("Usuario no válido");
         }
@@ -133,7 +133,7 @@ case 'registrar':
                 $mensajeCorto = strlen($infoReporte['descripcion']) > 50 
                     ? substr($infoReporte['descripcion'], 0, 50) . "..." 
                     : $infoReporte['descripcion'];
-                
+
                 $notificacionData = [
                     'id_reporte' => $id_reporte,
                     'mensaje' => "🚨 Nuevo reporte #{$id_reporte}: {$infoReporte['tipo_incidente']} - {$mensajeCorto}",
@@ -141,7 +141,7 @@ case 'registrar':
                     'usuario' => $nombreCompleto,
                     'timestamp' => time()
                 ];
-                
+
                 // Guardar en archivo temporal para SSE
                 $archivoNotificacion = $_SERVER['DOCUMENT_ROOT'] . '/temp/ultima_notificacion.json';
                 $tempDir = dirname($archivoNotificacion);
@@ -161,13 +161,13 @@ case 'registrar':
             // 🆕 CORRECCIÓN COMPLETA: Manejo de MÚLTIPLES IMÁGENES
             $imagenes_subidas = 0;
             $urls_imagenes = [];
-            
+
             // Verificar si hay imágenes (con soporte para múltiples)
             if (!empty($_FILES['imagen']['name'][0])) {
                 error_log("📸 Procesando " . count($_FILES['imagen']['name']) . " imágenes...");
-                
+
                 $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
-                
+
                 // Crear directorio si no existe
                 if (!is_dir($directorio)) {
                     if (!mkdir($directorio, 0755, true)) {
@@ -192,7 +192,7 @@ case 'registrar':
                     finfo_close($finfo);
 
                     $allowed_types = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-                    
+
                     if (!in_array($mime_type, $allowed_types)) {
                         error_log("❌ Tipo de archivo no permitido: " . $mime_type);
                         continue; // Saltar este archivo pero continuar
@@ -214,10 +214,10 @@ case 'registrar':
                     // Generar nombre seguro (CON ÍNDICE [$i])
                     $extension = pathinfo($_FILES['imagen']['name'][$i], PATHINFO_EXTENSION); // ← CORREGIDO
                     $nombreArchivo = uniqid('reporte_') . '.' . $extension;
-                    
+
                     // Ruta para guardar en servidor
                     $rutaDestino = $directorio . $nombreArchivo;
-                    
+
                     // 🆕 SOLUCIÓN: Crear URL absoluta CON HTTPS FORZADO EN PRODUCCIÓN
                     $host = $_SERVER['HTTP_HOST'];
                     // Si es localhost, usar HTTP; si es producción, forzar HTTPS
@@ -234,7 +234,7 @@ case 'registrar':
                     // Mover archivo (CON ÍNDICE [$i])
                     if (move_uploaded_file($_FILES['imagen']['tmp_name'][$i], $rutaDestino)) { // ← CORREGIDO
                         error_log("✅ Imagen $i guardada físicamente");
-                        
+
                         // Verificar que el archivo existe
                         if (file_exists($rutaDestino)) {
                             // Insertar en base de datos
@@ -267,7 +267,7 @@ case 'registrar':
 
             // Confirmar transacción
             $db->commit();
-            
+
             // Limpiar output accidental
             $unexpected_output = ob_get_contents();
             if (!empty($unexpected_output)) {
@@ -281,12 +281,12 @@ case 'registrar':
                 ($imagenes_subidas > 0 ? " con $imagenes_subidas imagen(es)" : ""),
                 "id_reporte" => $id_reporte
             ];
-            
+
             if ($imagenes_subidas > 0) {
                 $respuesta["imagenes"] = $urls_imagenes;
                 $respuesta["total_imagenes"] = $imagenes_subidas;
             }
-            
+
             echo json_encode($respuesta);
 
         } catch (Exception $e) {
@@ -303,7 +303,7 @@ case 'registrar':
             if (empty($id_reporte)) {
                 throw new Exception("ID de reporte requerido");
             }
-            
+
             $query = "
                 SELECT 
                     c.id_comentario,
@@ -321,14 +321,14 @@ case 'registrar':
             $stmt = $db->prepare($query);
             $stmt->execute([':id_reporte' => $id_reporte]);
             $comentarios = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Verificar output accidental
             $unexpected_output = ob_get_contents();
             if (!empty($unexpected_output)) {
                 error_log("⚠️ Output inesperado en listar_comentarios: " . $unexpected_output);
                 ob_clean();
             }
-            
+
             echo json_encode($comentarios);
             break;
 
@@ -337,20 +337,20 @@ case 'registrar':
                 $id_reporte = $_POST['id_reporte'];
                 $id_usuario = $_POST['id_usuario'];
                 $comentario = filter_var($_POST['comentario'], FILTER_SANITIZE_STRING);
-                
+
                 if (empty($id_reporte) || empty($id_usuario) || empty($comentario)) {
                     throw new Exception("Todos los campos son obligatorios");
                 }
-                
+
                 // Verificar que el reporte existe
                 $queryCheck = "SELECT id_reporte FROM reporte WHERE id_reporte = :id_reporte";
                 $stmtCheck = $db->prepare($queryCheck);
                 $stmtCheck->execute([':id_reporte' => $id_reporte]);
-                
+
                 if (!$stmtCheck->fetch()) {
                     throw new Exception("El reporte no existe");
                 }
-                
+
                 $query = "INSERT INTO comentario_reporte (id_reporte, id_usuario, comentario) 
                         VALUES (:id_reporte, :id_usuario, :comentario)";
                 $stmt = $db->prepare($query);
@@ -359,14 +359,14 @@ case 'registrar':
                     ':id_usuario' => $id_usuario,
                     ':comentario' => $comentario
                 ]);
-                
+
                 // Verificar output accidental
                 $unexpected_output = ob_get_contents();
                 if (!empty($unexpected_output)) {
                     error_log("⚠️ Output inesperado en agregar_comentario: " . $unexpected_output);
                     ob_clean();
                 }
-                
+
                 echo json_encode([
                     "success" => true,
                     "mensaje" => "Comentario agregado correctamente",
@@ -379,15 +379,15 @@ case 'registrar':
         case 'diagnostico_imagenes':
             $directorio = $_SERVER['DOCUMENT_ROOT'] . '/imagenes/reportes/';
             $archivos = is_dir($directorio) ? array_diff(scandir($directorio), ['.', '..']) : ['Directorio no existe'];
-            
+
             // Verificar últimas imágenes en BD
             $query = "SELECT * FROM imagen_reporte ORDER BY id_imagen DESC LIMIT 5";
             $stmt = $db->query($query);
             $ultimas_imagenes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-            
+
             // Verificar permisos
             $permisos = is_dir($directorio) ? substr(sprintf('%o', fileperms($directorio)), -4) : 'No existe';
-            
+
             echo json_encode([
                 'directorio' => $directorio,
                 'existe_directorio' => is_dir($directorio),
@@ -480,7 +480,7 @@ case 'verificar_like':
                 error_log("⚠️ Output inesperado en default: " . $unexpected_output);
                 ob_clean();
             }
-            
+
             echo json_encode(["error" => "Acción no válida"]);
             break;
     }
@@ -491,7 +491,7 @@ case 'verificar_like':
         error_log("⚠️ Output inesperado en catch: " . $unexpected_output);
         ob_clean();
     }
-    
+
     http_response_code(500);
     echo json_encode([
         "success" => false,
