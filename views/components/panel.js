@@ -231,7 +231,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 if (target === 'feedView') cargarFeed();
                 if (target === 'notificationsView') cargarNotificaciones();
-                if (target === 'profileView') cargarPerfil();
+                if (target === 'profileView') cargarPerfilCompleto();
             }
 
         } catch (error) {
@@ -552,7 +552,94 @@ window.toggleLike = async function(id_reporte, btn) {
         alert('Error al conectar con el servidor');
     }
 }
+async function cargarEstadisticasUsuario() {
+    try {
+        console.log('📊 Cargando estadísticas del usuario...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
+        
+        if (!resp.ok) {
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar estadísticas');
+        }
+        
+        const stats = data.estadisticas;
+        console.log('✅ Estadísticas cargadas:', stats);
+        
+        // Actualizar las estadísticas en la UI
+        actualizarEstadisticasUI(stats);
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        // Mostrar valores por defecto en caso de error
+        actualizarEstadisticasUI({
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        });
+    }
+}
 
+// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI CON LAS ESTADÍSTICAS
+function actualizarEstadisticasUI(stats) {
+    // Función auxiliar para formatear números grandes
+    function formatearNumero(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+    
+    // Actualizar cada estadística de forma segura
+    const elementosStats = [
+        { id: 'statReports', valor: stats.reportes },
+        { id: 'statLikes', valor: stats.likes },
+        { id: 'statComments', valor: stats.comentarios },
+        { id: 'statViews', valor: stats.vistas }
+    ];
+    
+    elementosStats.forEach(stat => {
+        const elemento = document.getElementById(stat.id);
+        if (elemento) {
+            elemento.textContent = formatearNumero(stat.valor);
+            console.log(`✅ Actualizada estadística ${stat.id}: ${stat.valor}`);
+            
+            // Agregar animación sutil
+            elemento.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                elemento.style.transform = 'scale(1)';
+            }, 300);
+        } else {
+            console.warn(`⚠️ Elemento de estadística no encontrado: ${stat.id}`);
+        }
+    });
+}
+
+// 🆕 FUNCIÓN PARA CARGAR DATOS COMPLETOS DEL PERFIL
+async function cargarPerfilCompleto() {
+    try {
+        console.log('👤 Cargando perfil completo...');
+        
+        // Cargar información básica del usuario
+        await cargarPerfil();
+        
+        // Cargar estadísticas
+        await cargarEstadisticasUsuario();
+        
+        console.log('✅ Perfil completo cargado exitosamente');
+        
+    } catch (error) {
+        console.error('❌ Error cargando perfil completo:', error);
+    }
+}
 // 🆕 Función temporal para obtener ID de usuario - IMPLEMENTA ESTO CON TU SISTEMA DE SESIONES
 async function obtenerUsuarioId() {
     // Si ya tenemos el ID en la variable global, usarlo

@@ -47,6 +47,7 @@ export class MarkerManager {
         }
     }
     
+    
     async _fetchReportes() {
     try {
         const resp = await fetch('../../controllers/reportecontrolador.php?action=listar');
@@ -94,7 +95,7 @@ export class MarkerManager {
     }
 }
     
-    _crearIconoPersonalizado(tipoIncidente, estado) {
+    crearIconoPersonalizado(tipoIncidente, estado) {
         const emoji = TipoIconos[tipoIncidente] || TipoIconos.default;
         const color = Config.icons.estado[estado] || Config.icons.defaultColor;
         
