@@ -1,41 +1,44 @@
-// sw.js - VERSIÓN DEFINITIVA UNIVERSAL
-const CACHE_NAME = 'reportes-app-v1';
-const OFFLINE_PAGE = '/offline.html';
+// sw.js - SERVICE WORKER PROFESIONAL Y SEGURO
+// Versión: 3.0 - Estrategia: Network-First para todo
 
-// Estrategia: CACHE SOLO LO ESENCIAL Y SEGURO
-const STATIC_ASSETS = [
-    '/',
-    '/views/vermapa.php',
-    '/views/admin.php',
-    '/styles/mapa.css',
-    '/styles/formulario.css', 
-    '/styles/admin.css',
-    '/imagenes/fiveicon.png'
-];
+const CACHE_NAME = 'ojo-en-la-via-v3-' + new Date().toISOString().split('T')[0];
+const API_ENDPOINTS = ['/controllers/', '/api/', 'reportecontrolador', 'usuario_controlador'];
+
+// 🎯 ESTRATEGIA PRINCIPAL: Network-First para TODO
+// Esto evita problemas de cache de código y asegura siempre la versión más reciente
 
 self.addEventListener('install', (event) => {
-    console.log('🔧 SW Definitivo instalado');
-    self.skipWaiting();
+    console.log('🔧 SW Profesional instalado - Versión 3.0');
+    self.skipWaiting(); // Tomar control inmediato
     
-    // Precargar solo assets críticos
+    // Precargar SOLO página offline y assets críticos
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
-                console.log('💾 Precargando assets críticos...');
-                return cache.addAll(STATIC_ASSETS)
+                const criticalAssets = [
+                    '/offline.html',
+                    '/imagenes/fiveicon.png',
+                    '/styles/mapa.css',
+                    '/styles/formulario.css'
+                ].filter(url => url); // Filtrar URLs válidas
+                
+                console.log('💾 Precargando assets críticos:', criticalAssets);
+                return cache.addAll(criticalAssets)
                     .catch(error => {
-                        console.log('⚠️ Algunos assets no se pudieron precargar:', error);
+                        console.log('⚠️ Algunos assets críticos fallaron:', error);
                     });
             })
     );
 });
 
 self.addEventListener('activate', (event) => {
-    console.log('🚀 SW Definitivo activado');
+    console.log('🚀 SW Profesional activado - Limpiando caches antiguos');
+    
     event.waitUntil(
         Promise.all([
-            self.clients.claim(),
-            // Limpiar caches antiguos
+            self.clients.claim(), // Tomar control de todas las pestañas
+            
+            // Limpiar TODOS los caches antiguos
             caches.keys().then(cacheNames => {
                 return Promise.all(
                     cacheNames.map(cacheName => {
@@ -46,7 +49,9 @@ self.addEventListener('activate', (event) => {
                     })
                 );
             })
-        ])
+        ]).then(() => {
+            console.log('✅ SW completamente activado y limpio');
+        })
     );
 });
 
@@ -54,7 +59,7 @@ self.addEventListener('fetch', (event) => {
     const { request } = event;
     const url = new URL(request.url);
 
-    // 🔒 ESTRATEGIA SEGURA: IGNORAR LO QUE PUEDE CAUSAR PROBLEMAS
+    // 🔒 FILTROS DE SEGURIDAD - Ignorar requests problemáticos
     
     // 1. Ignorar métodos que no sean GET
     if (request.method !== 'GET') {
@@ -73,169 +78,259 @@ self.addEventListener('fetch', (event) => {
         return;
     }
     
-    // 4. Ignorar endpoints dinámicos y APIs
-    if (request.url.includes('/controllers/') ||
-        request.url.includes('/api/') ||
-        request.url.includes('sse_notificaciones') ||
-        request.url.includes('reportecontrolador') ||
-        request.url.includes('notificacion_sistema_controlador')) {
-        return;
+    // 4. 🚨 IGNORAR COMPLETAMENTE ARCHIVOS JS - EVITAR CACHE DE CÓDIGO
+    if (request.url.match(/\.js(\?.*)?$/) || 
+        request.destination === 'script') {
+        return; // Network only - siempre la versión más reciente
+    }
+    
+    // 5. 🚨 IGNORAR APIS Y ENDPOINTS DINÁMICOS
+    if (isApiRequest(request)) {
+        return; // Network only - datos siempre frescos
     }
 
-    // 🎯 ESTRATEGIA INTELIGENTE POR TIPO DE RECURSO
-    
-    // A) PÁGINAS HTML - Network First
-    if (request.destination === 'document' || 
-        request.headers.get('Accept')?.includes('text/html')) {
-        event.respondWith(handleHtmlRequest(request));
-        return;
-    }
-    
-    // B) ARCHIVOS ESTÁTICOS (CSS, JS, imágenes) - Cache First  
-    if (request.url.match(/\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
-        event.respondWith(handleStaticRequest(request));
-        return;
-    }
-    
-    // C) PARA TODO LO DEMÁS - Network Only
-    return;
+    // 🎯 ESTRATEGIA: NETWORK-FIRST PARA TODO LO DEMÁS
+    event.respondWith(handleNetworkFirst(request));
 });
 
-// 🏠 MANEJADOR PARA PÁGINAS HTML
-async function handleHtmlRequest(request) {
+// 🛠️ FUNCIÓN PARA IDENTIFICAR REQUEST DE API
+function isApiRequest(request) {
+    const url = request.url.toLowerCase();
+    return API_ENDPOINTS.some(endpoint => url.includes(endpoint)) ||
+           request.headers.get('Accept')?.includes('application/json') ||
+           url.includes('?action=') ||
+           url.includes('/controllers/') ||
+           url.includes('/api/');
+}
+
+// 🌐 ESTRATEGIA NETWORK-FIRST (SIEMPRE VERSIÓN MÁS RECIENTE)
+async function handleNetworkFirst(request) {
     try {
-        // Intentar network primero
+        // 1. INTENTAR NETWORK PRIMERO
+        console.log('🌐 Network-First para:', request.url);
         const networkResponse = await fetch(request);
         
-        if (networkResponse.ok) {
-            // Cachear respuesta exitosa
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(request, networkResponse.clone());
+        // 2. VERIFICAR SI LA RESPUESTA ES VÁLIDA
+        if (networkResponse && networkResponse.status === 200) {
+            // 3. ACTUALIZAR CACHE EN SEGUNDO PLANO (SOLO PARA ASSETS NO-JS)
+            if (shouldCache(request)) {
+                cacheResponse(request, networkResponse.clone());
+            }
             return networkResponse;
         }
         throw new Error('Respuesta de red no válida');
+        
     } catch (error) {
-        // Fallback al cache
+        console.log('📴 Network falló, intentando cache:', request.url, error.message);
+        
+        // 4. FALLBACK AL CACHE
         const cachedResponse = await caches.match(request);
         if (cachedResponse) {
+            console.log('💾 Sirviendo desde cache:', request.url);
             return cachedResponse;
         }
         
-        // Fallback a página offline genérica
-        return new Response(`
-            <!DOCTYPE html>
-            <html>
-            <head>
-                <title>Modo Offline - Ojo en la Vía</title>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <style>
-                    body { 
-                        font-family: Arial, sans-serif; 
-                        text-align: center; 
-                        padding: 50px 20px;
-                        background: #f5f5f5;
-                        color: #333;
-                    }
-                    .container {
-                        max-width: 500px;
-                        margin: 0 auto;
-                        background: white;
-                        padding: 40px;
-                        border-radius: 10px;
-                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-                    }
-                    h1 { color: #e74c3c; margin-bottom: 20px; }
-                    p { color: #666; margin-bottom: 30px; line-height: 1.6; }
-                    button {
-                        background: #3498db;
-                        color: white;
-                        border: none;
-                        padding: 12px 24px;
-                        border-radius: 5px;
-                        cursor: pointer;
-                        font-size: 16px;
-                    }
-                    button:hover { background: #2980b9; }
-                </style>
-            </head>
-            <body>
-                <div class="container">
-                    <h1>🔌 Sin conexión</h1>
-                    <p>La aplicación requiere conexión a internet para funcionar correctamente.</p>
-                    <p>Por favor, verifica tu conexión e intenta nuevamente.</p>
-                    <button onclick="location.reload()">Reintentar conexión</button>
-                </div>
-            </body>
-            </html>
-        `, {
-            headers: { 
-                'Content-Type': 'text/html; charset=utf-8',
-                'Cache-Control': 'no-cache'
-            }
-        });
-    }
-}
-
-// 📦 MANEJADOR PARA ARCHIVOS ESTÁTICOS
-async function handleStaticRequest(request) {
-    // Intentar cache primero
-    const cachedResponse = await caches.match(request);
-    if (cachedResponse) {
-        return cachedResponse;
-    }
-    
-    try {
-        // Si no está en cache, buscar en network
-        const networkResponse = await fetch(request);
-        
-        if (networkResponse.ok) {
-            // Cachear para futuras visitas
-            const cache = await caches.open(CACHE_NAME);
-            cache.put(request, networkResponse.clone());
+        // 5. FALLBACK A PÁGINA OFFLINE PARA HTML
+        if (request.destination === 'document' || 
+            request.headers.get('Accept')?.includes('text/html')) {
+            return getOfflinePage();
         }
         
-        return networkResponse;
-    } catch (error) {
-        // Si falla todo, devolver respuesta vacía apropiada
-        const contentType = getContentType(request.url);
+        // 6. PARA RECURSOS ESTÁTICOS, RESPONDER CON ERROR CONTROLADO
         return new Response('', {
             status: 408,
             statusText: 'Offline',
-            headers: { 'Content-Type': contentType }
+            headers: { 'Content-Type': getContentType(request.url) }
         });
     }
 }
 
-// 🛠️ FUNCIÓN AUXILIAR PARA DETERMINAR CONTENT TYPE
+// 🎯 DETERMINAR QUÉ DEBERÍA SER CACHEADO
+function shouldCache(request) {
+    const url = request.url.toLowerCase();
+    
+    // CACHEAR SOLO:
+    // - CSS
+    // - Imágenes
+    // - Fuentes
+    // - Páginas HTML (pero con Network-First)
+    return url.match(/\.(css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/) ||
+           request.destination === 'style' ||
+           request.destination === 'image' ||
+           request.destination === 'font';
+}
+
+// 💾 CACHEAR RESPUESTA EN SEGUNDO PLANO
+async function cacheResponse(request, response) {
+    try {
+        const cache = await caches.open(CACHE_NAME);
+        await cache.put(request, response);
+        console.log('💾 Cache actualizado:', request.url);
+    } catch (error) {
+        console.log('⚠️ Error actualizando cache:', error);
+    }
+}
+
+// 📄 PÁGINA OFFLINE ELEGANTE
+async function getOfflinePage() {
+    try {
+        // Intentar obtener página offline del cache
+        const cache = await caches.open(CACHE_NAME);
+        const offlinePage = await cache.match('/offline.html');
+        if (offlinePage) {
+            return offlinePage;
+        }
+    } catch (error) {
+        console.log('⚠️ No se pudo obtener página offline del cache');
+    }
+    
+    // Fallback a página offline generada dinámicamente
+    return new Response(`
+        <!DOCTYPE html>
+        <html lang="es">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Modo Offline - Ojo en la Vía</title>
+            <style>
+                * { margin: 0; padding: 0; box-sizing: border-box; }
+                body { 
+                    font-family: 'Segoe UI', Arial, sans-serif; 
+                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+                    height: 100vh;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                }
+                .offline-container {
+                    text-align: center;
+                    background: rgba(255,255,255,0.1);
+                    backdrop-filter: blur(10px);
+                    padding: 3rem;
+                    border-radius: 20px;
+                    box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+                    border: 1px solid rgba(255,255,255,0.2);
+                    max-width: 500px;
+                    margin: 1rem;
+                }
+                .offline-icon {
+                    font-size: 4rem;
+                    margin-bottom: 1.5rem;
+                    animation: pulse 2s infinite;
+                }
+                h1 { 
+                    font-size: 2rem; 
+                    margin-bottom: 1rem;
+                    font-weight: 300;
+                }
+                p { 
+                    font-size: 1.1rem; 
+                    margin-bottom: 2rem;
+                    opacity: 0.9;
+                    line-height: 1.6;
+                }
+                .retry-btn {
+                    background: rgba(255,255,255,0.2);
+                    border: 2px solid rgba(255,255,255,0.3);
+                    color: white;
+                    padding: 12px 30px;
+                    border-radius: 50px;
+                    font-size: 1rem;
+                    cursor: pointer;
+                    transition: all 0.3s ease;
+                    backdrop-filter: blur(10px);
+                }
+                .retry-btn:hover {
+                    background: rgba(255,255,255,0.3);
+                    transform: translateY(-2px);
+                    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+                }
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); }
+                    50% { transform: scale(1.1); }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="offline-container">
+                <div class="offline-icon">📶</div>
+                <h1>Sin conexión a internet</h1>
+                <p>La aplicación <strong>Ojo en la Vía</strong> requiere conexión para funcionar.</p>
+                <p>Verifica tu conexión e intenta nuevamente.</p>
+                <button class="retry-btn" onclick="location.reload()">Reintentar conexión</button>
+            </div>
+        </body>
+        </html>
+    `, {
+        headers: { 
+            'Content-Type': 'text/html; charset=utf-8',
+            'Cache-Control': 'no-cache'
+        }
+    });
+}
+
+// 🛠️ FUNCIÓN AUXILIAR PARA CONTENT TYPE
 function getContentType(url) {
-    if (url.endsWith('.css')) return 'text/css';
-    if (url.endsWith('.js')) return 'application/javascript';
-    if (url.endsWith('.png')) return 'image/png';
-    if (url.endsWith('.jpg') || url.endsWith('.jpeg')) return 'image/jpeg';
-    if (url.endsWith('.gif')) return 'image/gif';
-    if (url.endsWith('.svg')) return 'image/svg+xml';
-    if (url.endsWith('.ico')) return 'image/x-icon';
+    const types = {
+        '.css': 'text/css',
+        '.png': 'image/png',
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.gif': 'image/gif',
+        '.svg': 'image/svg+xml',
+        '.ico': 'image/x-icon',
+        '.woff': 'font/woff',
+        '.woff2': 'font/woff2',
+        '.ttf': 'font/ttf'
+    };
+    
+    for (const [ext, type] of Object.entries(types)) {
+        if (url.endsWith(ext)) return type;
+    }
+    
     return 'text/plain';
 }
 
-// 📱 MANEJADOR DE SINCRONIZACIÓN (OPCIONAL PARA FUTURO)
-self.addEventListener('sync', (event) => {
-    if (event.tag === 'background-sync-reports') {
-        console.log('🔄 Sincronización en background');
-        // Aquí iría la lógica para sincronizar datos pendientes
+// 📱 MANEJADORES OPCIONALES PARA FUTURAS MEJORAS
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.type === 'SKIP_WAITING') {
+        self.skipWaiting();
     }
 });
 
-// 🔔 MANEJADOR DE PUSH (OPCIONAL PARA FUTURO)
+// 🔔 NOTIFICACIONES PUSH (PARA FUTURAS NOTIFICACIONES)
 self.addEventListener('push', (event) => {
     if (event.data) {
         const data = event.data.json();
+        const options = {
+            body: data.body || 'Nueva actualización disponible',
+            icon: '/imagenes/fiveicon.png',
+            badge: '/imagenes/fiveicon.png',
+            vibrate: [100, 50, 100],
+            data: { url: data.url || '/' }
+        };
+        
         event.waitUntil(
-            self.registration.showNotification(data.title, {
-                body: data.body,
-                icon: '/imagenes/fiveicon.png'
-            })
+            self.registration.showNotification(data.title || 'Ojo en la Vía', options)
         );
     }
 });
+
+self.addEventListener('notificationclick', (event) => {
+    event.notification.close();
+    event.waitUntil(
+        clients.matchAll({ type: 'window' }).then(windowClients => {
+            for (let client of windowClients) {
+                if (client.url === event.notification.data.url && 'focus' in client) {
+                    return client.focus();
+                }
+            }
+            if (clients.openWindow) {
+                return clients.openWindow(event.notification.data.url);
+            }
+        })
+    );
+});
+
+console.log('✅ Service Worker Profesional cargado - Listo para operar');
