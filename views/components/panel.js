@@ -240,6 +240,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
+// 🆕 INTERCEPTOR GLOBAL DE FETCH PARA MANEJAR ERRORES DE SESIÓN
+const originalFetch = window.fetch;
+window.fetch = function(...args) {
+    return originalFetch.apply(this, args).then(response => {
+        // Si es una redirección a login, manejar apropiadamente
+        if (response.redirected && response.url.includes('login')) {
+            console.warn('⚠️ Redirección detectada, posible sesión expirada');
+            window.location.href = '../index.php';
+            return Promise.reject(new Error('Sesión expirada'));
+        }
+        return response;
+    });
+};
+
 // Función para cerrar sesión
 function cerrarSesion() {
     if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
@@ -249,6 +263,26 @@ function cerrarSesion() {
 
 // Mejorar la experiencia en móviles
 document.addEventListener('touchstart', function() {}, { passive: true });
+
+// 🆕 FUNCIÓN AUXILIAR PARA VERIFICAR SESIÓN
+async function verificarSesion() {
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+            credentials: 'same-origin'
+        });
+        
+        if (!resp.ok) {
+            return false;
+        }
+        
+        const data = await resp.json();
+        return data.sesion_activa === true;
+        
+    } catch (error) {
+        console.error('Error verificando sesión:', error);
+        return false;
+    }
+}
 
 // Cargar feed de reportes - VERSIÓN MEJORADA
 async function cargarFeed() {
@@ -283,7 +317,9 @@ async function cargarFeed() {
     }
     
     try {
-        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
+        const resp = await fetch('../controllers/reportecontrolador.php?action=listar', {
+            credentials: 'same-origin'
+        });
         
         // Verificar respuesta
         if (!resp.ok) {
@@ -463,7 +499,9 @@ function crearPostElement(reporte) {
 // Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`);
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`, {
+            credentials: 'same-origin'
+        });
         const data = await resp.json();
         
         const likeCount = postElement.querySelector('.like-count');
@@ -478,7 +516,9 @@ async function cargarLikesPost(id_reporte, postElement) {
 // Función para cargar comentarios de un post
 async function cargarComentariosPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`);
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`, {
+            credentials: 'same-origin'
+        });
         const data = await resp.json();
         
         const commentBtn = postElement.querySelector('.comment-btn');
@@ -503,7 +543,8 @@ async function verificarLikeUsuario(id_reporte, postElement) {
         
         const resp = await fetch('../controllers/reportecontrolador.php?action=verificar_like', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         const data = await resp.json();
         
@@ -527,7 +568,8 @@ window.toggleLike = async function(id_reporte, btn) {
 
         const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
             method: 'POST', 
-            body: formData
+            body: formData,
+            credentials: 'same-origin'
         });
         const r = await resp.json();
         
@@ -552,14 +594,26 @@ window.toggleLike = async function(id_reporte, btn) {
         alert('Error al conectar con el servidor');
     }
 }
+
+// 🆕 FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
 async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
         
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+            credentials: 'same-origin'
+        });
         
         if (!resp.ok) {
             throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        // 🆕 VERIFICAR QUE SEA JSON
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const textResponse = await resp.text();
+            console.error('❌ Respuesta no JSON en estadísticas:', textResponse.substring(0, 200));
+            throw new Error('El servidor devolvió HTML en lugar de JSON');
         }
         
         const data = await resp.json();
@@ -576,7 +630,8 @@ async function cargarEstadisticasUsuario() {
         
     } catch (error) {
         console.error('❌ Error cargando estadísticas:', error);
-        // Mostrar valores por defecto en caso de error
+        
+        // 🆕 MOSTRAR VALORES POR DEFECTO DE FORMA MÁS ELEGANTE
         actualizarEstadisticasUI({
             reportes: 0,
             likes: 0,
@@ -623,10 +678,145 @@ function actualizarEstadisticasUI(stats) {
     });
 }
 
-// 🆕 FUNCIÓN PARA CARGAR DATOS COMPLETOS DEL PERFIL
+// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL
+async function cargarPerfil() {
+    try {
+        console.log('👤 Cargando información del perfil...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+            credentials: 'same-origin' // Incluir cookies de sesión
+        });
+        
+        // 🆕 VERIFICACIÓN ROBUSTA DE LA RESPUESTA
+        if (!resp.ok) {
+            throw new Error(`Error HTTP: ${resp.status} ${resp.statusText}`);
+        }
+        
+        const contentType = resp.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // 🆕 Obtener el texto para debuggear
+            const textResponse = await resp.text();
+            console.error('❌ El servidor devolvió HTML en lugar de JSON:', textResponse.substring(0, 200));
+            
+            // 🆕 Verificar si es una redirección al login
+            if (textResponse.includes('login') || textResponse.includes('Login')) {
+                mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
+                setTimeout(() => {
+                    window.location.href = '../index.php';
+                }, 2000);
+                return;
+            }
+            
+            throw new Error('El servidor devolvió una respuesta no JSON. Posible error de sesión.');
+        }
+        
+        const user = await resp.json();
+
+        if (!user || user.error) {
+            console.warn('❌ No se pudo obtener información del usuario:', user?.error);
+            mostrarErrorPerfil('No se pudo cargar la información del perfil');
+            return;
+        }
+
+        console.log('✅ Datos del usuario recibidos:', user);
+
+        // 🆕 FUNCIÓN MEJORADA PARA ACTUALIZAR ELEMENTOS
+        function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                // 🆕 Sanitizar el valor
+                const valorSeguro = valor ? String(valor).trim() : '';
+                elemento.textContent = valorSeguro || valorPorDefecto;
+                
+                // 🆕 Restaurar estilo por defecto
+                elemento.style.color = '';
+                elemento.style.fontStyle = '';
+                
+                console.log(`✅ Actualizado ${id}: ${valorSeguro || valorPorDefecto}`);
+            } else {
+                console.warn(`⚠️ Elemento no encontrado: ${id}`);
+            }
+        }
+
+        // Lista de todos los elementos que podríamos necesitar actualizar
+        const elementosPerfil = [
+            // Información principal
+            { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
+            { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
+            { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
+            
+            // Información personal en la tarjeta
+            { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
+            { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
+            { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
+            { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
+        ];
+
+        // Actualizar todos los elementos
+        elementosPerfil.forEach(item => {
+            actualizarElemento(item.id, item.valor, item.defecto);
+        });
+
+        // Actualizar avatars
+        const profileAvatar = document.getElementById('profileAvatar');
+        const headerAvatar = document.getElementById('headerAvatar');
+        
+        if (profileAvatar) {
+            profileAvatar.src = '/imagenes/fiveicon.png';
+            profileAvatar.onerror = function() {
+                this.src = '/imagenes/default-avatar.png';
+            };
+            console.log('✅ Avatar del perfil actualizado');
+        }
+        
+        if (headerAvatar) {
+            headerAvatar.src = '/imagenes/fiveicon.png';
+            headerAvatar.onerror = function() {
+                this.src = '/imagenes/default-avatar.png';
+            };
+            console.log('✅ Avatar del header actualizado');
+        }
+
+        // Prefill form solo con datos existentes
+        const inpNombres = document.getElementById('inpNombres');
+        const inpApellidos = document.getElementById('inpApellidos');
+        const inpTelefono = document.getElementById('inpTelefono');
+        
+        if (inpNombres) inpNombres.value = user.nombres || '';
+        if (inpApellidos) inpApellidos.value = user.apellidos || '';
+        if (inpTelefono) inpTelefono.value = user.telefono || '';
+
+        console.log('✅ Perfil cargado exitosamente');
+
+    } catch (err) {
+        console.error('❌ Error crítico al cargar perfil:', err);
+        
+        // 🆕 MEJOR MANEJO DE ERRORES
+        if (err.message.includes('sesión') || err.message.includes('login')) {
+            mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
+            setTimeout(() => {
+                window.location.href = '../index.php';
+            }, 2000);
+        } else {
+            mostrarErrorPerfil('Error al conectar con el servidor: ' + err.message);
+        }
+    }
+}
+
+// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL COMPLETO
 async function cargarPerfilCompleto() {
     try {
         console.log('👤 Cargando perfil completo...');
+        
+        // 🆕 Verificar sesión primero
+        const sesionActiva = await verificarSesion();
+        if (!sesionActiva) {
+            mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
+            setTimeout(() => {
+                window.location.href = '../index.php';
+            }, 2000);
+            return;
+        }
         
         // Cargar información básica del usuario
         await cargarPerfil();
@@ -640,6 +830,7 @@ async function cargarPerfilCompleto() {
         console.error('❌ Error cargando perfil completo:', error);
     }
 }
+
 // 🆕 Función temporal para obtener ID de usuario - IMPLEMENTA ESTO CON TU SISTEMA DE SESIONES
 async function obtenerUsuarioId() {
     // Si ya tenemos el ID en la variable global, usarlo
@@ -649,7 +840,9 @@ async function obtenerUsuarioId() {
     
     // Si no está disponible, intentar obtenerlo del servidor
     try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id');
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
+            credentials: 'same-origin'
+        });
         const data = await resp.json();
         if (data.success && data.id_usuario) {
             window.usuarioId = data.id_usuario;
@@ -786,114 +979,6 @@ function abrirMapaConCoordenadas(reporte) {
     }
 }
 
-// Cargar perfil - VERSIÓN MEJORADA Y ROBUSTA
-async function cargarPerfil() {
-    try {
-        console.log('👤 Cargando información del perfil...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
-        
-        // Verificar si la respuesta es JSON
-        const contentType = resp.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            console.warn('⚠️ El servidor devolvió HTML en lugar de JSON');
-            mostrarErrorPerfil('Error al cargar perfil: respuesta inválida del servidor');
-            return;
-        }
-        
-        const user = await resp.json();
-
-        if (!user || user.error) {
-            console.warn('❌ No se pudo obtener información del usuario:', user?.error);
-            mostrarErrorPerfil('No se pudo cargar la información del perfil');
-            return;
-        }
-
-        console.log('✅ Datos del usuario recibidos:', user);
-
-        // Función auxiliar para actualizar elementos de forma segura
-        function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
-            const elemento = document.getElementById(id);
-            if (elemento) {
-                elemento.textContent = valor || valorPorDefecto;
-                console.log(`✅ Actualizado ${id}: ${valor || valorPorDefecto}`);
-            } else {
-                console.warn(`⚠️ Elemento no encontrado: ${id}`);
-            }
-        }
-
-        // Lista de todos los elementos que podríamos necesitar actualizar
-        const elementosPerfil = [
-            // Información principal
-            { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
-            { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
-            { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-            
-            // Información personal en la tarjeta
-            { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
-            { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
-            { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
-            { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
-        ];
-
-        // Actualizar todos los elementos
-        elementosPerfil.forEach(item => {
-            actualizarElemento(item.id, item.valor, item.defecto);
-        });
-
-        // Actualizar avatars
-        const profileAvatar = document.getElementById('profileAvatar');
-        const headerAvatar = document.getElementById('headerAvatar');
-        
-        if (profileAvatar) {
-            profileAvatar.src = '/imagenes/fiveicon.png';
-            console.log('✅ Avatar del perfil actualizado');
-        } else {
-            console.warn('⚠️ profileAvatar no encontrado');
-        }
-        
-        if (headerAvatar) {
-            headerAvatar.src = '/imagenes/fiveicon.png';
-            console.log('✅ Avatar del header actualizado');
-        } else {
-            console.warn('⚠️ headerAvatar no encontrado');
-        }
-
-        // Prefill form solo con datos existentes
-        const inpNombres = document.getElementById('inpNombres');
-        const inpApellidos = document.getElementById('inpApellidos');
-        const inpTelefono = document.getElementById('inpTelefono');
-        
-        if (inpNombres) {
-            inpNombres.value = user.nombres || '';
-            console.log('✅ Campo nombres del formulario actualizado');
-        } else {
-            console.warn('⚠️ inpNombres no encontrado');
-        }
-        
-        if (inpApellidos) {
-            inpApellidos.value = user.apellidos || '';
-            console.log('✅ Campo apellidos del formulario actualizado');
-        } else {
-            console.warn('⚠️ inpApellidos no encontrado');
-        }
-        
-        if (inpTelefono) {
-            inpTelefono.value = user.telefono || '';
-            console.log('✅ Campo teléfono del formulario actualizado');
-        } else {
-            console.warn('⚠️ inpTelefono no encontrado');
-        }
-
-        console.log('✅ Perfil cargado exitosamente');
-
-    } catch (err) {
-        console.error('❌ Error crítico al cargar perfil:', err);
-        mostrarErrorPerfil('Error al conectar con el servidor');
-    }
-}
-
-
 // Función para mostrar errores en el perfil
 function mostrarErrorPerfil(mensaje) {
     console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
@@ -966,7 +1051,9 @@ async function cargarNotificaciones() {
     
     notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
     try {
-        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
+            credentials: 'same-origin'
+        });
         const data = await resp.json();
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -1014,7 +1101,9 @@ async function guardarPerfil() {
 
     try {
         const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', body: form
+            method: 'POST', 
+            body: form,
+            credentials: 'same-origin'
         });
         const res = await resp.json();
         if (res.success) {
@@ -1099,7 +1188,8 @@ window.marcarLeida = async function(id, btn) {
         form.append('id_notificacion', id);
         const resp = await fetch('../controllers/notificacion_controlador.php?action=marcar_leida', { 
             method: 'POST', 
-            body: form 
+            body: form,
+            credentials: 'same-origin'
         });
         const r = await resp.json();
         if (r.success) {
