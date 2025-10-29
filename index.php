@@ -132,6 +132,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
     }
 }
 
+// ✅ CORRECIÓN: Mostrar mensaje de recuperación desde sesión
+if (isset($_SESSION['mensaje_recuperacion'])) {
+    $mensaje_recuperacion = $_SESSION['mensaje_recuperacion'];
+    unset($_SESSION['mensaje_recuperacion']); // Limpiar después de mostrar
+}
+
 //FUNCIÓN PARA LIMPIAR TOKENS EXPIRADOS 
 function limpiarTokensExpirados($db) {
     try {
@@ -469,7 +475,7 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
       margin-bottom: 20px;
       text-align: center;
       border-left: 4px solid #4CAF50;
-      display:block;
+      display: <?php echo isset($mensaje_recuperacion) ? 'block' : 'none'; ?>;
     }
 
     /* Modal de recuperación */

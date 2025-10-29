@@ -65,6 +65,7 @@ export class MarkerManager {
     
     agregarReporte(reporte) {
     try {
+        // ✅ CORRECCIÓN: Cambiar _crearIconoPersonalizado por crearIconoPersonalizado
         const icono = this.crearIconoPersonalizado(reporte.tipo_incidente, reporte.estado);
         
         // 🆕 AGREGAR ESTA LÍNEA - Asignar reportId al marcador
@@ -124,6 +125,7 @@ export class MarkerManager {
             popupAnchor: [0, -45]
         });
     }
+    
     agregarMarkerOffline(reporteOffline) {
     console.log('📍 Agregando marker offline:', reporteOffline.id);
     
@@ -137,9 +139,9 @@ export class MarkerManager {
         return;
     }
     
-    // Crear marker para reporte offline
+    // ✅ CORRECCIÓN: Cambiar _crearIconoPersonalizado por crearIconoPersonalizado
     const marker = L.marker([reporteOffline.latitud, reporteOffline.longitud], {
-        icon: this.crearIconoPersonalizado(reporteOffline.tipo_incidente, true),// true para offline
+        icon: this.crearIconoPersonalizado(reporteOffline.tipo_incidente, true), // true para offline
         customId: `offline-${reporteOffline.id}` // ID único para evitar duplicados
     });
     
@@ -153,6 +155,7 @@ export class MarkerManager {
     
     console.log('✅ Marker offline agregado:', reporteOffline.id);
 }
+
 crearPopupOffline(reporte) {
     return `
         <div class="popup-offline">
@@ -185,6 +188,7 @@ limpiarMarkersOffline() {
     
     console.log('✅ Markers offline limpiados');
 }
+
     _ajustarVista() {
         if (this.markers.length > 0) {
             const group = new L.featureGroup(this.markers.map(m => m.marker));
@@ -213,5 +217,19 @@ limpiarMarkersOffline() {
     
     obtenerMarcadores() {
         return this.markers.map(m => m.data);
+    }
+
+    // ✅ AGREGAR MÉTODO FALTANTE
+    obtenerNombreTipoIncidente(tipoId) {
+        // Mapeo simple de tipos de incidente - puedes expandir esto
+        const tipos = {
+            1: 'Bache',
+            2: 'Inundación',
+            3: 'Accidente',
+            4: 'Obra en construcción',
+            5: 'Semáforo dañado'
+            // Agrega más tipos según tu base de datos
+        };
+        return tipos[tipoId] || 'Incidente vial';
     }
 }
