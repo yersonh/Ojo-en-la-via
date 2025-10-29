@@ -352,7 +352,7 @@ async function cargarFeed() {
     }
 }
 
-// Función para crear elemento de post - VERSIÓN SIMPLIFICADA Y ROBUSTA
+// Función para crear elemento de post - VERSIÓN ACTUALIZADA CON LIKES Y COMENTARIOS
 function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
@@ -403,13 +403,13 @@ function crearPostElement(reporte) {
             </div>
             
             <div class="post-actions">
-                <button class="btn-small like-btn">
-                    <i class="fas fa-heart"></i>
+                <button class="btn-small like-btn" data-report-id="${reporte.id_reporte}">
+                    <i class="far fa-heart"></i>
                     <span class="like-count">0</span>
                 </button>
-                <button class="btn-small comment-btn">
+                <button class="btn-small comment-btn" data-report-id="${reporte.id_reporte}">
                     <i class="fas fa-comment"></i>
-                    <span>Comentar</span>
+                    <span>Comentarios (0)</span>
                 </button>
                 <button class="btn-small view-map-btn">
                     <i class="fas fa-map-marker-alt"></i>
@@ -424,12 +424,18 @@ function crearPostElement(reporte) {
         const viewMapBtn = div.querySelector('.view-map-btn');
         const streetInfo = div.querySelector('.street-info');
         
-        if (likeBtn) likeBtn.addEventListener('click', () => toggleLike(reporte.id_reporte, likeBtn));
-        if (commentBtn) commentBtn.addEventListener('click', () => {
-            if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
-                ComentariosManager.abrirComentarios(reporte.id_reporte);
-            }
-        });
+        if (likeBtn) {
+            likeBtn.addEventListener('click', () => toggleLike(reporte.id_reporte, likeBtn));
+        }
+        if (commentBtn) {
+            commentBtn.addEventListener('click', () => {
+                if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
+                    ComentariosManager.abrirComentarios(reporte.id_reporte);
+                } else {
+                    alert('Función de comentarios no disponible');
+                }
+            });
+        }
         if (viewMapBtn) viewMapBtn.addEventListener('click', () => navegarAlMapa(reporte));
         if (streetInfo) {
             streetInfo.style.cursor = 'pointer';
@@ -437,12 +443,140 @@ function crearPostElement(reporte) {
             streetInfo.addEventListener('click', () => navegarAlMapa(reporte));
         }
 
+        // Cargar datos de likes y comentarios después de crear el elemento
+        setTimeout(() => {
+            cargarLikesPost(reporte.id_reporte, div);
+            cargarComentariosPost(reporte.id_reporte, div);
+            verificarLikeUsuario(reporte.id_reporte, div);
+        }, 100);
+
         return div;
         
     } catch (error) {
         console.error('Error creando post:', error);
         return null;
     }
+}
+
+// 🆕 FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
+
+// Función para cargar likes de un post
+async function cargarLikesPost(id_reporte, postElement) {
+    try {
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`);
+        const data = await resp.json();
+        
+        const likeCount = postElement.querySelector('.like-count');
+        if (likeCount && data.total_likes !== undefined) {
+            likeCount.textContent = data.total_likes;
+        }
+    } catch (error) {
+        console.error('Error cargando likes:', error);
+    }
+}
+
+// Función para cargar comentarios de un post
+async function cargarComentariosPost(id_reporte, postElement) {
+    try {
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`);
+        const data = await resp.json();
+        
+        const commentBtn = postElement.querySelector('.comment-btn');
+        if (commentBtn && data.total_comentarios !== undefined) {
+            const commentText = commentBtn.querySelector('span');
+            if (commentText) {
+                commentText.textContent = `Comentarios (${data.total_comentarios})`;
+            }
+        }
+    } catch (error) {
+        console.error('Error cargando comentarios:', error);
+    }
+}
+
+// Función para verificar si el usuario actual dio like
+async function verificarLikeUsuario(id_reporte, postElement) {
+    try {
+        const id_usuario = await obtenerUsuarioId();
+        const formData = new FormData();
+        formData.append('id_reporte', id_reporte);
+        formData.append('id_usuario', id_usuario);
+        
+        const resp = await fetch('../controllers/reportecontrolador.php?action=verificar_like', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await resp.json();
+        
+        const likeBtn = postElement.querySelector('.like-btn');
+        if (likeBtn && data.liked) {
+            likeBtn.innerHTML = '<i class="fas fa-heart"></i> <span class="like-count">' + (likeBtn.querySelector('.like-count')?.textContent || '0') + '</span>';
+            likeBtn.style.color = 'var(--danger)';
+        }
+    } catch (error) {
+        console.error('Error verificando like:', error);
+    }
+}
+
+// Función para toggle like (ACTUALIZADA)
+window.toggleLike = async function(id_reporte, btn) {
+    try {
+        const id_usuario = await obtenerUsuarioId();
+        const formData = new FormData();
+        formData.append('id_reporte', id_reporte);
+        formData.append('id_usuario', id_usuario);
+
+        const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
+            method: 'POST', 
+            body: formData
+        });
+        const r = await resp.json();
+        
+        if (r.success) {
+            const likeCount = btn.querySelector('.like-count');
+            let currentCount = parseInt(likeCount.textContent) || 0;
+            
+            if (r.action === 'liked') {
+                btn.innerHTML = '<i class="fas fa-heart"></i> <span class="like-count">' + (currentCount + 1) + '</span>';
+                btn.style.color = 'var(--danger)';
+                likeCount.textContent = currentCount + 1;
+            } else {
+                btn.innerHTML = '<i class="far fa-heart"></i> <span class="like-count">' + (currentCount - 1) + '</span>';
+                btn.style.color = '';
+                likeCount.textContent = Math.max(0, currentCount - 1);
+            }
+        } else {
+            alert('Error al procesar like');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al conectar con el servidor');
+    }
+}
+
+// 🆕 Función temporal para obtener ID de usuario - IMPLEMENTA ESTO CON TU SISTEMA DE SESIONES
+async function obtenerUsuarioId() {
+    // Si ya tenemos el ID en la variable global, usarlo
+    if (window.usuarioId) {
+        return window.usuarioId;
+    }
+    
+    // Si no está disponible, intentar obtenerlo del servidor
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id');
+        const data = await resp.json();
+        if (data.success && data.id_usuario) {
+            window.usuarioId = data.id_usuario;
+            return data.id_usuario;
+        }
+    } catch (error) {
+        console.error('Error obteniendo ID de usuario:', error);
+    }
+    
+    // Fallback: mostrar error y redirigir al login
+    console.error('❌ No se pudo obtener el ID de usuario');
+    alert('Error de autenticación. Serás redirigido al login.');
+    window.location.href = '../index.php';
+    return null;
 }
 
 // Función auxiliar para crear estructura de imágenes simple
@@ -735,7 +869,7 @@ function mostrarErrorPerfil(mensaje) {
     }
 }
 
-// Notificaciones (mock mínimo: likes/comentarios recientes cercanos a tus coords)
+// Notificaciones (ACTUALIZADA para usar el nuevo controlador)
 async function cargarNotificaciones() {
     const notificationsView = document.getElementById('notificationsView');
     if (!notificationsView) {
@@ -760,7 +894,7 @@ async function cargarNotificaciones() {
             div.innerHTML = `
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <div>
-                        <strong>${escapeHtml(n.origen_nombres || 'Usuario')}</strong>
+                        <strong>${escapeHtml(n.origen_nombres || 'Sistema')}</strong>
                         <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
                         <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
                     </div>
@@ -869,32 +1003,6 @@ function formatearFecha(fechaString) {
         });
     } catch (e) {
         return 'Fecha no disponible';
-    }
-}
-
-window.toggleLike = async function(id_reporte, btn) {
-    try {
-        const form = new FormData();
-        form.append('id_reporte', id_reporte);
-
-        const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
-            method: 'POST', body: form
-        });
-        const r = await resp.json();
-        if (r.success) {
-            if (r.action === 'liked') {
-                btn.innerHTML = '<i class="fas fa-heart"></i> Ya me gusta';
-                btn.style.color = 'var(--danger)';
-            } else {
-                btn.innerHTML = '<i class="far fa-heart"></i> Me gusta';
-                btn.style.color = '';
-            }
-        } else {
-            alert('Error al procesar like');
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Error al conectar con el servidor');
     }
 }
 

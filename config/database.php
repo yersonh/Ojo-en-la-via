@@ -56,7 +56,11 @@ class Database {
             ]);
             
             error_log("✅ Conexión exitosa a PostgreSQL: " . $this->dbname);
-            
+
+            // 🔧 Ajustar la zona horaria a Colombia inmediatamente después de conectar
+            $this->conn->exec("SET TIMEZONE TO 'America/Bogota'");
+            error_log("🕐 Zona horaria establecida en America/Bogota");
+
         } catch (PDOException $e) {
             error_log("❌ Error de conexión a PostgreSQL: " . $e->getMessage());
             error_log("❌ DSN: pgsql:host={$this->host};port={$this->port};dbname={$this->dbname}");

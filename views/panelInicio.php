@@ -5,6 +5,11 @@ if (!isset($_SESSION['usuario_id'])) {
     exit();
 }
 
+// Obtener datos del usuario de la sesión
+$usuario_id = $_SESSION['usuario_id'];
+$usuario_nombres = $_SESSION['nombres'] ?? 'Usuario';
+$usuario_correo = $_SESSION['correo'] ?? '';
+
 // Determinar la URL base para el iframe - ACTUALIZADO A HTTPS
 $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
 if ($_SERVER['HTTP_HOST'] === 'localhost:8080') {
@@ -23,6 +28,20 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     <link rel="stylesheet" href="styles/mapa.css">
     <link rel="stylesheet" href="styles/panel.css">
     
+    <!-- Pasar variables de sesión a JavaScript -->
+    <script>
+        // Variables globales con datos del usuario desde PHP
+        window.usuarioId = <?php echo json_encode($usuario_id); ?>;
+        window.usuarioNombres = <?php echo json_encode($usuario_nombres); ?>;
+        window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
+        
+        console.log('👤 Usuario cargado:', {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
+        });
+    </script>
+    
     <!-- Forzar HTTPS en producción -->
     <?php if ($_SERVER['HTTP_HOST'] !== 'localhost:8080'): ?>
     <script>
@@ -31,6 +50,189 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         }
     </script>
     <?php endif; ?>
+
+    <style>
+    /* Estilos para el modal de comentarios - Modo Claro/Oscuro */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.7);
+        z-index: 10000;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .comentarios-modal {
+        background: var(--modal-bg, white);
+        border-radius: 12px;
+        width: 90%;
+        max-width: 500px;
+        max-height: 80vh;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        color: var(--modal-text, #2c3e50);
+    }
+
+    .modal-header {
+        padding: 20px;
+        border-bottom: 1px solid var(--modal-border, #e9ecef);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .modal-header h3 {
+        margin: 0;
+        color: var(--modal-heading, #2c3e50);
+        font-size: 1.25rem;
+    }
+
+    .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        color: var(--modal-close, #6c757d);
+        cursor: pointer;
+        padding: 5px;
+        border-radius: 50%;
+        transition: all 0.3s ease;
+    }
+
+    .modal-close:hover {
+        background: var(--modal-close-hover-bg, #f8f9fa);
+        color: var(--modal-close-hover, #e74c3c);
+    }
+
+    .modal-body {
+        padding: 20px;
+        flex: 1;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    /* Lista de comentarios */
+    .comentarios-list {
+        flex: 1;
+        max-height: 300px;
+        overflow-y: auto;
+        border: 1px solid var(--modal-border, #e9ecef);
+        border-radius: 8px;
+        padding: 15px;
+        background: var(--modal-list-bg, transparent);
+    }
+
+    .comentario-item {
+        padding: 12px;
+        border-bottom: 1px solid var(--modal-item-border, #f1f3f4);
+        margin-bottom: 10px;
+    }
+
+    .comentario-item:last-child {
+        border-bottom: none;
+        margin-bottom: 0;
+    }
+
+    .comentario-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+    }
+
+    .comentario-usuario {
+        font-weight: 600;
+        color: var(--modal-user, #2c3e50);
+        font-size: 0.9rem;
+    }
+
+    .comentario-fecha {
+        font-size: 0.8rem;
+        color: var(--modal-date, #6c757d);
+    }
+
+    .comentario-texto {
+        color: var(--modal-text, #495057);
+        line-height: 1.4;
+        font-size: 0.9rem;
+    }
+
+    /* Formulario de comentarios */
+    .comentario-form {
+        border-top: 1px solid var(--modal-border, #e9ecef);
+        padding-top: 20px;
+    }
+
+    .comentario-input {
+        width: 100%;
+        min-height: 100px;
+        padding: 12px;
+        border: 1px solid var(--modal-input-border, #ddd);
+        border-radius: 8px;
+        resize: vertical;
+        font-family: inherit;
+        font-size: 0.9rem;
+        transition: border-color 0.3s ease;
+        background: var(--modal-input-bg, white);
+        color: var(--modal-input-text, #495057);
+    }
+
+    .comentario-input:focus {
+        outline: none;
+        border-color: var(--modal-input-focus, #3498db);
+        box-shadow: 0 0 0 2px var(--modal-input-focus-shadow, rgba(52, 152, 219, 0.2));
+    }
+
+    .comentario-counter {
+        text-align: right;
+        font-size: 0.8rem;
+        color: var(--modal-counter, #6c757d);
+        margin-top: 5px;
+    }
+
+    /* Botón del formulario */
+    #btnComentario {
+        background: var(--modal-button-bg, #3498db);
+        color: var(--modal-button-text, white);
+        border: none;
+        padding: 10px 20px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: background-color 0.3s ease;
+    }
+
+    #btnComentario:hover:not(:disabled) {
+        background: var(--modal-button-hover, #2980b9);
+    }
+
+    #btnComentario:disabled {
+        background: var(--modal-button-disabled, #bdc3c7);
+        cursor: not-allowed;
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+        .comentarios-modal {
+            width: 95%;
+            margin: 10px;
+        }
+        
+        .modal-header {
+            padding: 15px;
+        }
+        
+        .modal-body {
+            padding: 15px;
+        }
+    }
+</style>
 </head>
 <body>
     <div class="app">
@@ -300,6 +502,52 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         </nav>
     </div>
 
+    <!-- SECCIÓN DE COMENTARIOS (Modal) -->
+    <div id="comentariosSection" class="modal-overlay" style="display: none;">
+        <div class="modal-content comentarios-modal">
+            <div class="modal-header">
+                <h3>Comentarios del Reporte</h3>
+                <button class="modal-close" onclick="ComentariosManager.cerrarComentarios()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Lista de comentarios -->
+                <div class="comentarios-list" id="comentariosList">
+                    <div class="loading">
+                        <div class="loading-spinner"></div>
+                        <p>Cargando comentarios...</p>
+                    </div>
+                </div>
+                
+                <!-- Formulario para agregar comentario -->
+                <form id="formComentario" class="comentario-form">
+                    <input type="hidden" id="comentarioIdReporte" name="id_reporte">
+                    <input type="hidden" name="id_usuario" id="comentarioIdUsuario">
+                    
+                    <div class="form-group">
+                        <textarea 
+                            id="textoComentario" 
+                            name="comentario" 
+                            class="comentario-input" 
+                            placeholder="Escribe tu comentario..." 
+                            required
+                            maxlength="500"
+                        ></textarea>
+                        <div class="comentario-counter">
+                            <span id="comentarioChars">0</span>/500
+                        </div>
+                    </div>
+                    
+                    <button type="submit" id="btnComentario" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> Publicar Comentario
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- TEMPLATE PARA CADA POST (oculto) -->
     <template id="postTemplate">
     <div class="post" data-post-id="">
@@ -416,5 +664,78 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     <script type="module" src="components/mapa/index.js"></script>
     <script type="module" src="components/formulario/index.js"></script>
     <script src="components/comentarios.js"></script>
+    <script>
+    // Detectar modo claro/oscuro del sistema y aplicar estilos
+    function aplicarModoColor() {
+        const isDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        
+        if (isDarkMode) {
+            // Variables CSS para modo oscuro
+            document.documentElement.style.setProperty('--modal-bg', '#1a1a1a');
+            document.documentElement.style.setProperty('--modal-text', '#e0e0e0');
+            document.documentElement.style.setProperty('--modal-heading', '#ffffff');
+            document.documentElement.style.setProperty('--modal-border', '#333333');
+            document.documentElement.style.setProperty('--modal-close', '#888888');
+            document.documentElement.style.setProperty('--modal-close-hover-bg', '#333333');
+            document.documentElement.style.setProperty('--modal-close-hover', '#ff6b6b');
+            document.documentElement.style.setProperty('--modal-list-bg', '#222222');
+            document.documentElement.style.setProperty('--modal-item-border', '#333333');
+            document.documentElement.style.setProperty('--modal-user', '#ffffff');
+            document.documentElement.style.setProperty('--modal-date', '#aaaaaa');
+            document.documentElement.style.setProperty('--modal-input-bg', '#2d2d2d');
+            document.documentElement.style.setProperty('--modal-input-text', '#e0e0e0');
+            document.documentElement.style.setProperty('--modal-input-border', '#444444');
+            document.documentElement.style.setProperty('--modal-input-focus', '#3498db');
+            document.documentElement.style.setProperty('--modal-input-focus-shadow', 'rgba(52, 152, 219, 0.3)');
+            document.documentElement.style.setProperty('--modal-counter', '#888888');
+            document.documentElement.style.setProperty('--modal-button-bg', '#3498db');
+            document.documentElement.style.setProperty('--modal-button-text', '#ffffff');
+            document.documentElement.style.setProperty('--modal-button-hover', '#2980b9');
+            document.documentElement.style.setProperty('--modal-button-disabled', '#555555');
+        } else {
+            // Variables CSS para modo claro (valores por defecto)
+            document.documentElement.style.setProperty('--modal-bg', 'white');
+            document.documentElement.style.setProperty('--modal-text', '#2c3e50');
+            document.documentElement.style.setProperty('--modal-heading', '#2c3e50');
+            document.documentElement.style.setProperty('--modal-border', '#e9ecef');
+            document.documentElement.style.setProperty('--modal-close', '#6c757d');
+            document.documentElement.style.setProperty('--modal-close-hover-bg', '#f8f9fa');
+            document.documentElement.style.setProperty('--modal-close-hover', '#e74c3c');
+            document.documentElement.style.setProperty('--modal-list-bg', 'transparent');
+            document.documentElement.style.setProperty('--modal-item-border', '#f1f3f4');
+            document.documentElement.style.setProperty('--modal-user', '#2c3e50');
+            document.documentElement.style.setProperty('--modal-date', '#6c757d');
+            document.documentElement.style.setProperty('--modal-input-bg', 'white');
+            document.documentElement.style.setProperty('--modal-input-text', '#495057');
+            document.documentElement.style.setProperty('--modal-input-border', '#ddd');
+            document.documentElement.style.setProperty('--modal-input-focus', '#3498db');
+            document.documentElement.style.setProperty('--modal-input-focus-shadow', 'rgba(52, 152, 219, 0.2)');
+            document.documentElement.style.setProperty('--modal-counter', '#6c757d');
+            document.documentElement.style.setProperty('--modal-button-bg', '#3498db');
+            document.documentElement.style.setProperty('--modal-button-text', 'white');
+            document.documentElement.style.setProperty('--modal-button-hover', '#2980b9');
+            document.documentElement.style.setProperty('--modal-button-disabled', '#bdc3c7');
+        }
+    }
+
+    // Aplicar modo al cargar y cuando cambie
+    document.addEventListener('DOMContentLoaded', function() {
+        aplicarModoColor();
+        
+        // Escuchar cambios en la preferencia de color
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', aplicarModoColor);
+    });
+</script>
+    <script>
+        // Inicializar ComentariosManager después de cargar el DOM
+        document.addEventListener('DOMContentLoaded', function() {
+            if (typeof ComentariosManager !== 'undefined') {
+                ComentariosManager.inicializar();
+                console.log('✅ ComentariosManager inicializado correctamente');
+            } else {
+                console.error('❌ ComentariosManager no está definido');
+            }
+        });
+    </script>
 </body>
 </html>

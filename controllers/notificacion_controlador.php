@@ -263,6 +263,62 @@ try {
             ]);
             break;
 
+        // 🆕 LISTAR NOTIFICACIONES PARA USUARIO COMÚN
+        case 'listar':
+            session_start();
+            $id_usuario = $_SESSION['usuario_id'] ?? null;
+            
+            if (!$id_usuario) {
+                echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+                break;
+            }
+            
+            $query = "
+                SELECT 
+                    n.id_notificacion,
+                    n.tipo,
+                    n.mensaje,
+                    n.leida,
+                    n.fecha,
+                    n.id_reporte,
+                    po.nombres as origen_nombres,
+                    po.apellidos as origen_apellidos,
+                    r.descripcion as reporte_descripcion
+                FROM notificacion n
+                LEFT JOIN usuario uo ON n.id_usuario_origen = uo.id_usuario
+                LEFT JOIN persona po ON uo.id_persona = po.id_persona
+                LEFT JOIN reporte r ON n.id_reporte = r.id_reporte
+                WHERE n.id_usuario_destino = :id_usuario
+                ORDER BY n.fecha DESC
+                LIMIT 50
+            ";
+            
+            $stmt = $db->prepare($query);
+            $stmt->execute([':id_usuario' => $id_usuario]);
+            $notificaciones = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            echo json_encode($notificaciones);
+            break;
+
+        // 🆕 CONTAR NOTIFICACIONES NO LEÍDAS
+        case 'contar_no_leidas':
+            session_start();
+            $id_usuario = $_SESSION['usuario_id'] ?? null;
+            
+            if (!$id_usuario) {
+                echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
+                break;
+            }
+            
+            $query = "SELECT COUNT(*) as total FROM notificacion 
+                     WHERE id_usuario_destino = :id_usuario AND leida = FALSE";
+            $stmt = $db->prepare($query);
+            $stmt->execute([':id_usuario' => $id_usuario]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            echo json_encode(["total_no_leidas" => $result['total']]);
+            break;
+
         default:
             echo json_encode(['success' => false, 'error' => 'Acción no válida']);
     }

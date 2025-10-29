@@ -3,6 +3,7 @@
 ob_start(); // Capturar cualquier output accidental
 error_reporting(0);
 ini_set('display_errors', 0);
+date_default_timezone_set('America/Bogota');
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -396,6 +397,81 @@ case 'registrar':
                 'escribible' => is_dir($directorio) ? is_writable($directorio) : false
             ]);
             break;
+            case 'toggle_like':
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $id_reporte = $_POST['id_reporte'];
+        $id_usuario = $_POST['id_usuario']; // Necesitarás enviar esto desde el frontend
+        
+        if (empty($id_reporte) || empty($id_usuario)) {
+            throw new Exception("Datos incompletos");
+        }
+        
+        // Verificar si ya existe el like
+        $queryCheck = "SELECT id_like FROM like_reporte WHERE id_reporte = :id_reporte AND id_usuario = :id_usuario";
+        $stmtCheck = $db->prepare($queryCheck);
+        $stmtCheck->execute([':id_reporte' => $id_reporte, ':id_usuario' => $id_usuario]);
+        $existingLike = $stmtCheck->fetch();
+        
+        if ($existingLike) {
+            // Quitar like
+            $queryDelete = "DELETE FROM like_reporte WHERE id_like = :id_like";
+            $stmtDelete = $db->prepare($queryDelete);
+            $stmtDelete->execute([':id_like' => $existingLike['id_like']]);
+            
+            // Crear notificación de like eliminado (opcional)
+            crearNotificacion($db, $id_usuario, null, $id_reporte, 'like_remove', 'Ya no le gusta tu reporte');
+            
+            echo json_encode(["success" => true, "action" => "unliked"]);
+        } else {
+            // Agregar like
+            $queryInsert = "INSERT INTO like_reporte (id_reporte, id_usuario) VALUES (:id_reporte, :id_usuario)";
+            $stmtInsert = $db->prepare($queryInsert);
+            $stmtInsert->execute([':id_reporte' => $id_reporte, ':id_usuario' => $id_usuario]);
+            
+            // Obtener información para la notificación
+            $reporteInfo = obtenerInfoReporte($db, $id_reporte);
+            if ($reporteInfo && $reporteInfo['id_usuario'] != $id_usuario) {
+                $mensaje = "Le gusta tu reporte: " . (strlen($reporteInfo['descripcion']) > 50 ? 
+                    substr($reporteInfo['descripcion'], 0, 50) . "..." : $reporteInfo['descripcion']);
+                crearNotificacion($db, $reporteInfo['id_usuario'], $id_usuario, $id_reporte, 'like', $mensaje);
+            }
+            
+            echo json_encode(["success" => true, "action" => "liked"]);
+        }
+    }
+    break;
+
+case 'contar_likes':
+    $id_reporte = $_GET['id_reporte'] ?? '';
+    if (empty($id_reporte)) {
+        throw new Exception("ID de reporte requerido");
+    }
+    
+    $query = "SELECT COUNT(*) as total_likes FROM like_reporte WHERE id_reporte = :id_reporte";
+    $stmt = $db->prepare($query);
+    $stmt->execute([':id_reporte' => $id_reporte]);
+    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    echo json_encode(["total_likes" => $result['total_likes']]);
+    break;
+
+case 'verificar_like':
+    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+        $id_reporte = $_POST['id_reporte'];
+        $id_usuario = $_POST['id_usuario'];
+        
+        if (empty($id_reporte) || empty($id_usuario)) {
+            throw new Exception("Datos incompletos");
+        }
+        
+        $query = "SELECT id_like FROM like_reporte WHERE id_reporte = :id_reporte AND id_usuario = :id_usuario";
+        $stmt = $db->prepare($query);
+        $stmt->execute([':id_reporte' => $id_reporte, ':id_usuario' => $id_usuario]);
+        $result = $stmt->fetch();
+        
+        echo json_encode(["liked" => !!$result]);
+    }
+    break;
 
         default:
             // Verificar output accidental
@@ -423,7 +499,32 @@ case 'registrar':
         "mensaje" => $e->getMessage()
     ]);
 }
+// Función para obtener información del reporte
+function obtenerInfoReporte($db, $id_reporte) {
+    $query = "SELECT r.id_usuario, r.descripcion, u.correo, p.nombres, p.apellidos 
+            FROM reporte r 
+            INNER JOIN usuario u ON r.id_usuario = u.id_usuario 
+            INNER JOIN persona p ON u.id_persona = p.id_persona 
+            WHERE r.id_reporte = :id_reporte";
+    $stmt = $db->prepare($query);
+    $stmt->execute([':id_reporte' => $id_reporte]);
+    return $stmt->fetch(PDO::FETCH_ASSOC);
+}
 
+// Función para crear notificaciones
+function crearNotificacion($db, $id_usuario_destino, $id_usuario_origen, $id_reporte, $tipo, $mensaje) {
+    $query = "INSERT INTO notificacion (id_usuario_destino, id_usuario_origen, id_reporte, tipo, mensaje) 
+            VALUES (:destino, :origen, :reporte, :tipo, :mensaje)";
+    $stmt = $db->prepare($query);
+    $stmt->execute([
+        ':destino' => $id_usuario_destino,
+        ':origen' => $id_usuario_origen,
+        ':reporte' => $id_reporte,
+        ':tipo' => $tipo,
+        ':mensaje' => $mensaje
+    ]);
+    return $db->lastInsertId();
+}
 // Finalizar el buffer sin limpiar (ya limpiamos solo lo accidental)
 ob_end_flush();
 ?>
