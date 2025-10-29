@@ -65,7 +65,7 @@ export class MarkerManager {
     
     agregarReporte(reporte) {
     try {
-        const icono = this._crearIconoPersonalizado(reporte.tipo_incidente, reporte.estado);
+        const icono = this.crearIconoPersonalizado(reporte.tipo_incidente, reporte.estado);
         
         // 🆕 AGREGAR ESTA LÍNEA - Asignar reportId al marcador
         const marker = L.marker([reporte.latitud, reporte.longitud], { 
@@ -139,7 +139,7 @@ export class MarkerManager {
     
     // Crear marker para reporte offline
     const marker = L.marker([reporteOffline.latitud, reporteOffline.longitud], {
-        icon: this.crearIconoPersonalizado(reporteOffline.tipo_incidente, true), // true para offline
+        icon: this.crearIconoPersonalizado(reporteOffline.tipo_incidente, true),// true para offline
         customId: `offline-${reporteOffline.id}` // ID único para evitar duplicados
     });
     
