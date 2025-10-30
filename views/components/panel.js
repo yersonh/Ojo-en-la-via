@@ -553,26 +553,37 @@ async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
         
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+            credentials: 'include' // Importante: incluir cookies de sesión
+        });
         
         if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('🔐 Error 401 - Sesión expirada');
+                // Redirigir al login después de mostrar mensaje
+                mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
+                setTimeout(() => {
+                    window.location.href = '../index.php';
+                }, 2000);
+                return;
+            }
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
-        // Primero obtener el texto para debug
-        const responseText = await resp.text();
-        
-        let user;
-        try {
-            user = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ Error parseando JSON:', parseError);
-            console.log('📄 Respuesta del servidor:', responseText.substring(0, 500));
-            throw new Error('Error en formato de respuesta del servidor');
-        }
+        const user = await resp.json();
 
         if (user && user.success === false) {
             console.warn('❌ Error del servidor:', user.error);
+            
+            // Si es error de autenticación, redirigir
+            if (user.error && user.error.includes('No autenticado')) {
+                mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
+                setTimeout(() => {
+                    window.location.href = '../index.php';
+                }, 2000);
+                return;
+            }
+            
             mostrarErrorPerfil(user.error || 'Error del servidor');
             return;
         }
@@ -582,7 +593,13 @@ async function cargarPerfil() {
 
     } catch (err) {
         console.error('❌ Error cargando perfil:', err);
-        mostrarErrorPerfil('Error al cargar información del perfil');
+        
+        // Si es error de red, podría ser problema de sesión
+        if (err.message.includes('401') || err.message.includes('No autenticado')) {
+            mostrarErrorPerfil('Sesión expirada. Por favor inicia sesión nuevamente.');
+        } else {
+            mostrarErrorPerfil('Error al cargar información del perfil');
+        }
     }
 }
 
@@ -646,9 +663,15 @@ async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
         
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+            credentials: 'include'
+        });
         
         if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('🔐 Sesión expirada en estadísticas');
+                return; // No hacer nada, ya se manejó en cargarPerfil
+            }
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
@@ -670,6 +693,7 @@ async function cargarEstadisticasUsuario() {
         
     } catch (error) {
         console.error('❌ Error cargando estadísticas:', error);
+        // No mostrar error para no molestar al usuario
         actualizarEstadisticasUI({
             reportes: 0,
             likes: 0,

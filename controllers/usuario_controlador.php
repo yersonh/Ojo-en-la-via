@@ -3,11 +3,14 @@ session_start();
 require_once '../config/database.php';
 require_once '../models/usuario.php';
 
-// Configuración para producción - desactivar display_errors
+// Configuración para producción
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 header('Content-Type: application/json');
+
+// Debug: loguear información de sesión
+error_log("SESSION en usuario_controlador: " . print_r($_SESSION, true));
 
 class UsuarioControlador {
     private $usuarioModel;
@@ -19,17 +22,24 @@ class UsuarioControlador {
     
     public function obtener() {
         try {
-            // Verificar sesión
+            // Debug más detallado
+            error_log("🔍 Verificando sesión en obtener(): " . (isset($_SESSION['id_usuario']) ? $_SESSION['id_usuario'] : 'NO HAY SESION'));
+            
+            // Verificar sesión de manera más flexible para debug
             if (!isset($_SESSION['id_usuario'])) {
+                error_log("❌ SESION NO ENCONTRADA en obtener()");
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'No autenticado'
+                    'error' => 'No autenticado - Sesión no encontrada',
+                    'session_debug' => $_SESSION
                 ]);
                 return;
             }
             
             $id_usuario = $_SESSION['id_usuario'];
+            error_log("✅ Sesión encontrada, ID: " . $id_usuario);
+            
             $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
             
             if ($usuario) {
@@ -46,11 +56,12 @@ class UsuarioControlador {
             } else {
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Usuario no encontrado'
+                    'error' => 'Usuario no encontrado en la base de datos'
                 ]);
             }
             
         } catch (Exception $e) {
+            error_log("❌ Error en obtener(): " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -73,7 +84,7 @@ class UsuarioControlador {
             
             $id_usuario = $_SESSION['id_usuario'];
             
-            // Estadísticas temporales - puedes implementar la lógica real después
+            // Estadísticas temporales
             $estadisticas = [
                 'reportes' => 0,
                 'likes' => 0, 
@@ -182,7 +193,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Error interno del servidor'
+        'error' => 'Error interno del servidor: ' . $e->getMessage()
     ]);
 }
 ?>
