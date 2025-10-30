@@ -9,8 +9,6 @@ if (!isset($_SESSION['usuario_id']) || $_SESSION['rol'] != 1) {
     exit();
 }
 
-
-
 class ExportarControlador {
     private $db;
     private $adminControlador;

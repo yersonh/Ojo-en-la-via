@@ -14,7 +14,7 @@ class SessionManager {
         error_log("APP_ENV: " . (getenv('APP_ENV') ?: 'NOT_SET'));
         error_log("REDIS_URL: " . (getenv('REDIS_URL') ?: 'NOT_SET'));
 
-        // Configurar Redis SI la sesión no está activa
+        // Configurar Redis ANTES de iniciar sesión
         $redisUrl = getenv('REDIS_URL') ?: 'redis://default:DRNukNuOugIPIHsJZOxwPuyrBySWqjzC@redis.railway.internal:6379';
         
         self::setupRedisSession($redisUrl);
@@ -30,9 +30,20 @@ class SessionManager {
         ]);
 
         session_name('OJOSESSION');
-        session_start();
         
+        // Configuración específica para Redis
+        ini_set('session.use_strict_mode', 1);
+        ini_set('session.use_cookies', 1);
+        ini_set('session.use_only_cookies', 1);
+        ini_set('session.cookie_httponly', 1);
+        ini_set('session.cookie_secure', isset($_SERVER['HTTPS']));
+        
+        session_start();
+
+        // DEBUG: Verificar datos de sesión después de iniciar
         error_log("✅ SESION INICIADA - ID: " . session_id());
+        error_log("📊 DATOS SESION: " . print_r($_SESSION, true));
+        
         self::regenerateSessionId();
     }
     
@@ -43,7 +54,7 @@ class SessionManager {
                 $redisConfig = parse_url($redisUrl);
                 
                 $redisPath = sprintf(
-                    "tcp://%s:%d?auth=%s&database=0&timeout=5&read_timeout=5",
+                    "tcp://%s:%d?auth=%s&database=0&timeout=5&read_timeout=5&prefix=ojo_session_",
                     $redisConfig['host'],
                     $redisConfig['port'] ?? 6379,
                     $redisConfig['pass'] ?? ''
@@ -51,7 +62,7 @@ class SessionManager {
                 
                 ini_set('session.save_handler', 'redis');
                 ini_set('session.save_path', $redisPath);
-                ini_set('session.gc_maxlifetime', 3600);
+                ini_set('session.gc_maxlifetime', 3600); // 1 hora
                 
                 error_log("✅ REDIS CONFIGURADO: " . $redisConfig['host']);
             }
@@ -76,7 +87,19 @@ class SessionManager {
     
     public static function close() {
         if (session_status() === PHP_SESSION_ACTIVE) {
+            // Forzar escritura de datos en Redis
             session_write_close();
+        }
+    }
+    
+    // 🆕 Función para verificar que los datos se guarden
+    public static function verifySessionData() {
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            error_log("🔍 VERIFICANDO DATOS SESION:");
+            error_log("  - usuario_id: " . ($_SESSION['usuario_id'] ?? 'NO'));
+            error_log("  - rol: " . ($_SESSION['rol'] ?? 'NO'));
+            error_log("  - nombres: " . ($_SESSION['nombres'] ?? 'NO'));
+            error_log("  - session_id: " . session_id());
         }
     }
 }
@@ -85,6 +108,9 @@ class SessionManager {
 if (session_status() !== PHP_SESSION_ACTIVE) {
     SessionManager::start();
 }
+
+// Verificar datos de sesión después de iniciar
+SessionManager::verifySessionData();
 
 // Cerrar sesión al final
 register_shutdown_function([SessionManager::class, 'close']);

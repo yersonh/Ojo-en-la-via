@@ -1,7 +1,4 @@
 <?php
-
-session_start();
-
 require_once __DIR__ . '/config/config.php';
 require_once BASE_PATH . 'config/database.php';
 require_once BASE_PATH . 'controllers/sesioncontrolador.php';
