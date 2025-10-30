@@ -6,6 +6,15 @@ ini_set('session.cookie_samesite', 'Strict');
 ini_set('session.use_strict_mode', 1);
 ini_set('session.gc_maxlifetime', 86400);
 
+session_set_cookie_params([
+    'lifetime' => 86400,
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'],
+    'secure' => ($protocol === 'https'),
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
+
 session_start();
 
 require_once __DIR__ . '/config/config.php';
@@ -29,14 +38,7 @@ $database = new Database();
 $db = $database->conectar();
 $sesionControlador = new SesionControlador($db);
 
-session_set_cookie_params([
-    'lifetime' => 86400, // 24 horas
-    'path' => '/',
-    'domain' => $_SERVER['HTTP_HOST'],
-    'secure' => ($protocol === 'https'),
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
+
 
 // 1. VERIFICAR SI HAY COOKIE DE "RECUÉRDAME" AL CARGAR LA PÁGINA
 if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {

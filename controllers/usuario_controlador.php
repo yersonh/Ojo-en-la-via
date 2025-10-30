@@ -6,8 +6,6 @@ ini_set('session.cookie_samesite', 'Strict');
 ini_set('session.use_strict_mode', 1);
 ini_set('session.gc_maxlifetime', 86400); // 24 horas
 
-session_start();
-
 // Configurar parámetros de cookie de sesión
 session_set_cookie_params([
     'lifetime' => 86400, // 24 horas
@@ -17,6 +15,9 @@ session_set_cookie_params([
     'httponly' => true,
     'samesite' => 'Strict'
 ]);
+
+
+session_start();
 
 require_once '../config/database.php';
 require_once '../models/usuario.php';
