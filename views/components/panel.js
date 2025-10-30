@@ -240,185 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN MEJORADO
-class SessionManager {
-    constructor() {
-        this.sessionCheckInterval = 5 * 60 * 1000; // 5 minutos (menos frecuente)
-        this.maxRetries = 3;
-        this.retryCount = 0;
-        this.lastActivity = Date.now();
-        this.isChecking = false;
-        this.init();
-    }
-
-    init() {
-        console.log('🔐 SessionManager inicializado - Verificaciones cada 5 minutos');
-        
-        // Detectar actividad del usuario
-        this.setupActivityListeners();
-        
-        // Verificar sesión periódicamente
-        this.startSessionChecks();
-        
-        // Verificar sesión al cargar (con delay para evitar conflictos)
-        setTimeout(() => this.checkSession(), 2000);
-    }
-
-    setupActivityListeners() {
-        const activities = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart', 'mousedown'];
-        
-        activities.forEach(event => {
-            document.addEventListener(event, () => {
-                this.lastActivity = Date.now();
-                this.retryCount = 0; // Resetear contador en actividad
-            }, { passive: true });
-        });
-
-        // También verificar al hacer focus en la ventana
-        window.addEventListener('focus', () => {
-            this.retryCount = 0;
-            this.checkSession();
-        });
-    }
-
-    startSessionChecks() {
-        setInterval(() => {
-            this.checkSession();
-        }, this.sessionCheckInterval);
-    }
-
-    async checkSession() {
-        // Evitar múltiples verificaciones simultáneas
-        if (this.isChecking) return;
-        
-        this.isChecking = true;
-        
-        try {
-            console.log('🔐 Verificando sesión...');
-            
-            const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-                credentials: 'include',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache',
-                    'X-Requested-With': 'XMLHttpRequest'
-                },
-                // 🆕 Agregar timeout de 10 segundos
-                signal: AbortSignal.timeout(10000)
-            });
-            
-            if (!resp.ok) {
-                this.retryCount++;
-                console.warn(`❌ Error HTTP en verificación (${this.retryCount}/${this.maxRetries}):`, resp.status);
-                
-                // 🆕 Solo redirigir después de múltiples errores consecutivos
-                if (this.retryCount >= this.maxRetries) {
-                    console.error(`🔐 ${this.maxRetries} errores consecutivos - Sesión expirada`);
-                    this.handleSessionExpired();
-                }
-                return;
-            }
-            
-            const data = await resp.json();
-            
-            // 🆕 Resetear contador en éxito
-            this.retryCount = 0;
-            
-            if (!data.success || !data.sesion_activa) {
-                console.warn('🔐 Sesión no activa según servidor:', data.error);
-                this.handleSessionExpired();
-            } else {
-                console.log('✅ Sesión activa - Usuario:', data.nombres);
-            }
-        } catch (error) {
-            this.retryCount++;
-            
-            // 🆕 Manejar diferentes tipos de error
-            if (error.name === 'AbortError') {
-                console.warn('⏰ Timeout en verificación de sesión');
-            } else if (error.name === 'TypeError') {
-                console.warn('🌐 Error de red/CORS:', error.message);
-            } else {
-                console.warn(`🌐 Error verificando sesión (${this.retryCount}/${this.maxRetries}):`, error.message);
-            }
-            
-            // 🆕 Solo redirigir después de múltiples errores de red (excluyendo timeouts)
-            if (this.retryCount >= this.maxRetries && error.name !== 'AbortError') {
-                console.error(`🔐 ${this.maxRetries} errores de red consecutivos - Sesión expirada`);
-                this.handleSessionExpired();
-            }
-        } finally {
-            this.isChecking = false;
-        }
-    }
-
-    handleSessionExpired() {
-        console.warn('🔐 Sesión expirada después de múltiples intentos - Redirigiendo en 5 segundos');
-        
-        // Mostrar notificación
-        this.showSessionExpiredNotification();
-        
-        // 🆕 Redirigir después de 5 segundos (más tiempo para el usuario)
-        setTimeout(() => {
-            console.log('🔐 Redirigiendo al login...');
-            window.location.href = '../index.php?session_expired=1';
-        }, 5000);
-    }
-
-    showSessionExpiredNotification() {
-        // Evitar múltiples notificaciones
-        if (document.getElementById('sessionExpiredNotification')) return;
-        
-        const notification = document.createElement('div');
-        notification.id = 'sessionExpiredNotification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #e74c3c;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-family: Arial;
-            font-size: 14px;
-            max-width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s ease;
-        `;
-        
-        // Agregar animación CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
-            }
-        `;
-        document.head.appendChild(style);
-        
-        notification.innerHTML = `
-            <strong>⚠️ Sesión Expirada</strong>
-            <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login en 5 segundos.</p>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-eliminar después de 5 segundos
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
-    }
-}
-
-// Inicializar el manager de sesión cuando se cargue el panel
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar el manager de sesión
-    window.sessionManager = new SessionManager();
-});
-
 // Función para cerrar sesión
 function cerrarSesion() {
     if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
@@ -639,7 +460,7 @@ function crearPostElement(reporte) {
     }
 }
 
-// 🆕 FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
+// FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
 
 // Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
@@ -740,7 +561,7 @@ window.toggleLike = async function(id_reporte, btn) {
     }
 }
 
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL
+// FUNCIÓN MEJORADA PARA CARGAR PERFIL
 async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
@@ -794,7 +615,7 @@ async function cargarPerfil() {
     }
 }
 
-// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
+// FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
 function actualizarUIUsuario(user) {
     function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
         const elemento = document.getElementById(id);
@@ -849,7 +670,7 @@ function actualizarUIUsuario(user) {
     console.log('✅ Perfil cargado exitosamente');
 }
 
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
+// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
 async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
@@ -894,7 +715,7 @@ async function cargarEstadisticasUsuario() {
     }
 }
 
-// 🆕 FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
+// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
 function actualizarEstadisticasUI(stats) {
     function formatearNumero(num) {
         if (num >= 1000000) {
@@ -920,7 +741,7 @@ function actualizarEstadisticasUI(stats) {
     });
 }
 
-// 🆕 FUNCIÓN PARA CARGAR PERFIL COMPLETO
+// FUNCIÓN PARA CARGAR PERFIL COMPLETO
 async function cargarPerfilCompleto() {
     try {
         console.log('👤 Cargando perfil completo...');
@@ -935,7 +756,7 @@ async function cargarPerfilCompleto() {
     }
 }
 
-// 🆕 FUNCIÓN PARA OBTENER ID DE USUARIO
+// FUNCIÓN PARA OBTENER ID DE USUARIO
 async function obtenerUsuarioId() {
     if (window.usuarioId) {
         return window.usuarioId;
@@ -957,7 +778,7 @@ async function obtenerUsuarioId() {
     return 0;
 }
 
-// 🆕 FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
+// FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
 function mostrarErrorPerfil(mensaje) {
     console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
     
@@ -979,8 +800,6 @@ function mostrarErrorPerfil(mensaje) {
         }
     });
 }
-
-// ... (el resto de las funciones auxiliares se mantienen igual)
 
 // Función auxiliar para crear estructura de imágenes simple
 function crearEstructuraImagenesSimple(imagenes) {
