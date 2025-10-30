@@ -240,6 +240,173 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
+// 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN
+class SessionManager {
+    constructor() {
+        this.sessionCheckInterval = 2 * 60 * 1000; // 2 minutos (más frecuente)
+        this.activityTimeout = 25 * 60 * 1000; // 25 minutos (antes del timeout de 30 min)
+        this.lastActivity = Date.now();
+        this.isChecking = false;
+        this.init();
+    }
+
+    init() {
+        console.log('🔐 SessionManager inicializado');
+        
+        // Detectar actividad del usuario
+        this.setupActivityListeners();
+        
+        // Verificar sesión periódicamente
+        this.startSessionChecks();
+        
+        // Verificar sesión al cargar
+        setTimeout(() => this.checkSession(), 1000);
+    }
+
+    setupActivityListeners() {
+        const activities = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart', 'mousedown'];
+        
+        activities.forEach(event => {
+            document.addEventListener(event, () => {
+                this.lastActivity = Date.now();
+                // Verificar sesión después de actividad prolongada
+                if (Date.now() - this.lastActivity > 10 * 60 * 1000) { // 10 minutos
+                    this.checkSession();
+                }
+            }, { passive: true });
+        });
+
+        // También verificar al hacer focus en la ventana
+        window.addEventListener('focus', () => {
+            this.checkSession();
+        });
+    }
+
+    startSessionChecks() {
+        setInterval(() => {
+            this.checkSession();
+        }, this.sessionCheckInterval);
+    }
+
+    async checkSession() {
+        // Evitar múltiples verificaciones simultáneas
+        if (this.isChecking) return;
+        
+        this.isChecking = true;
+        
+        try {
+            const inactivity = Date.now() - this.lastActivity;
+            
+            // Solo verificar si hay actividad reciente o es tiempo de verificación regular
+            if (inactivity < this.activityTimeout) {
+                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+                    credentials: 'include',
+                    headers: {
+                        'Cache-Control': 'no-cache'
+                    }
+                });
+                
+                if (!resp.ok) {
+                    console.warn('❌ Error HTTP en verificación de sesión:', resp.status);
+                    if (resp.status === 401) {
+                        this.handleSessionExpired();
+                        return;
+                    }
+                }
+                
+                const data = await resp.json();
+                
+                if (!data.success || !data.sesion_activa) {
+                    console.warn('🔐 Sesión no activa:', data.error);
+                    this.handleSessionExpired();
+                } else {
+                    console.log('✅ Sesión activa - Usuario:', data.nombres);
+                }
+            } else {
+                console.warn('⚡ Mucha inactividad, verificando sesión...');
+                // Forzar verificación incluso con inactividad
+                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+                    credentials: 'include'
+                });
+                
+                if (!resp.ok || resp.status === 401) {
+                    this.handleSessionExpired();
+                }
+            }
+        } catch (error) {
+            console.warn('🌐 Error de red verificando sesión:', error.message);
+            // No hacer nada en caso de error de red, podría ser temporal
+        } finally {
+            this.isChecking = false;
+        }
+    }
+
+    handleSessionExpired() {
+        console.warn('🔐 Sesión expirada - Redirigiendo al login');
+        
+        // Mostrar notificación
+        this.showSessionExpiredNotification();
+        
+        // Redirigir después de 3 segundos
+        setTimeout(() => {
+            window.location.href = '../index.php';
+        }, 3000);
+    }
+
+    showSessionExpiredNotification() {
+        // Evitar múltiples notificaciones
+        if (document.getElementById('sessionExpiredNotification')) return;
+        
+        const notification = document.createElement('div');
+        notification.id = 'sessionExpiredNotification';
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #e74c3c;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            font-family: Arial;
+            font-size: 14px;
+            max-width: 300px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            animation: slideIn 0.3s ease;
+        `;
+        
+        // Agregar animación CSS
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideIn {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        notification.innerHTML = `
+            <strong>⚠️ Sesión Expirada</strong>
+            <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login.</p>
+        `;
+        
+        document.body.appendChild(notification);
+        
+        // Auto-eliminar después de 5 segundos
+        setTimeout(() => {
+            if (notification.parentElement) {
+                notification.remove();
+            }
+        }, 5000);
+    }
+}
+
+// Inicializar el manager de sesión cuando se cargue el panel
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar el manager de sesión
+    window.sessionManager = new SessionManager();
+});
+
 // Función para cerrar sesión
 function cerrarSesion() {
     if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
@@ -250,7 +417,7 @@ function cerrarSesion() {
 // Mejorar la experiencia en móviles
 document.addEventListener('touchstart', function() {}, { passive: true });
 
-// Cargar feed de reportes
+// Cargar feed de reportes - VERSIÓN MEJORADA
 async function cargarFeed() {
     console.log('📰 Cargando feed de reportes...');
     
@@ -283,7 +450,9 @@ async function cargarFeed() {
     }
     
     try {
-        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
+        const resp = await fetch('../controllers/reportecontrolador.php?action=listar', {
+            credentials: 'include'
+        });
         
         // Verificar respuesta
         if (!resp.ok) {
@@ -352,7 +521,7 @@ async function cargarFeed() {
     }
 }
 
-// Función para crear elemento de post
+// Función para crear elemento de post - VERSIÓN ACTUALIZADA CON LIKES Y COMENTARIOS
 function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
@@ -458,10 +627,14 @@ function crearPostElement(reporte) {
     }
 }
 
-// FUNCIONES PARA LIKES Y COMENTARIOS
+// 🆕 FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
+
+// Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`);
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`, {
+            credentials: 'include'
+        });
         const data = await resp.json();
         
         const likeCount = postElement.querySelector('.like-count');
@@ -473,9 +646,12 @@ async function cargarLikesPost(id_reporte, postElement) {
     }
 }
 
+// Función para cargar comentarios de un post
 async function cargarComentariosPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`);
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`, {
+            credentials: 'include'
+        });
         const data = await resp.json();
         
         const commentBtn = postElement.querySelector('.comment-btn');
@@ -490,6 +666,7 @@ async function cargarComentariosPost(id_reporte, postElement) {
     }
 }
 
+// Función para verificar si el usuario actual dio like
 async function verificarLikeUsuario(id_reporte, postElement) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -499,7 +676,8 @@ async function verificarLikeUsuario(id_reporte, postElement) {
         
         const resp = await fetch('../controllers/reportecontrolador.php?action=verificar_like', {
             method: 'POST',
-            body: formData
+            body: formData,
+            credentials: 'include'
         });
         const data = await resp.json();
         
@@ -513,6 +691,7 @@ async function verificarLikeUsuario(id_reporte, postElement) {
     }
 }
 
+// Función para toggle like (ACTUALIZADA)
 window.toggleLike = async function(id_reporte, btn) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -522,7 +701,8 @@ window.toggleLike = async function(id_reporte, btn) {
 
         const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
             method: 'POST', 
-            body: formData
+            body: formData,
+            credentials: 'include'
         });
         const r = await resp.json();
         
@@ -548,19 +728,18 @@ window.toggleLike = async function(id_reporte, btn) {
     }
 }
 
-// FUNCIÓN MEJORADA PARA CARGAR PERFIL
+// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL
 async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
         
         const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            credentials: 'include' // Importante: incluir cookies de sesión
+            credentials: 'include'
         });
         
         if (!resp.ok) {
             if (resp.status === 401) {
-                console.warn('🔐 Error 401 - Sesión expirada');
-                // Redirigir al login después de mostrar mensaje
+                console.warn('🔐 Error 401 - Sesión expirada en cargarPerfil');
                 mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
                 setTimeout(() => {
                     window.location.href = '../index.php';
@@ -603,7 +782,7 @@ async function cargarPerfil() {
     }
 }
 
-// FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
+// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
 function actualizarUIUsuario(user) {
     function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
         const elemento = document.getElementById(id);
@@ -658,7 +837,7 @@ function actualizarUIUsuario(user) {
     console.log('✅ Perfil cargado exitosamente');
 }
 
-// FUNCIÓN PARA CARGAR ESTADÍSTICAS
+// 🆕 FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
 async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
@@ -703,7 +882,7 @@ async function cargarEstadisticasUsuario() {
     }
 }
 
-// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
+// 🆕 FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
 function actualizarEstadisticasUI(stats) {
     function formatearNumero(num) {
         if (num >= 1000000) {
@@ -729,7 +908,7 @@ function actualizarEstadisticasUI(stats) {
     });
 }
 
-// FUNCIÓN PARA CARGAR PERFIL COMPLETO
+// 🆕 FUNCIÓN PARA CARGAR PERFIL COMPLETO
 async function cargarPerfilCompleto() {
     try {
         console.log('👤 Cargando perfil completo...');
@@ -744,14 +923,16 @@ async function cargarPerfilCompleto() {
     }
 }
 
-// FUNCIÓN PARA OBTENER ID DE USUARIO
+// 🆕 FUNCIÓN PARA OBTENER ID DE USUARIO
 async function obtenerUsuarioId() {
     if (window.usuarioId) {
         return window.usuarioId;
     }
     
     try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id');
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
+            credentials: 'include'
+        });
         const data = await resp.json();
         if (data.success && data.id_usuario) {
             window.usuarioId = data.id_usuario;
@@ -764,7 +945,7 @@ async function obtenerUsuarioId() {
     return 0;
 }
 
-// FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
+// 🆕 FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
 function mostrarErrorPerfil(mensaje) {
     console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
     
@@ -889,7 +1070,9 @@ async function cargarNotificaciones() {
     
     notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
     try {
-        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
+            credentials: 'include'
+        });
         const data = await resp.json();
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -937,7 +1120,9 @@ async function guardarPerfil() {
 
     try {
         const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', body: form
+            method: 'POST', 
+            body: form,
+            credentials: 'include'
         });
         const res = await resp.json();
         if (res.success) {
@@ -1017,7 +1202,8 @@ window.marcarLeida = async function(id, btn) {
         form.append('id_notificacion', id);
         const resp = await fetch('../controllers/notificacion_controlador.php?action=marcar_leida', { 
             method: 'POST', 
-            body: form 
+            body: form,
+            credentials: 'include'
         });
         const r = await resp.json();
         if (r.success) {

@@ -1,16 +1,31 @@
 <?php
+// Configuración robusta de sesiones para producción
+ini_set('session.cookie_httponly', 1);
+ini_set('session.cookie_secure', 1);
+ini_set('session.cookie_samesite', 'Strict');
+ini_set('session.use_strict_mode', 1);
+ini_set('session.gc_maxlifetime', 86400); // 24 horas
+
 session_start();
+
+// Configurar parámetros de cookie de sesión
+session_set_cookie_params([
+    'lifetime' => 86400, // 24 horas
+    'path' => '/',
+    'domain' => $_SERVER['HTTP_HOST'],
+    'secure' => isset($_SERVER['HTTPS']),
+    'httponly' => true,
+    'samesite' => 'Strict'
+]);
+
 require_once '../config/database.php';
 require_once '../models/usuario.php';
 
-// Configuración para producción
+// Configuración para producción - desactivar display_errors
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 header('Content-Type: application/json');
-
-// Debug: loguear información de sesión
-error_log("SESSION en usuario_controlador: " . print_r($_SESSION, true));
 
 class UsuarioControlador {
     private $usuarioModel;
@@ -22,23 +37,23 @@ class UsuarioControlador {
     
     public function obtener() {
         try {
-            // Debug más detallado
-            error_log("🔍 Verificando sesión en obtener(): " . (isset($_SESSION['id_usuario']) ? $_SESSION['id_usuario'] : 'NO HAY SESION'));
-            
-            // Verificar sesión de manera más flexible para debug
-            if (!isset($_SESSION['id_usuario'])) {
-                error_log("❌ SESION NO ENCONTRADA en obtener()");
+            // Verificar sesión de manera robusta
+            if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+                error_log("❌ SESION NO VALIDA en obtener() - usuario_id: " . ($_SESSION['usuario_id'] ?? 'NO') . ", loggedin: " . ($_SESSION['loggedin'] ?? 'NO'));
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'No autenticado - Sesión no encontrada',
-                    'session_debug' => $_SESSION
+                    'error' => 'No autenticado',
+                    'session_expired' => true
                 ]);
                 return;
             }
             
-            $id_usuario = $_SESSION['id_usuario'];
-            error_log("✅ Sesión encontrada, ID: " . $id_usuario);
+            // Actualizar tiempo de última actividad
+            $_SESSION['last_activity'] = time();
+            
+            $id_usuario = $_SESSION['usuario_id'];
+            error_log("✅ Sesión válida, obteniendo datos para usuario ID: " . $id_usuario);
             
             $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
             
@@ -72,19 +87,23 @@ class UsuarioControlador {
     
     public function obtener_estadisticas() {
         try {
-            // Verificar sesión
-            if (!isset($_SESSION['id_usuario'])) {
+            // Verificar sesión de manera robusta
+            if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'No autenticado'
+                    'error' => 'No autenticado',
+                    'session_expired' => true
                 ]);
                 return;
             }
             
-            $id_usuario = $_SESSION['id_usuario'];
+            // Actualizar tiempo de última actividad
+            $_SESSION['last_activity'] = time();
             
-            // Estadísticas temporales
+            $id_usuario = $_SESSION['usuario_id'];
+            
+            // Estadísticas temporales - puedes implementar la lógica real después
             $estadisticas = [
                 'reportes' => 0,
                 'likes' => 0, 
@@ -98,6 +117,7 @@ class UsuarioControlador {
             ]);
             
         } catch (Exception $e) {
+            error_log("❌ Error en obtener_estadisticas(): " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -108,21 +128,27 @@ class UsuarioControlador {
     
     public function obtener_id() {
         try {
-            if (!isset($_SESSION['id_usuario'])) {
+            // Verificar sesión de manera robusta
+            if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'No autenticado'
+                    'error' => 'No autenticado',
+                    'session_expired' => true
                 ]);
                 return;
             }
             
+            // Actualizar tiempo de última actividad
+            $_SESSION['last_activity'] = time();
+            
             echo json_encode([
                 'success' => true,
-                'id_usuario' => $_SESSION['id_usuario']
+                'id_usuario' => $_SESSION['usuario_id']
             ]);
             
         } catch (Exception $e) {
+            error_log("❌ Error en obtener_id(): " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -131,21 +157,78 @@ class UsuarioControlador {
         }
     }
     
+    public function verificar_sesion() {
+        try {
+            // Verificar sesión de manera robusta
+            if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+                echo json_encode([
+                    'success' => false,
+                    'sesion_activa' => false,
+                    'error' => 'Sesión no activa'
+                ]);
+                return;
+            }
+            
+            // Verificar si la sesión ha expirado por inactividad (30 minutos)
+            $timeout = 30 * 60; // 30 minutos en segundos
+            if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
+                // Sesión expirada
+                session_unset();
+                session_destroy();
+                
+                echo json_encode([
+                    'success' => false,
+                    'sesion_activa' => false,
+                    'error' => 'Sesión expirada por inactividad'
+                ]);
+                return;
+            }
+            
+            // Actualizar tiempo de última actividad
+            $_SESSION['last_activity'] = time();
+            
+            echo json_encode([
+                'success' => true,
+                'sesion_activa' => true,
+                'usuario_id' => $_SESSION['usuario_id'],
+                'nombres' => $_SESSION['nombres'] ?? '',
+                'correo' => $_SESSION['correo'] ?? ''
+            ]);
+            
+        } catch (Exception $e) {
+            error_log("❌ Error en verificar_sesion(): " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'sesion_activa' => false,
+                'error' => 'Error verificando sesión'
+            ]);
+        }
+    }
+    
     public function actualizar() {
         try {
-            if (!isset($_SESSION['id_usuario'])) {
+            // Verificar sesión de manera robusta
+            if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
                 http_response_code(401);
                 echo json_encode(['success' => false, 'error' => 'No autenticado']);
                 return;
             }
             
-            $id_usuario = $_SESSION['id_usuario'];
+            // Actualizar tiempo de última actividad
+            $_SESSION['last_activity'] = time();
+            
+            $id_usuario = $_SESSION['usuario_id'];
             $datos = $_POST;
             
             // Lógica para actualizar usuario
             $resultado = $this->usuarioModel->actualizar($id_usuario, $datos);
             
             if ($resultado) {
+                // Actualizar datos en sesión si es necesario
+                if (isset($datos['nombres'])) {
+                    $_SESSION['nombres'] = $datos['nombres'];
+                }
+                
                 echo json_encode([
                     'success' => true, 
                     'mensaje' => 'Perfil actualizado correctamente'
@@ -158,6 +241,7 @@ class UsuarioControlador {
             }
             
         } catch (Exception $e) {
+            error_log("❌ Error en actualizar(): " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false, 
@@ -179,7 +263,7 @@ try {
             http_response_code(404);
             echo json_encode([
                 'success' => false,
-                'error' => 'Acción no válida'
+                'error' => 'Acción no válida: ' . $action
             ]);
         }
     } else {
@@ -190,10 +274,11 @@ try {
         ]);
     }
 } catch (Exception $e) {
+    error_log("❌ Error fatal en usuario_controlador: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Error interno del servidor: ' . $e->getMessage()
+        'error' => 'Error interno del servidor'
     ]);
 }
 ?>
