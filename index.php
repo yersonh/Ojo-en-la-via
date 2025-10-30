@@ -1,6 +1,7 @@
 <?php
+
 require_once __DIR__ . '/config/config.php';
-require_once BASE_PATH . 'config/database.php';
+require_once BASE_PATH . 'config/database.php'; // ← Este ya maneja sesiones
 require_once BASE_PATH . 'controllers/sesioncontrolador.php';
 require_once BASE_PATH . 'models/persona.php';
 require_once BASE_PATH . 'models/usuario.php';
@@ -19,6 +20,10 @@ use PHPMailer\PHPMailer\Exception;
 $database = new Database();
 $db = $database->conectar();
 $sesionControlador = new SesionControlador($db);
+
+// 🆕 DEBUG: Verificar estado de sesión
+error_log("🔍 INDEX.PHP - Estado sesión: " . session_status());
+error_log("🔍 INDEX.PHP - Datos sesión inicial: " . print_r($_SESSION, true));
 
 // 1. VERIFICAR SI HAY COOKIE DE "RECUÉRDAME" AL CARGAR LA PÁGINA
 if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
@@ -39,6 +44,13 @@ if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
             $_SESSION['rol'] = $usuario['id_rol'];
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
+            
+            // 🆕 FORZAR guardado en Redis
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
+            }
+            
+            error_log("✅ LOGIN AUTOMÁTICO - usuario_id: " . $_SESSION['usuario_id']);
             
             // Redirección según el rol
             if ($usuario['id_rol'] == 1) {
@@ -71,10 +83,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
         $usuario = $sesionControlador->login($correo, $password);
 
         if ($usuario) {
+            // 🆕 Asegurar que la sesión esté activa
+            if (session_status() !== PHP_SESSION_ACTIVE) {
+                error_log("⚠️ Sesión no activa en login, forzando inicio");
+                require_once BASE_PATH . 'config/sessions.php';
+            }
+            
             $_SESSION['usuario_id'] = $usuario['id_usuario'];
             $_SESSION['rol'] = $usuario['id_rol'];
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
+            
+            // 🆕 DEBUG después del login
+            error_log("✅ LOGIN EXITOSO - Datos guardados:");
+            error_log("  usuario_id: " . $_SESSION['usuario_id']);
+            error_log("  rol: " . $_SESSION['rol']);
+            error_log("  nombres: " . $_SESSION['nombres']);
+            error_log("  session_id: " . session_id());
             
             // 3. CREAR COOKIE DE "RECUÉRDAME" SI EL USUARIO LO SOLICITÓ
             if ($remember) {
@@ -103,6 +128,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                     // Si hay error al insertar, simplemente continuar sin recordar
                     error_log("Error al crear token de recordar: " . $e->getMessage());
                 }
+            }
+            
+            // 🆕 FORZAR guardado en Redis antes de redireccionar
+            if (session_status() === PHP_SESSION_ACTIVE) {
+                session_write_close();
             }
             
             // Redirección según el rol del usuario
