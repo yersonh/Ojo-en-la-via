@@ -240,20 +240,6 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// 🆕 INTERCEPTOR GLOBAL DE FETCH PARA MANEJAR ERRORES DE SESIÓN
-const originalFetch = window.fetch;
-window.fetch = function(...args) {
-    return originalFetch.apply(this, args).then(response => {
-        // Si es una redirección a login, manejar apropiadamente
-        if (response.redirected && response.url.includes('login')) {
-            console.warn('⚠️ Redirección detectada, posible sesión expirada');
-            window.location.href = '../index.php';
-            return Promise.reject(new Error('Sesión expirada'));
-        }
-        return response;
-    });
-};
-
 // Función para cerrar sesión
 function cerrarSesion() {
     if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
@@ -263,26 +249,6 @@ function cerrarSesion() {
 
 // Mejorar la experiencia en móviles
 document.addEventListener('touchstart', function() {}, { passive: true });
-
-// 🆕 FUNCIÓN AUXILIAR PARA VERIFICAR SESIÓN
-async function verificarSesion() {
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-            credentials: 'same-origin'
-        });
-        
-        if (!resp.ok) {
-            return false;
-        }
-        
-        const data = await resp.json();
-        return data.sesion_activa === true;
-        
-    } catch (error) {
-        console.error('Error verificando sesión:', error);
-        return false;
-    }
-}
 
 // Cargar feed de reportes - VERSIÓN MEJORADA
 async function cargarFeed() {
@@ -317,9 +283,7 @@ async function cargarFeed() {
     }
     
     try {
-        const resp = await fetch('../controllers/reportecontrolador.php?action=listar', {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
         
         // Verificar respuesta
         if (!resp.ok) {
@@ -494,14 +458,12 @@ function crearPostElement(reporte) {
     }
 }
 
-// 🆕 FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
+// FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
 
 // Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`, {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`);
         const data = await resp.json();
         
         const likeCount = postElement.querySelector('.like-count');
@@ -516,9 +478,7 @@ async function cargarLikesPost(id_reporte, postElement) {
 // Función para cargar comentarios de un post
 async function cargarComentariosPost(id_reporte, postElement) {
     try {
-        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`, {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`);
         const data = await resp.json();
         
         const commentBtn = postElement.querySelector('.comment-btn');
@@ -543,8 +503,7 @@ async function verificarLikeUsuario(id_reporte, postElement) {
         
         const resp = await fetch('../controllers/reportecontrolador.php?action=verificar_like', {
             method: 'POST',
-            body: formData,
-            credentials: 'same-origin'
+            body: formData
         });
         const data = await resp.json();
         
@@ -568,8 +527,7 @@ window.toggleLike = async function(id_reporte, btn) {
 
         const resp = await fetch('../controllers/reportecontrolador.php?action=toggle_like', {
             method: 'POST', 
-            body: formData,
-            credentials: 'same-origin'
+            body: formData
         });
         const r = await resp.json();
         
@@ -595,34 +553,39 @@ window.toggleLike = async function(id_reporte, btn) {
     }
 }
 
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
+// FUNCIÓN SIMPLIFICADA PARA CARGAR ESTADÍSTICAS
 async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
         
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
         
         if (!resp.ok) {
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
-        // 🆕 VERIFICAR QUE SEA JSON
-        const contentType = resp.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const textResponse = await resp.text();
-            console.error('❌ Respuesta no JSON en estadísticas:', textResponse.substring(0, 200));
-            throw new Error('El servidor devolvió HTML en lugar de JSON');
-        }
+        // Verificar contenido de respuesta
+        const text = await resp.text();
+        let data;
         
-        const data = await resp.json();
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('❌ No se pudo parsear JSON:', text.substring(0, 200));
+            throw new Error('Respuesta no válida del servidor');
+        }
         
         if (!data.success) {
             throw new Error(data.error || 'Error al cargar estadísticas');
         }
         
-        const stats = data.estadisticas;
+        const stats = data.estadisticas || {
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        };
+        
         console.log('✅ Estadísticas cargadas:', stats);
         
         // Actualizar las estadísticas en la UI
@@ -631,7 +594,7 @@ async function cargarEstadisticasUsuario() {
     } catch (error) {
         console.error('❌ Error cargando estadísticas:', error);
         
-        // 🆕 MOSTRAR VALORES POR DEFECTO DE FORMA MÁS ELEGANTE
+        // Mostrar valores por defecto en caso de error
         actualizarEstadisticasUI({
             reportes: 0,
             likes: 0,
@@ -641,7 +604,7 @@ async function cargarEstadisticasUsuario() {
     }
 }
 
-// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI CON LAS ESTADÍSTICAS
+// FUNCIÓN PARA ACTUALIZAR LA UI CON LAS ESTADÍSTICAS
 function actualizarEstadisticasUI(stats) {
     // Función auxiliar para formatear números grandes
     function formatearNumero(num) {
@@ -666,51 +629,35 @@ function actualizarEstadisticasUI(stats) {
         if (elemento) {
             elemento.textContent = formatearNumero(stat.valor);
             console.log(`✅ Actualizada estadística ${stat.id}: ${stat.valor}`);
-            
-            // Agregar animación sutil
-            elemento.style.transform = 'scale(1.1)';
-            setTimeout(() => {
-                elemento.style.transform = 'scale(1)';
-            }, 300);
         } else {
             console.warn(`⚠️ Elemento de estadística no encontrado: ${stat.id}`);
         }
     });
 }
 
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL
+// FUNCIÓN SIMPLIFICADA PARA CARGAR PERFIL
 async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
         
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            credentials: 'same-origin' // Incluir cookies de sesión
-        });
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
         
-        // 🆕 VERIFICACIÓN ROBUSTA DE LA RESPUESTA
+        // Verificar respuesta
         if (!resp.ok) {
-            throw new Error(`Error HTTP: ${resp.status} ${resp.statusText}`);
+            throw new Error(`Error HTTP: ${resp.status}`);
         }
         
-        const contentType = resp.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            // 🆕 Obtener el texto para debuggear
-            const textResponse = await resp.text();
-            console.error('❌ El servidor devolvió HTML en lugar de JSON:', textResponse.substring(0, 200));
-            
-            // 🆕 Verificar si es una redirección al login
-            if (textResponse.includes('login') || textResponse.includes('Login')) {
-                mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 2000);
-                return;
-            }
-            
-            throw new Error('El servidor devolvió una respuesta no JSON. Posible error de sesión.');
-        }
+        // Verificar contenido
+        const text = await resp.text();
+        let user;
         
-        const user = await resp.json();
+        try {
+            user = JSON.parse(text);
+        } catch (e) {
+            console.error('❌ No se pudo parsear JSON del perfil:', text.substring(0, 200));
+            mostrarErrorPerfil('Error en formato de respuesta');
+            return;
+        }
 
         if (!user || user.error) {
             console.warn('❌ No se pudo obtener información del usuario:', user?.error);
@@ -720,39 +667,27 @@ async function cargarPerfil() {
 
         console.log('✅ Datos del usuario recibidos:', user);
 
-        // 🆕 FUNCIÓN MEJORADA PARA ACTUALIZAR ELEMENTOS
+        // Función auxiliar para actualizar elementos de forma segura
         function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
             const elemento = document.getElementById(id);
             if (elemento) {
-                // 🆕 Sanitizar el valor
-                const valorSeguro = valor ? String(valor).trim() : '';
-                elemento.textContent = valorSeguro || valorPorDefecto;
-                
-                // 🆕 Restaurar estilo por defecto
+                elemento.textContent = valor || valorPorDefecto;
                 elemento.style.color = '';
-                elemento.style.fontStyle = '';
-                
-                console.log(`✅ Actualizado ${id}: ${valorSeguro || valorPorDefecto}`);
-            } else {
-                console.warn(`⚠️ Elemento no encontrado: ${id}`);
+                console.log(`✅ Actualizado ${id}: ${valor || valorPorDefecto}`);
             }
         }
 
-        // Lista de todos los elementos que podríamos necesitar actualizar
+        // Actualizar elementos del perfil
         const elementosPerfil = [
-            // Información principal
             { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
             { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
             { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-            
-            // Información personal en la tarjeta
             { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
             { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
             { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
             { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
         ];
 
-        // Actualizar todos los elementos
         elementosPerfil.forEach(item => {
             actualizarElemento(item.id, item.valor, item.defecto);
         });
@@ -766,7 +701,6 @@ async function cargarPerfil() {
             profileAvatar.onerror = function() {
                 this.src = '/imagenes/default-avatar.png';
             };
-            console.log('✅ Avatar del perfil actualizado');
         }
         
         if (headerAvatar) {
@@ -774,10 +708,9 @@ async function cargarPerfil() {
             headerAvatar.onerror = function() {
                 this.src = '/imagenes/default-avatar.png';
             };
-            console.log('✅ Avatar del header actualizado');
         }
 
-        // Prefill form solo con datos existentes
+        // Prefill form
         const inpNombres = document.getElementById('inpNombres');
         const inpApellidos = document.getElementById('inpApellidos');
         const inpTelefono = document.getElementById('inpTelefono');
@@ -789,34 +722,15 @@ async function cargarPerfil() {
         console.log('✅ Perfil cargado exitosamente');
 
     } catch (err) {
-        console.error('❌ Error crítico al cargar perfil:', err);
-        
-        // 🆕 MEJOR MANEJO DE ERRORES
-        if (err.message.includes('sesión') || err.message.includes('login')) {
-            mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
-            setTimeout(() => {
-                window.location.href = '../index.php';
-            }, 2000);
-        } else {
-            mostrarErrorPerfil('Error al conectar con el servidor: ' + err.message);
-        }
+        console.error('❌ Error al cargar perfil:', err);
+        mostrarErrorPerfil('Error al cargar información del perfil');
     }
 }
 
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL COMPLETO
+// FUNCIÓN PARA CARGAR PERFIL COMPLETO
 async function cargarPerfilCompleto() {
     try {
         console.log('👤 Cargando perfil completo...');
-        
-        // 🆕 Verificar sesión primero
-        const sesionActiva = await verificarSesion();
-        if (!sesionActiva) {
-            mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
-            setTimeout(() => {
-                window.location.href = '../index.php';
-            }, 2000);
-            return;
-        }
         
         // Cargar información básica del usuario
         await cargarPerfil();
@@ -831,7 +745,7 @@ async function cargarPerfilCompleto() {
     }
 }
 
-// 🆕 Función temporal para obtener ID de usuario - IMPLEMENTA ESTO CON TU SISTEMA DE SESIONES
+// Función temporal para obtener ID de usuario
 async function obtenerUsuarioId() {
     // Si ya tenemos el ID en la variable global, usarlo
     if (window.usuarioId) {
@@ -840,9 +754,7 @@ async function obtenerUsuarioId() {
     
     // Si no está disponible, intentar obtenerlo del servidor
     try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id');
         const data = await resp.json();
         if (data.success && data.id_usuario) {
             window.usuarioId = data.id_usuario;
@@ -852,18 +764,13 @@ async function obtenerUsuarioId() {
         console.error('Error obteniendo ID de usuario:', error);
     }
     
-    // Fallback: mostrar error y redirigir al login
-    console.error('❌ No se pudo obtener el ID de usuario');
-    alert('Error de autenticación. Serás redirigido al login.');
-    window.location.href = '../index.php';
-    return null;
+    return 0; // Valor por defecto
 }
 
 // Función auxiliar para crear estructura de imágenes simple
 function crearEstructuraImagenesSimple(imagenes) {
     if (!imagenes || imagenes.length === 0) return '';
     
-    // Asegurarse de que las URLs sean seguras para HTML
     const imagenesSeguras = imagenes.map(img => {
         return img.replace(/'/g, "&#39;").replace(/"/g, "&#34;");
     });
@@ -906,12 +813,10 @@ function crearEstructuraImagenesSimple(imagenes) {
 
 // Función para navegar al mapa con el reporte específico
 function navegarAlMapa(reporte) {
-    // Navegar a la vista del mapa
     const mapNavItem = document.querySelector('.nav-item[data-target="mapView"]');
     if (mapNavItem) {
         mapNavItem.click();
         
-        // Esperar un poco a que se cargue el mapa y luego enviar el mensaje
         setTimeout(() => {
             enviarCoordenadasAlMapa(reporte);
         }, 1000);
@@ -923,13 +828,11 @@ function enviarCoordenadasAlMapa(reporte) {
     const mapIframe = document.querySelector('#mapView iframe');
     if (mapIframe && mapIframe.contentWindow) {
         try {
-            // Convertir coordenadas a números
             const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
             const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
             
             console.log('📍 Enviando al mapa:', { reportId: reporte.id_reporte, lat, lng });
             
-            // Enviar mensaje al iframe con las coordenadas
             const message = {
                 type: 'SHOW_REPORT',
                 coordinates: {
@@ -948,34 +851,9 @@ function enviarCoordenadasAlMapa(reporte) {
             
             mapIframe.contentWindow.postMessage(message, '*');
             
-            // Reintentar después de 2 segundos por si el mapa no está listo
-            setTimeout(() => {
-                mapIframe.contentWindow.postMessage(message, '*');
-            }, 2000);
-            
         } catch (error) {
             console.error('Error enviando coordenadas al mapa:', error);
-            // Fallback: abrir el mapa con parámetros en la URL
-            abrirMapaConCoordenadas(reporte);
         }
-    } else {
-        console.error('❌ No se puede acceder al iframe del mapa');
-        // Fallback si no se puede comunicar con el iframe
-        abrirMapaConCoordenadas(reporte);
-    }
-}
-
-// Función fallback para abrir mapa con coordenadas en parámetros URL
-function abrirMapaConCoordenadas(reporte) {
-    const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
-    const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
-    
-    // Usar la variable mapUrl que ya está definida en el scope global desde PHP
-    const mapUrlWithParams = `${window.mapUrl || '<?php echo $mapUrl; ?>'}?lat=${lat}&lng=${lng}&reportId=${reporte.id_reporte}`;
-    const mapIframe = document.querySelector('#mapView iframe');
-    
-    if (mapIframe) {
-        mapIframe.src = mapUrlWithParams;
     }
 }
 
@@ -983,7 +861,6 @@ function abrirMapaConCoordenadas(reporte) {
 function mostrarErrorPerfil(mensaje) {
     console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
     
-    // Intentar mostrar el error en diferentes lugares
     const elementosError = [
         'profileName',
         'profileEmail', 
@@ -994,54 +871,16 @@ function mostrarErrorPerfil(mensaje) {
         'profilePhoneCard'
     ];
     
-    let elementosActualizados = 0;
-    
     elementosError.forEach(id => {
         const elemento = document.getElementById(id);
         if (elemento) {
             elemento.textContent = 'Error al cargar';
             elemento.style.color = '#e74c3c';
-            elementosActualizados++;
         }
     });
-    
-    console.log(`✅ ${elementosActualizados} elementos de error actualizados`);
-    
-    // Mostrar notificación temporal solo si estamos en una vista visible
-    const profileView = document.getElementById('profileView');
-    if (profileView && profileView.style.display !== 'none') {
-        const notification = document.createElement('div');
-        notification.style.cssText = `
-            position: fixed;
-            top: 60px;
-            right: 20px;
-            background: #e74c3c;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-family: Arial;
-            font-size: 14px;
-            max-width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-        `;
-        notification.innerHTML = `
-            <strong>⚠️ Error</strong>
-            <p style="margin: 5px 0; font-size: 12px;">${mensaje}</p>
-        `;
-        
-        document.body.appendChild(notification);
-        
-        // Auto-eliminar después de 5 segundos
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
-            }
-        }, 5000);
-    }
 }
 
-// Notificaciones (ACTUALIZADA para usar el nuevo controlador)
+// Notificaciones
 async function cargarNotificaciones() {
     const notificationsView = document.getElementById('notificationsView');
     if (!notificationsView) {
@@ -1051,9 +890,7 @@ async function cargarNotificaciones() {
     
     notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
     try {
-        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
-            credentials: 'same-origin'
-        });
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar');
         const data = await resp.json();
 
         if (!Array.isArray(data) || data.length === 0) {
@@ -1101,9 +938,7 @@ async function guardarPerfil() {
 
     try {
         const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', 
-            body: form,
-            credentials: 'same-origin'
+            method: 'POST', body: form
         });
         const res = await resp.json();
         if (res.success) {
@@ -1122,7 +957,6 @@ async function guardarPerfil() {
 
 // Función para abrir mapa en pantalla completa
 function abrirMapaCompleto() {
-    // Usar la variable mapUrl que ya está definida en el scope global desde PHP
     const url = window.mapUrl || '<?php echo $mapUrl; ?>';
     const ventanaMapa = window.open(url, 'MapaOjoEnLaVia', 
         'width=1200,height=800,scrollbars=yes,resizable=yes');
@@ -1157,10 +991,8 @@ function formatearCoordenada(coord) {
         return 'No disponible';
     }
     
-    // Convertir a número si es string
     const num = typeof coord === 'string' ? parseFloat(coord) : coord;
     
-    // Verificar si es un número válido
     if (isNaN(num)) {
         return 'Inválida';
     }
@@ -1188,8 +1020,7 @@ window.marcarLeida = async function(id, btn) {
         form.append('id_notificacion', id);
         const resp = await fetch('../controllers/notificacion_controlador.php?action=marcar_leida', { 
             method: 'POST', 
-            body: form,
-            credentials: 'same-origin'
+            body: form 
         });
         const r = await resp.json();
         if (r.success) {
@@ -1203,9 +1034,7 @@ window.marcarLeida = async function(id, btn) {
 }
 
 window.verNotificacion = function(id_notificacion, id_reporte) {
-    // Marcar como leída y abrir la info del reporte
     if (id_reporte && id_reporte !== 'null') {
-        // Abrir comentarios para ese reporte
         if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
             ComentariosManager.abrirComentarios(id_reporte);
         } else {
