@@ -240,18 +240,19 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN
+// 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN MEJORADO
 class SessionManager {
     constructor() {
-        this.sessionCheckInterval = 2 * 60 * 1000; // 2 minutos (más frecuente)
-        this.activityTimeout = 25 * 60 * 1000; // 25 minutos (antes del timeout de 30 min)
+        this.sessionCheckInterval = 5 * 60 * 1000; // 5 minutos (menos frecuente)
+        this.maxRetries = 3;
+        this.retryCount = 0;
         this.lastActivity = Date.now();
         this.isChecking = false;
         this.init();
     }
 
     init() {
-        console.log('🔐 SessionManager inicializado');
+        console.log('🔐 SessionManager inicializado - Verificaciones cada 5 minutos');
         
         // Detectar actividad del usuario
         this.setupActivityListeners();
@@ -259,8 +260,8 @@ class SessionManager {
         // Verificar sesión periódicamente
         this.startSessionChecks();
         
-        // Verificar sesión al cargar
-        setTimeout(() => this.checkSession(), 1000);
+        // Verificar sesión al cargar (con delay para evitar conflictos)
+        setTimeout(() => this.checkSession(), 2000);
     }
 
     setupActivityListeners() {
@@ -269,15 +270,13 @@ class SessionManager {
         activities.forEach(event => {
             document.addEventListener(event, () => {
                 this.lastActivity = Date.now();
-                // Verificar sesión después de actividad prolongada
-                if (Date.now() - this.lastActivity > 10 * 60 * 1000) { // 10 minutos
-                    this.checkSession();
-                }
+                this.retryCount = 0; // Resetear contador en actividad
             }, { passive: true });
         });
 
         // También verificar al hacer focus en la ventana
         window.addEventListener('focus', () => {
+            this.retryCount = 0;
             this.checkSession();
         });
     }
@@ -295,62 +294,75 @@ class SessionManager {
         this.isChecking = true;
         
         try {
-            const inactivity = Date.now() - this.lastActivity;
+            console.log('🔐 Verificando sesión...');
             
-            // Solo verificar si hay actividad reciente o es tiempo de verificación regular
-            if (inactivity < this.activityTimeout) {
-                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-                    credentials: 'include',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
-                });
+            const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+                credentials: 'include',
+                headers: {
+                    'Cache-Control': 'no-cache',
+                    'Pragma': 'no-cache',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                // 🆕 Agregar timeout de 10 segundos
+                signal: AbortSignal.timeout(10000)
+            });
+            
+            if (!resp.ok) {
+                this.retryCount++;
+                console.warn(`❌ Error HTTP en verificación (${this.retryCount}/${this.maxRetries}):`, resp.status);
                 
-                if (!resp.ok) {
-                    console.warn('❌ Error HTTP en verificación de sesión:', resp.status);
-                    if (resp.status === 401) {
-                        this.handleSessionExpired();
-                        return;
-                    }
-                }
-                
-                const data = await resp.json();
-                
-                if (!data.success || !data.sesion_activa) {
-                    console.warn('🔐 Sesión no activa:', data.error);
+                // 🆕 Solo redirigir después de múltiples errores consecutivos
+                if (this.retryCount >= this.maxRetries) {
+                    console.error(`🔐 ${this.maxRetries} errores consecutivos - Sesión expirada`);
                     this.handleSessionExpired();
-                } else {
-                    console.log('✅ Sesión activa - Usuario:', data.nombres);
                 }
+                return;
+            }
+            
+            const data = await resp.json();
+            
+            // 🆕 Resetear contador en éxito
+            this.retryCount = 0;
+            
+            if (!data.success || !data.sesion_activa) {
+                console.warn('🔐 Sesión no activa según servidor:', data.error);
+                this.handleSessionExpired();
             } else {
-                console.warn('⚡ Mucha inactividad, verificando sesión...');
-                // Forzar verificación incluso con inactividad
-                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-                    credentials: 'include'
-                });
-                
-                if (!resp.ok || resp.status === 401) {
-                    this.handleSessionExpired();
-                }
+                console.log('✅ Sesión activa - Usuario:', data.nombres);
             }
         } catch (error) {
-            console.warn('🌐 Error de red verificando sesión:', error.message);
-            // No hacer nada en caso de error de red, podría ser temporal
+            this.retryCount++;
+            
+            // 🆕 Manejar diferentes tipos de error
+            if (error.name === 'AbortError') {
+                console.warn('⏰ Timeout en verificación de sesión');
+            } else if (error.name === 'TypeError') {
+                console.warn('🌐 Error de red/CORS:', error.message);
+            } else {
+                console.warn(`🌐 Error verificando sesión (${this.retryCount}/${this.maxRetries}):`, error.message);
+            }
+            
+            // 🆕 Solo redirigir después de múltiples errores de red (excluyendo timeouts)
+            if (this.retryCount >= this.maxRetries && error.name !== 'AbortError') {
+                console.error(`🔐 ${this.maxRetries} errores de red consecutivos - Sesión expirada`);
+                this.handleSessionExpired();
+            }
         } finally {
             this.isChecking = false;
         }
     }
 
     handleSessionExpired() {
-        console.warn('🔐 Sesión expirada - Redirigiendo al login');
+        console.warn('🔐 Sesión expirada después de múltiples intentos - Redirigiendo en 5 segundos');
         
         // Mostrar notificación
         this.showSessionExpiredNotification();
         
-        // Redirigir después de 3 segundos
+        // 🆕 Redirigir después de 5 segundos (más tiempo para el usuario)
         setTimeout(() => {
-            window.location.href = '../index.php';
-        }, 3000);
+            console.log('🔐 Redirigiendo al login...');
+            window.location.href = '../index.php?session_expired=1';
+        }, 5000);
     }
 
     showSessionExpiredNotification() {
@@ -387,7 +399,7 @@ class SessionManager {
         
         notification.innerHTML = `
             <strong>⚠️ Sesión Expirada</strong>
-            <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login.</p>
+            <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login en 5 segundos.</p>
         `;
         
         document.body.appendChild(notification);
