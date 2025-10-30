@@ -1,7 +1,7 @@
 <?php
 session_start();
 require_once '../config/database.php';
-require_once '../models/Usuario.php';
+require_once '../models/usuario.php';
 
 // Configuración para producción - desactivar display_errors
 ini_set('display_errors', 0);
