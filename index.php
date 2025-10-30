@@ -1,20 +1,5 @@
 <?php
 
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.use_strict_mode', 1);
-ini_set('session.gc_maxlifetime', 86400);
-
-session_set_cookie_params([
-    'lifetime' => 86400,
-    'path' => '/',
-    'domain' => $_SERVER['HTTP_HOST'],
-    'secure' => ($protocol === 'https'),
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
-
 session_start();
 
 require_once __DIR__ . '/config/config.php';
@@ -38,8 +23,6 @@ $database = new Database();
 $db = $database->conectar();
 $sesionControlador = new SesionControlador($db);
 
-
-
 // 1. VERIFICAR SI HAY COOKIE DE "RECUÉRDAME" AL CARGAR LA PÁGINA
 if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
     $token = $_COOKIE['remember_token'];
@@ -59,8 +42,6 @@ if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
             $_SESSION['rol'] = $usuario['id_rol'];
             $_SESSION['nombres'] = $usuario['nombres'];
             $_SESSION['correo'] = $usuario['correo'];
-            $_SESSION['loggedin'] = true;
-            $_SESSION['last_activity'] = time();
             
             // Redirección según el rol
             if ($usuario['id_rol'] == 1) {
