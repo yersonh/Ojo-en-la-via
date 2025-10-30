@@ -1,8 +1,7 @@
-// Panel.js - gestiona navegación inferior, feed, notificaciones y perfil
+// Panel.js - Versión corregida sin cierres de sesión agresivos
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando panel...');
     
-    // Esperar un poco más para que el DOM esté completamente cargado
     setTimeout(() => {
         try {
             const navItems = document.querySelectorAll('.nav-item');
@@ -24,11 +23,11 @@ document.addEventListener('DOMContentLoaded', function() {
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
             
-            // Cargar datos iniciales
-            cargarFeed();
-            cargarPerfil();
+            // Cargar datos iniciales (sin verificaciones agresivas de sesión)
+            cargarFeedSuave();
+            cargarPerfilSuave();
 
-            // Configurar botones del perfil de forma SEGURA
+            // Configurar botones del perfil
             const btnEditProfile = document.getElementById('btnEditProfile');
             const btnCancelProfile = document.getElementById('btnCancelProfile');
             const btnSaveProfile = document.getElementById('btnSaveProfile');
@@ -50,7 +49,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (btnSaveProfile) {
                 btnSaveProfile.addEventListener('click', async () => {
-                    await guardarPerfil();
+                    await guardarPerfilSuave();
                 });
             }
             
@@ -63,32 +62,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('✅ Panel inicializado correctamente');
 
-            // Función para inicializar el auto-ocultado de la navegación
             function initAutoHideNav() {
-                // Ocultar después de 3 segundos de inactividad
                 hideTimeout = setTimeout(hideNavigation, 3000);
-                
-                // Mostrar navegación al hacer hover en la zona de activación
                 navActivationZone.addEventListener('mouseenter', showNavigation);
                 navActivationZone.addEventListener('touchstart', showNavigation);
-                
-                // Mostrar navegación al hacer hover sobre ella misma
                 bottomNav.addEventListener('mouseenter', showNavigation);
                 bottomNav.addEventListener('touchstart', showNavigation);
                 
-                // Ocultar al salir del área de la navegación
                 bottomNav.addEventListener('mouseleave', () => {
                     if (!isUserInteracting()) {
                         hideTimeout = setTimeout(hideNavigation, 1000);
                     }
                 });
                 
-                // Detectar scroll para auto-ocultar
                 if (mainContent) {
                     mainContent.addEventListener('scroll', handleScroll);
                 }
                 
-                // Resetear timer en interacciones
                 document.addEventListener('mousemove', resetHideTimer);
                 document.addEventListener('touchstart', resetHideTimer);
                 document.addEventListener('click', resetHideTimer);
@@ -96,8 +86,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             function handleScroll() {
                 const scrollTop = mainContent.scrollTop;
-                
-                // Determinar dirección del scroll
                 if (scrollTop > lastScrollTop) {
                     scrollDirection = 'down';
                 } else {
@@ -105,7 +93,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 lastScrollTop = scrollTop;
                 
-                // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
                 if (scrollDirection === 'down' && !isNavHidden) {
                     hideNavigation();
                 } else if (scrollDirection === 'up' && isNavHidden) {
@@ -128,10 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (mapButton && bottomNav) {
                     if (bottomNav.classList.contains('hidden')) {
-                        // Navegación oculta - botón más abajo
                         mapButton.style.bottom = '20px';
                     } else {
-                        // Navegación visible - botón arriba de la navegación
                         mapButton.style.bottom = '80px';
                     }
                 }
@@ -147,8 +132,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         mainContent.classList.add('with-hidden-nav');
                     }
                     isNavHidden = true;
-                    
-                    // Actualizar posición del botón
                     actualizarPosicionBoton();
                 }
             }
@@ -164,16 +147,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         mainContent.classList.add('with-visible-nav');
                     }
                     isNavHidden = false;
-                    
-                    // Actualizar posición del botón
                     actualizarPosicionBoton();
-                    
                     hideTimeout = setTimeout(hideNavigation, 3000);
                 }
             }
 
             function isUserInteracting() {
-                // Verificar si el usuario está interactuando con la navegación
                 return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
             }
 
@@ -190,11 +169,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetElement) {
                     targetElement.style.display = 'block';
                     
-                    // Manejar el botón flotante
                     const mapButton = document.querySelector('.map-floating-button');
                     
                     if (target === 'mapView') {
-                        // Configurar mapa en pantalla completa
                         targetElement.style.position = 'fixed';
                         targetElement.style.top = '44px';
                         targetElement.style.left = '0';
@@ -204,21 +181,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         targetElement.style.height = 'calc(100vh - 44px)';
                         targetElement.style.zIndex = '998';
                         
-                        // Mostrar botón
                         if (mapButton) {
                             mapButton.style.display = 'flex';
                             mapButton.classList.add('visible');
                             mapButton.classList.remove('hidden');
                         }
                         
-                        // Asegurar que el iframe ocupe todo
                         const iframe = targetElement.querySelector('iframe');
                         if (iframe) {
                             iframe.style.width = '100%';
                             iframe.style.height = '100%';
                         }
                     } else {
-                        // Ocultar botón en otras vistas
                         if (mapButton) {
                             mapButton.style.display = 'none';
                             mapButton.classList.remove('visible');
@@ -229,9 +203,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 showNavigation();
 
-                if (target === 'feedView') cargarFeed();
-                if (target === 'notificationsView') cargarNotificaciones();
-                if (target === 'profileView') cargarPerfilCompleto();
+                if (target === 'feedView') cargarFeedSuave();
+                if (target === 'notificationsView') cargarNotificacionesSuave();
+                if (target === 'profileView') cargarPerfilCompletoSuave();
             }
 
         } catch (error) {
@@ -240,18 +214,10 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// Función para cerrar sesión
-function cerrarSesion() {
-    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-        window.location.href = '../logout.php';
-    }
-}
+// VERSIÓN SEGURA DE LAS FUNCIONES PRINCIPALES - SIN REDIRECCIONES AGRESIVAS
 
-// Mejorar la experiencia en móviles
-document.addEventListener('touchstart', function() {}, { passive: true });
-
-// Cargar feed de reportes - VERSIÓN MEJORADA
-async function cargarFeed() {
+// Cargar feed de forma segura
+async function cargarFeedSuave() {
     console.log('📰 Cargando feed de reportes...');
     
     const feedView = document.getElementById('feedView');
@@ -260,12 +226,10 @@ async function cargarFeed() {
         return;
     }
     
-    // Mostrar estados de carga de forma segura
     const postsContainer = document.getElementById('postsContainer');
     const loadingPosts = document.getElementById('loadingPosts');
     const noPosts = document.getElementById('noPosts');
     
-    // Función segura para mostrar/ocultar elementos
     function mostrarElemento(elemento, mostrar) {
         if (elemento && elemento.style) {
             elemento.style.display = mostrar ? 'block' : 'none';
@@ -277,8 +241,6 @@ async function cargarFeed() {
         mostrarElemento(loadingPosts, true);
         mostrarElemento(noPosts, false);
     } else {
-        // Fallback seguro
-        console.warn('⚠️ Elementos del feed no encontrados, usando fallback');
         feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
     }
     
@@ -287,8 +249,13 @@ async function cargarFeed() {
             credentials: 'include'
         });
         
-        // Verificar respuesta
+        // MANEJO SEGURO DE ERRORES - SIN REDIRECCIONES
         if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Posible problema de sesión al cargar feed');
+                // No redirigir, solo mostrar error
+                throw new Error('Problema de autenticación');
+            }
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
@@ -303,12 +270,11 @@ async function cargarFeed() {
                 mostrarElemento(loadingPosts, false);
                 mostrarElemento(noPosts, true);
             } else {
-                feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles. ¡Sé el primero en reportar!</p>';
+                feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles.</p>';
             }
             return;
         }
 
-        // Limpiar y mostrar posts de forma segura
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             postsContainer.innerHTML = '';
@@ -324,7 +290,6 @@ async function cargarFeed() {
                 }
             });
         } else {
-            // Fallback seguro
             feedView.innerHTML = '';
             data.forEach(post => {
                 try {
@@ -343,18 +308,329 @@ async function cargarFeed() {
     } catch (err) {
         console.error('❌ Error cargando feed:', err);
         
-        // Manejo seguro de errores
+        // MOSTRAR ERROR SIN REDIRIGIR
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             mostrarElemento(noPosts, true);
-            noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+            noPosts.innerHTML = '<p style="text-align:center; color:var(--warning); padding: 20px;">Problema al cargar reportes. Intenta recargar la página.</p>';
         } else {
-            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+            feedView.innerHTML = '<p style="text-align:center; color:var(--warning); padding: 20px;">Problema al cargar reportes.</p>';
         }
     }
 }
 
-// Función para crear elemento de post - VERSIÓN ACTUALIZADA CON LIKES Y COMENTARIOS
+// Cargar perfil de forma segura
+async function cargarPerfilSuave() {
+    try {
+        console.log('👤 Cargando información del perfil...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+            credentials: 'include'
+        });
+        
+        // MANEJO SEGURO - NO REDIRIGIR EN ERROR 401
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Posible problema de sesión al cargar perfil');
+                // Mostrar datos por defecto en lugar de redirigir
+                mostrarDatosPerfilPorDefecto();
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const user = await resp.json();
+
+        if (user && user.success === false) {
+            console.warn('❌ Error del servidor:', user.error);
+            // Mostrar datos por defecto en lugar de redirigir
+            mostrarDatosPerfilPorDefecto();
+            return;
+        }
+
+        console.log('✅ Datos del usuario recibidos:', user);
+        actualizarUIUsuario(user);
+
+    } catch (err) {
+        console.error('❌ Error cargando perfil:', err);
+        // Mostrar datos por defecto en lugar de redirigir
+        mostrarDatosPerfilPorDefecto();
+    }
+}
+
+// Función para mostrar datos por defecto cuando hay problemas de sesión
+function mostrarDatosPerfilPorDefecto() {
+    const elementosPerfil = [
+        'profileName', 'profileEmail', 'profilePhone', 
+        'profileNames', 'profileLastnames', 'profileEmailCard', 'profilePhoneCard'
+    ];
+    
+    elementosPerfil.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            if (id === 'profileName') elemento.textContent = 'Usuario';
+            else if (id.includes('Email')) elemento.textContent = 'correo@ejemplo.com';
+            else if (id.includes('Phone')) elemento.textContent = 'Sin teléfono';
+            else elemento.textContent = 'No disponible';
+            elemento.style.color = '#999';
+        }
+    });
+}
+
+// Versiones seguras de otras funciones
+async function cargarNotificacionesSuave() {
+    const notificationsView = document.getElementById('notificationsView');
+    if (!notificationsView) return;
+    
+    notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
+    
+    try {
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
+            credentials: 'include'
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                notificationsView.innerHTML = '<div class="notification">Problema de sesión al cargar notificaciones</div>';
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+            notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
+            return;
+        }
+
+        notificationsView.innerHTML = '';
+        data.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'notification';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${escapeHtml(n.origen_nombres || 'Sistema')}</strong>
+                        <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
+                        <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
+                        <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
+                    </div>
+                </div>
+            `;
+            notificationsView.appendChild(div);
+        });
+    } catch (err) {
+        console.error(err);
+        notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
+    }
+}
+
+async function guardarPerfilSuave() {
+    const form = new FormData();
+    const foto = document.getElementById('fotoPerfil');
+    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
+    
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) form.append('nombres', inpNombres.value);
+    if (inpApellidos) form.append('apellidos', inpApellidos.value);
+    if (inpTelefono) form.append('telefono', inpTelefono.value);
+
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
+            method: 'POST', 
+            body: form,
+            credentials: 'include'
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const res = await resp.json();
+        if (res.success) {
+            alert('Perfil actualizado');
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) profileForm.style.display = 'none';
+            await cargarPerfilSuave();
+        } else {
+            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al guardar perfil');
+    }
+}
+
+async function cargarPerfilCompletoSuave() {
+    try {
+        console.log('👤 Cargando perfil completo...');
+        await cargarPerfilSuave();
+        await cargarEstadisticasUsuario();
+        console.log('✅ Perfil completo cargado exitosamente');
+    } catch (error) {
+        console.error('❌ Error cargando perfil completo:', error);
+    }
+}
+
+// FUNCIÓN PARA CARGAR ESTADÍSTICAS
+async function cargarEstadisticasUsuario() {
+    try {
+        console.log('📊 Cargando estadísticas del usuario...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+            credentials: 'include'
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('🔐 Sesión expirada en estadísticas');
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'Error al cargar estadísticas');
+        }
+        
+        const stats = data.estadisticas || {
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        };
+        
+        console.log('✅ Estadísticas cargadas:', stats);
+        actualizarEstadisticasUI(stats);
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        actualizarEstadisticasUI({
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        });
+    }
+}
+
+// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
+function actualizarEstadisticasUI(stats) {
+    function formatearNumero(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+    
+    const elementosStats = [
+        { id: 'statReports', valor: stats.reportes },
+        { id: 'statLikes', valor: stats.likes },
+        { id: 'statComments', valor: stats.comentarios },
+        { id: 'statViews', valor: stats.vistas }
+    ];
+    
+    elementosStats.forEach(stat => {
+        const elemento = document.getElementById(stat.id);
+        if (elemento) {
+            elemento.textContent = formatearNumero(stat.valor);
+        }
+    });
+}
+
+// FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
+function actualizarUIUsuario(user) {
+    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            const valorSeguro = valor ? String(valor).trim() : '';
+            elemento.textContent = valorSeguro || valorPorDefecto;
+            elemento.style.color = '';
+        }
+    }
+
+    const elementosPerfil = [
+        { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
+        { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
+        { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
+        { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
+        { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
+        { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
+        { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
+    ];
+
+    elementosPerfil.forEach(item => {
+        actualizarElemento(item.id, item.valor, item.defecto);
+    });
+
+    // Actualizar avatars
+    const profileAvatar = document.getElementById('profileAvatar');
+    const headerAvatar = document.getElementById('headerAvatar');
+    
+    if (profileAvatar) {
+        profileAvatar.src = '/imagenes/fiveicon.png';
+        profileAvatar.onerror = function() {
+            this.src = '/imagenes/default-avatar.png';
+        };
+    }
+    
+    if (headerAvatar) {
+        headerAvatar.src = '/imagenes/fiveicon.png';
+        headerAvatar.onerror = function() {
+            this.src = '/imagenes/default-avatar.png';
+        };
+    }
+
+    // Prefill form
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) inpNombres.value = user.nombres || '';
+    if (inpApellidos) inpApellidos.value = user.apellidos || '';
+    if (inpTelefono) inpTelefono.value = user.telefono || '';
+
+    console.log('✅ Perfil cargado exitosamente');
+}
+
+// FUNCIÓN PARA OBTENER ID DE USUARIO
+async function obtenerUsuarioId() {
+    if (window.usuarioId) {
+        return window.usuarioId;
+    }
+    
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
+            credentials: 'include'
+        });
+        const data = await resp.json();
+        if (data.success && data.id_usuario) {
+            window.usuarioId = data.id_usuario;
+            return data.id_usuario;
+        }
+    } catch (error) {
+        console.error('Error obteniendo ID de usuario:', error);
+    }
+    
+    return 0;
+}
+
+// Función para crear elemento de post
 function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
@@ -460,8 +736,6 @@ function crearPostElement(reporte) {
     }
 }
 
-// FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
-
 // Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
     try {
@@ -524,7 +798,7 @@ async function verificarLikeUsuario(id_reporte, postElement) {
     }
 }
 
-// Función para toggle like (ACTUALIZADA)
+// Función para toggle like
 window.toggleLike = async function(id_reporte, btn) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -559,246 +833,6 @@ window.toggleLike = async function(id_reporte, btn) {
         console.error(err);
         alert('Error al conectar con el servidor');
     }
-}
-
-// FUNCIÓN MEJORADA PARA CARGAR PERFIL
-async function cargarPerfil() {
-    try {
-        console.log('👤 Cargando información del perfil...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            credentials: 'include'
-        });
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('🔐 Error 401 - Sesión expirada en cargarPerfil');
-                mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 2000);
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const user = await resp.json();
-
-        if (user && user.success === false) {
-            console.warn('❌ Error del servidor:', user.error);
-            
-            // Si es error de autenticación, redirigir
-            if (user.error && user.error.includes('No autenticado')) {
-                mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 2000);
-                return;
-            }
-            
-            mostrarErrorPerfil(user.error || 'Error del servidor');
-            return;
-        }
-
-        console.log('✅ Datos del usuario recibidos:', user);
-        actualizarUIUsuario(user);
-
-    } catch (err) {
-        console.error('❌ Error cargando perfil:', err);
-        
-        // Si es error de red, podría ser problema de sesión
-        if (err.message.includes('401') || err.message.includes('No autenticado')) {
-            mostrarErrorPerfil('Sesión expirada. Por favor inicia sesión nuevamente.');
-        } else {
-            mostrarErrorPerfil('Error al cargar información del perfil');
-        }
-    }
-}
-
-// FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
-function actualizarUIUsuario(user) {
-    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            const valorSeguro = valor ? String(valor).trim() : '';
-            elemento.textContent = valorSeguro || valorPorDefecto;
-            elemento.style.color = '';
-        }
-    }
-
-    const elementosPerfil = [
-        { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
-        { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-        { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
-        { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
-        { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
-    ];
-
-    elementosPerfil.forEach(item => {
-        actualizarElemento(item.id, item.valor, item.defecto);
-    });
-
-    // Actualizar avatars
-    const profileAvatar = document.getElementById('profileAvatar');
-    const headerAvatar = document.getElementById('headerAvatar');
-    
-    if (profileAvatar) {
-        profileAvatar.src = '/imagenes/fiveicon.png';
-        profileAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-    
-    if (headerAvatar) {
-        headerAvatar.src = '/imagenes/fiveicon.png';
-        headerAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-
-    // Prefill form
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) inpNombres.value = user.nombres || '';
-    if (inpApellidos) inpApellidos.value = user.apellidos || '';
-    if (inpTelefono) inpTelefono.value = user.telefono || '';
-
-    console.log('✅ Perfil cargado exitosamente');
-}
-
-// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
-async function cargarEstadisticasUsuario() {
-    try {
-        console.log('📊 Cargando estadísticas del usuario...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            credentials: 'include'
-        });
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('🔐 Sesión expirada en estadísticas');
-                return; // No hacer nada, ya se manejó en cargarPerfil
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const data = await resp.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Error al cargar estadísticas');
-        }
-        
-        const stats = data.estadisticas || {
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        };
-        
-        console.log('✅ Estadísticas cargadas:', stats);
-        actualizarEstadisticasUI(stats);
-        
-    } catch (error) {
-        console.error('❌ Error cargando estadísticas:', error);
-        // No mostrar error para no molestar al usuario
-        actualizarEstadisticasUI({
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        });
-    }
-}
-
-// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
-function actualizarEstadisticasUI(stats) {
-    function formatearNumero(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    }
-    
-    const elementosStats = [
-        { id: 'statReports', valor: stats.reportes },
-        { id: 'statLikes', valor: stats.likes },
-        { id: 'statComments', valor: stats.comentarios },
-        { id: 'statViews', valor: stats.vistas }
-    ];
-    
-    elementosStats.forEach(stat => {
-        const elemento = document.getElementById(stat.id);
-        if (elemento) {
-            elemento.textContent = formatearNumero(stat.valor);
-        }
-    });
-}
-
-// FUNCIÓN PARA CARGAR PERFIL COMPLETO
-async function cargarPerfilCompleto() {
-    try {
-        console.log('👤 Cargando perfil completo...');
-        
-        await cargarPerfil();
-        await cargarEstadisticasUsuario();
-        
-        console.log('✅ Perfil completo cargado exitosamente');
-        
-    } catch (error) {
-        console.error('❌ Error cargando perfil completo:', error);
-    }
-}
-
-// FUNCIÓN PARA OBTENER ID DE USUARIO
-async function obtenerUsuarioId() {
-    if (window.usuarioId) {
-        return window.usuarioId;
-    }
-    
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
-            credentials: 'include'
-        });
-        const data = await resp.json();
-        if (data.success && data.id_usuario) {
-            window.usuarioId = data.id_usuario;
-            return data.id_usuario;
-        }
-    } catch (error) {
-        console.error('Error obteniendo ID de usuario:', error);
-    }
-    
-    return 0;
-}
-
-// FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
-function mostrarErrorPerfil(mensaje) {
-    console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
-    
-    const elementosError = [
-        'profileName',
-        'profileEmail', 
-        'profilePhone',
-        'profileNames',
-        'profileLastnames',
-        'profileEmailCard',
-        'profilePhoneCard'
-    ];
-    
-    elementosError.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            elemento.textContent = 'Error al cargar';
-            elemento.style.color = '#e74c3c';
-        }
-    });
 }
 
 // Función auxiliar para crear estructura de imágenes simple
@@ -888,85 +922,6 @@ function enviarCoordenadasAlMapa(reporte) {
         } catch (error) {
             console.error('Error enviando coordenadas al mapa:', error);
         }
-    }
-}
-
-// Notificaciones
-async function cargarNotificaciones() {
-    const notificationsView = document.getElementById('notificationsView');
-    if (!notificationsView) {
-        console.warn('❌ notificationsView no encontrado');
-        return;
-    }
-    
-    notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
-    try {
-        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
-            credentials: 'include'
-        });
-        const data = await resp.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
-            return;
-        }
-
-        notificationsView.innerHTML = '';
-        data.forEach(n => {
-            const div = document.createElement('div');
-            div.className = 'notification';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong>${escapeHtml(n.origen_nombres || 'Sistema')}</strong>
-                        <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
-                        <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
-                        <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
-                    </div>
-                </div>
-            `;
-            notificationsView.appendChild(div);
-        });
-    } catch (err) {
-        console.error(err);
-        notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
-    }
-}
-
-async function guardarPerfil() {
-    const form = new FormData();
-    const foto = document.getElementById('fotoPerfil');
-    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
-    
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) form.append('nombres', inpNombres.value);
-    if (inpApellidos) form.append('apellidos', inpApellidos.value);
-    if (inpTelefono) form.append('telefono', inpTelefono.value);
-
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', 
-            body: form,
-            credentials: 'include'
-        });
-        const res = await resp.json();
-        if (res.success) {
-            alert('Perfil actualizado');
-            const profileForm = document.getElementById('profileForm');
-            if (profileForm) profileForm.style.display = 'none';
-            await cargarPerfil();
-        } else {
-            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Error al guardar perfil');
     }
 }
 
@@ -1091,3 +1046,13 @@ window.ampliarImagen = function(src) {
 }
 
 window.navegarAlMapa = navegarAlMapa;
+
+// Función para cerrar sesión (solo cuando el usuario lo solicita)
+function cerrarSesion() {
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        window.location.href = '../logout.php';
+    }
+}
+
+// Mejorar la experiencia en móviles
+document.addEventListener('touchstart', function() {}, { passive: true });
