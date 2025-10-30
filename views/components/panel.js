@@ -250,7 +250,7 @@ function cerrarSesion() {
 // Mejorar la experiencia en móviles
 document.addEventListener('touchstart', function() {}, { passive: true });
 
-// Cargar feed de reportes - VERSIÓN MEJORADA
+// Cargar feed de reportes
 async function cargarFeed() {
     console.log('📰 Cargando feed de reportes...');
     
@@ -260,12 +260,10 @@ async function cargarFeed() {
         return;
     }
     
-    // Mostrar estados de carga de forma segura
     const postsContainer = document.getElementById('postsContainer');
     const loadingPosts = document.getElementById('loadingPosts');
     const noPosts = document.getElementById('noPosts');
     
-    // Función segura para mostrar/ocultar elementos
     function mostrarElemento(elemento, mostrar) {
         if (elemento && elemento.style) {
             elemento.style.display = mostrar ? 'block' : 'none';
@@ -277,15 +275,12 @@ async function cargarFeed() {
         mostrarElemento(loadingPosts, true);
         mostrarElemento(noPosts, false);
     } else {
-        // Fallback seguro
-        console.warn('⚠️ Elementos del feed no encontrados, usando fallback');
         feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
     }
     
     try {
         const resp = await fetch('../controllers/reportecontrolador.php?action=listar');
         
-        // Verificar respuesta
         if (!resp.ok) {
             throw new Error(`Error HTTP: ${resp.status}`);
         }
@@ -306,7 +301,6 @@ async function cargarFeed() {
             return;
         }
 
-        // Limpiar y mostrar posts de forma segura
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             postsContainer.innerHTML = '';
@@ -322,7 +316,6 @@ async function cargarFeed() {
                 }
             });
         } else {
-            // Fallback seguro
             feedView.innerHTML = '';
             data.forEach(post => {
                 try {
@@ -341,7 +334,6 @@ async function cargarFeed() {
     } catch (err) {
         console.error('❌ Error cargando feed:', err);
         
-        // Manejo seguro de errores
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             mostrarElemento(noPosts, true);
@@ -352,13 +344,11 @@ async function cargarFeed() {
     }
 }
 
-// Función para crear elemento de post - VERSIÓN ACTUALIZADA CON LIKES Y COMENTARIOS
+// Función para crear elemento de post
 function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
         const timeText = tiempoRelativo(new Date(reporte.fecha_reporte));
-        const descripcionCorta = reporte.descripcion && reporte.descripcion.length > 150 ? 
-            reporte.descripcion.substring(0, 150) + '...' : reporte.descripcion;
 
         const div = document.createElement('div');
         div.className = 'post';
@@ -418,7 +408,6 @@ function crearPostElement(reporte) {
             </div>
         `;
 
-        // Agregar event listeners
         const likeBtn = div.querySelector('.like-btn');
         const commentBtn = div.querySelector('.comment-btn');
         const viewMapBtn = div.querySelector('.view-map-btn');
@@ -443,7 +432,6 @@ function crearPostElement(reporte) {
             streetInfo.addEventListener('click', () => navegarAlMapa(reporte));
         }
 
-        // Cargar datos de likes y comentarios después de crear el elemento
         setTimeout(() => {
             cargarLikesPost(reporte.id_reporte, div);
             cargarComentariosPost(reporte.id_reporte, div);
@@ -458,9 +446,7 @@ function crearPostElement(reporte) {
     }
 }
 
-// FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
-
-// Función para cargar likes de un post
+// Funciones para likes y comentarios
 async function cargarLikesPost(id_reporte, postElement) {
     try {
         const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_likes&id_reporte=${id_reporte}`);
@@ -475,7 +461,6 @@ async function cargarLikesPost(id_reporte, postElement) {
     }
 }
 
-// Función para cargar comentarios de un post
 async function cargarComentariosPost(id_reporte, postElement) {
     try {
         const resp = await fetch(`../controllers/reportecontrolador.php?action=contar_comentarios&id_reporte=${id_reporte}`);
@@ -493,7 +478,6 @@ async function cargarComentariosPost(id_reporte, postElement) {
     }
 }
 
-// Función para verificar si el usuario actual dio like
 async function verificarLikeUsuario(id_reporte, postElement) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -517,7 +501,6 @@ async function verificarLikeUsuario(id_reporte, postElement) {
     }
 }
 
-// Función para toggle like (ACTUALIZADA)
 window.toggleLike = async function(id_reporte, btn) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -553,144 +536,36 @@ window.toggleLike = async function(id_reporte, btn) {
     }
 }
 
-// FUNCIÓN SIMPLIFICADA PARA CARGAR ESTADÍSTICAS
-async function cargarEstadisticasUsuario() {
-    try {
-        console.log('📊 Cargando estadísticas del usuario...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
-        
-        if (!resp.ok) {
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        // Verificar contenido de respuesta
-        const text = await resp.text();
-        let data;
-        
-        try {
-            data = JSON.parse(text);
-        } catch (e) {
-            console.error('❌ No se pudo parsear JSON:', text.substring(0, 200));
-            throw new Error('Respuesta no válida del servidor');
-        }
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Error al cargar estadísticas');
-        }
-        
-        const stats = data.estadisticas || {
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        };
-        
-        console.log('✅ Estadísticas cargadas:', stats);
-        
-        // Actualizar las estadísticas en la UI
-        actualizarEstadisticasUI(stats);
-        
-    } catch (error) {
-        console.error('❌ Error cargando estadísticas:', error);
-        
-        // Mostrar valores por defecto en caso de error
-        actualizarEstadisticasUI({
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        });
-    }
-}
-
-// FUNCIÓN PARA ACTUALIZAR LA UI CON LAS ESTADÍSTICAS
-function actualizarEstadisticasUI(stats) {
-    // Función auxiliar para formatear números grandes
-    function formatearNumero(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    }
-    
-    // Actualizar cada estadística de forma segura
-    const elementosStats = [
-        { id: 'statReports', valor: stats.reportes },
-        { id: 'statLikes', valor: stats.likes },
-        { id: 'statComments', valor: stats.comentarios },
-        { id: 'statViews', valor: stats.vistas }
-    ];
-    
-    elementosStats.forEach(stat => {
-        const elemento = document.getElementById(stat.id);
-        if (elemento) {
-            elemento.textContent = formatearNumero(stat.valor);
-            console.log(`✅ Actualizada estadística ${stat.id}: ${stat.valor}`);
-        } else {
-            console.warn(`⚠️ Elemento de estadística no encontrado: ${stat.id}`);
-        }
-    });
-}
-
-// FUNCIÓN SIMPLIFICADA PARA CARGAR PERFIL
+// Cargar perfil - VERSIÓN ORIGINAL SIMPLE
 async function cargarPerfil() {
     try {
         console.log('👤 Cargando información del perfil...');
         
         const resp = await fetch('../controllers/usuario_controlador.php?action=obtener');
-        
-        // Verificar respuesta
-        if (!resp.ok) {
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        // Verificar contenido
-        const text = await resp.text();
-        let user;
-        
-        try {
-            user = JSON.parse(text);
-        } catch (e) {
-            console.error('❌ No se pudo parsear JSON del perfil:', text.substring(0, 200));
-            mostrarErrorPerfil('Error en formato de respuesta');
-            return;
-        }
+        const user = await resp.json();
 
         if (!user || user.error) {
             console.warn('❌ No se pudo obtener información del usuario:', user?.error);
-            mostrarErrorPerfil('No se pudo cargar la información del perfil');
             return;
         }
 
         console.log('✅ Datos del usuario recibidos:', user);
 
-        // Función auxiliar para actualizar elementos de forma segura
-        function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+        // Actualizar elementos básicos
+        function actualizarElemento(id, valor, defecto = 'No disponible') {
             const elemento = document.getElementById(id);
             if (elemento) {
-                elemento.textContent = valor || valorPorDefecto;
-                elemento.style.color = '';
-                console.log(`✅ Actualizado ${id}: ${valor || valorPorDefecto}`);
+                elemento.textContent = valor || defecto;
             }
         }
 
-        // Actualizar elementos del perfil
-        const elementosPerfil = [
-            { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
-            { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
-            { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-            { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
-            { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
-            { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
-            { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
-        ];
-
-        elementosPerfil.forEach(item => {
-            actualizarElemento(item.id, item.valor, item.defecto);
-        });
+        actualizarElemento('profileName', `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario');
+        actualizarElemento('profileEmail', user.correo, 'Correo no disponible');
+        actualizarElemento('profilePhone', user.telefono, 'Sin teléfono');
+        actualizarElemento('profileNames', user.nombres, 'No disponible');
+        actualizarElemento('profileLastnames', user.apellidos, 'No disponible');
+        actualizarElemento('profileEmailCard', user.correo, 'Correo no disponible');
+        actualizarElemento('profilePhoneCard', user.telefono, 'Sin teléfono');
 
         // Actualizar avatars
         const profileAvatar = document.getElementById('profileAvatar');
@@ -698,16 +573,10 @@ async function cargarPerfil() {
         
         if (profileAvatar) {
             profileAvatar.src = '/imagenes/fiveicon.png';
-            profileAvatar.onerror = function() {
-                this.src = '/imagenes/default-avatar.png';
-            };
         }
         
         if (headerAvatar) {
             headerAvatar.src = '/imagenes/fiveicon.png';
-            headerAvatar.onerror = function() {
-                this.src = '/imagenes/default-avatar.png';
-            };
         }
 
         // Prefill form
@@ -723,19 +592,49 @@ async function cargarPerfil() {
 
     } catch (err) {
         console.error('❌ Error al cargar perfil:', err);
-        mostrarErrorPerfil('Error al cargar información del perfil');
     }
 }
 
-// FUNCIÓN PARA CARGAR PERFIL COMPLETO
+// Cargar estadísticas - VERSIÓN SIMPLE
+async function cargarEstadisticasUsuario() {
+    try {
+        console.log('📊 Cargando estadísticas del usuario...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas');
+        const data = await resp.json();
+        
+        if (!data.success) {
+            console.error('Error en estadísticas:', data.error);
+            return;
+        }
+        
+        const stats = data.estadisticas;
+        console.log('✅ Estadísticas cargadas:', stats);
+        
+        // Actualizar UI
+        function actualizarEstadistica(id, valor) {
+            const elemento = document.getElementById(id);
+            if (elemento) {
+                elemento.textContent = valor || '0';
+            }
+        }
+        
+        actualizarEstadistica('statReports', stats.reportes);
+        actualizarEstadistica('statLikes', stats.likes);
+        actualizarEstadistica('statComments', stats.comentarios);
+        actualizarEstadistica('statViews', stats.vistas);
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+    }
+}
+
+// Cargar perfil completo
 async function cargarPerfilCompleto() {
     try {
         console.log('👤 Cargando perfil completo...');
         
-        // Cargar información básica del usuario
         await cargarPerfil();
-        
-        // Cargar estadísticas
         await cargarEstadisticasUsuario();
         
         console.log('✅ Perfil completo cargado exitosamente');
@@ -745,14 +644,12 @@ async function cargarPerfilCompleto() {
     }
 }
 
-// Función temporal para obtener ID de usuario
+// Función para obtener ID de usuario
 async function obtenerUsuarioId() {
-    // Si ya tenemos el ID en la variable global, usarlo
     if (window.usuarioId) {
         return window.usuarioId;
     }
     
-    // Si no está disponible, intentar obtenerlo del servidor
     try {
         const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id');
         const data = await resp.json();
@@ -764,10 +661,10 @@ async function obtenerUsuarioId() {
         console.error('Error obteniendo ID de usuario:', error);
     }
     
-    return 0; // Valor por defecto
+    return 0;
 }
 
-// Función auxiliar para crear estructura de imágenes simple
+// Resto de funciones auxiliares (sin cambios)
 function crearEstructuraImagenesSimple(imagenes) {
     if (!imagenes || imagenes.length === 0) return '';
     
@@ -811,7 +708,6 @@ function crearEstructuraImagenesSimple(imagenes) {
     }
 }
 
-// Función para navegar al mapa con el reporte específico
 function navegarAlMapa(reporte) {
     const mapNavItem = document.querySelector('.nav-item[data-target="mapView"]');
     if (mapNavItem) {
@@ -823,7 +719,6 @@ function navegarAlMapa(reporte) {
     }
 }
 
-// Función para enviar las coordenadas al iframe del mapa
 function enviarCoordenadasAlMapa(reporte) {
     const mapIframe = document.querySelector('#mapView iframe');
     if (mapIframe && mapIframe.contentWindow) {
@@ -831,22 +726,11 @@ function enviarCoordenadasAlMapa(reporte) {
             const lat = typeof reporte.latitud === 'string' ? parseFloat(reporte.latitud) : reporte.latitud;
             const lng = typeof reporte.longitud === 'string' ? parseFloat(reporte.longitud) : reporte.longitud;
             
-            console.log('📍 Enviando al mapa:', { reportId: reporte.id_reporte, lat, lng });
-            
             const message = {
                 type: 'SHOW_REPORT',
-                coordinates: {
-                    lat: lat,
-                    lng: lng
-                },
+                coordinates: { lat, lng },
                 reportId: reporte.id_reporte,
-                reportData: {
-                    tipo_incidente: reporte.tipo_incidente,
-                    descripcion: reporte.descripcion,
-                    estado: reporte.estado,
-                    usuario: reporte.usuario,
-                    fecha_reporte: reporte.fecha_reporte
-                }
+                reportData: reporte
             };
             
             mapIframe.contentWindow.postMessage(message, '*');
@@ -857,36 +741,10 @@ function enviarCoordenadasAlMapa(reporte) {
     }
 }
 
-// Función para mostrar errores en el perfil
-function mostrarErrorPerfil(mensaje) {
-    console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
-    
-    const elementosError = [
-        'profileName',
-        'profileEmail', 
-        'profilePhone',
-        'profileNames',
-        'profileLastnames',
-        'profileEmailCard',
-        'profilePhoneCard'
-    ];
-    
-    elementosError.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            elemento.textContent = 'Error al cargar';
-            elemento.style.color = '#e74c3c';
-        }
-    });
-}
-
 // Notificaciones
 async function cargarNotificaciones() {
     const notificationsView = document.getElementById('notificationsView');
-    if (!notificationsView) {
-        console.warn('❌ notificationsView no encontrado');
-        return;
-    }
+    if (!notificationsView) return;
     
     notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
     try {
@@ -955,7 +813,6 @@ async function guardarPerfil() {
     }
 }
 
-// Función para abrir mapa en pantalla completa
 function abrirMapaCompleto() {
     const url = window.mapUrl || '<?php echo $mapUrl; ?>';
     const ventanaMapa = window.open(url, 'MapaOjoEnLaVia', 
@@ -963,8 +820,6 @@ function abrirMapaCompleto() {
     
     if (ventanaMapa) {
         ventanaMapa.focus();
-    } else {
-        alert('Por favor permite las ventanas emergentes para esta función');
     }
 }
 
@@ -985,22 +840,12 @@ function escapeHtml(text) {
     });
 }
 
-// Función auxiliar para formatear coordenadas de forma segura
 function formatearCoordenada(coord) {
-    if (coord === null || coord === undefined) {
-        return 'No disponible';
-    }
-    
+    if (coord === null || coord === undefined) return 'No disponible';
     const num = typeof coord === 'string' ? parseFloat(coord) : coord;
-    
-    if (isNaN(num)) {
-        return 'Inválida';
-    }
-    
-    return num.toFixed(6);
+    return isNaN(num) ? 'Inválida' : num.toFixed(6);
 }
 
-// Función para formatear fecha
 function formatearFecha(fechaString) {
     try {
         const fecha = new Date(fechaString);
@@ -1037,15 +882,10 @@ window.verNotificacion = function(id_notificacion, id_reporte) {
     if (id_reporte && id_reporte !== 'null') {
         if (typeof ComentariosManager !== 'undefined' && ComentariosManager.abrirComentarios) {
             ComentariosManager.abrirComentarios(id_reporte);
-        } else {
-            alert('Función de comentarios no disponible');
         }
-    } else {
-        alert('No hay información de reporte asociada');
     }
 }
 
-// Función para compartir reporte
 window.compartirReporte = function(reporte) {
     const texto = `Reporte de ${reporte.tipo_incidente}: ${reporte.descripcion}`;
     
@@ -1062,7 +902,6 @@ window.compartirReporte = function(reporte) {
     }
 }
 
-// Función para ampliar imagen
 window.ampliarImagen = function(src) {
     const modal = document.createElement('div');
     modal.className = 'image-modal';
@@ -1078,5 +917,4 @@ window.ampliarImagen = function(src) {
     document.body.appendChild(modal);
 }
 
-// Función global para navegar al mapa (para uso externo)
 window.navegarAlMapa = navegarAlMapa;
