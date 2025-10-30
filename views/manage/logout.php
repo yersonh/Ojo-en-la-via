@@ -1,5 +1,5 @@
 <?php
-session_start();
+require_once '../config/sessions.php'; 
 
 // Eliminar token de "Recuérdame" si existe
 if (isset($_COOKIE['remember_token'])) {

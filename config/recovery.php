@@ -8,7 +8,6 @@ require __DIR__ . '/../phpmailer/Exception.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-session_start();
 
 $database = new Database();
 $db = $database->conectar();

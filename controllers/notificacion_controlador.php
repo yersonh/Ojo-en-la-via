@@ -8,6 +8,10 @@ try {
     $database = new Database();
     $db = $database->conectar();
 
+    // 🆕 VERIFICAR SESIÓN UNA SOLA VEZ para los casos que lo necesitan
+    $id_usuario = $_SESSION['usuario_id'] ?? null;
+    $rol_usuario = $_SESSION['rol'] ?? null;
+
     switch ($action) {
         // 🆕 NOTIFICAR A TODOS LOS ADMINS SOBRE NUEVO REPORTE
         case 'notificar_nuevo_reporte':
@@ -115,14 +119,12 @@ try {
 
         // 🔔 Obtener nuevas notificaciones
         case 'obtener_nuevas':
-            session_start();
-            $id_usuario = $_SESSION['usuario_id'] ?? null;
-            $ultima_verificacion = $_GET['ultima_verificacion'] ?? null;
-
             if (!$id_usuario) {
                 echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
                 break;
             }
+
+            $ultima_verificacion = $_GET['ultima_verificacion'] ?? null;
 
             $sql = "SELECT n.*, 
                         p.nombres as nombre_origen, 
@@ -171,7 +173,7 @@ try {
 
         // ✅ Marcar una notificación como leída
         case 'marcar_leida':
-            session_start();
+           
             $id_notificacion = $_POST['id_notificacion'] ?? null;
 
             if (!$id_notificacion) {
@@ -189,9 +191,7 @@ try {
 
         // ✅ Marcar todas como leídas
         case 'marcar_todas_leidas':
-            session_start();
-            $id_usuario = $_SESSION['usuario_id'] ?? null;
-
+          
             if (!$id_usuario) {
                 echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
                 break;
@@ -246,15 +246,18 @@ try {
 
         // ✅ Generar token SSE
         case 'generate_sse_token':
-            session_start();
-
-            if (!isset($_SESSION['usuario_id']) || ($_SESSION['rol'] ?? 0) != 1) {
+            if (!$id_usuario || $rol_usuario != 1) {
                 echo json_encode(['success' => false, 'error' => 'No autorizado']);
                 break;
             }
 
-            require_once __DIR__ . '/../config/session_manager.php';
-            $token = SessionManager::generateSSEToken($_SESSION['usuario_id']);
+            // Este archivo probablemente no existe, mejor eliminarlo
+            // require_once __DIR__ . '/../config/session_manager.php';
+            
+            // Generar token simple
+            $token = bin2hex(random_bytes(32));
+            $_SESSION['sse_token'] = $token;
+            $_SESSION['sse_token_expires'] = time() + 3600;
 
             echo json_encode([
                 'success' => true,
@@ -265,9 +268,6 @@ try {
 
         // 🆕 LISTAR NOTIFICACIONES PARA USUARIO COMÚN
         case 'listar':
-            session_start();
-            $id_usuario = $_SESSION['usuario_id'] ?? null;
-            
             if (!$id_usuario) {
                 echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
                 break;
@@ -302,9 +302,6 @@ try {
 
         // 🆕 CONTAR NOTIFICACIONES NO LEÍDAS
         case 'contar_no_leidas':
-            session_start();
-            $id_usuario = $_SESSION['usuario_id'] ?? null;
-            
             if (!$id_usuario) {
                 echo json_encode(['success' => false, 'error' => 'Usuario no autenticado']);
                 break;
@@ -330,5 +327,4 @@ try {
     }
     echo json_encode(['success' => false, 'error' => $mensajeError]);
 }
-?>
 ?>

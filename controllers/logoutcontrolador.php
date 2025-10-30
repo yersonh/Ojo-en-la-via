@@ -1,6 +1,6 @@
 <?php
 // controllers/logoutcontrolador.php - Versión Mejorada
-session_start();
+require_once '../config/sessions.php';
 
 // Registrar el logout para auditoría
 if (isset($_SESSION['usuario_id'])) {

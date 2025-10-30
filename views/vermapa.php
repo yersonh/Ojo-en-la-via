@@ -1,11 +1,12 @@
 <?php
-session_start();
+
+require_once __DIR__ . '/../config/database.php';
 
 if (!isset($_SESSION['usuario_id'])) {
     header("Location: ../../index.php");
     exit();
 }
-require_once __DIR__ . '/../config/database.php';
+
 $database = new Database();
 $db = $database->conectar();
 
