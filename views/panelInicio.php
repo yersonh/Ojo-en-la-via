@@ -1,6 +1,7 @@
 <?php
 
-session_start();
+require_once '../config/database.php'; 
+
 if (!isset($_SESSION['usuario_id'])) {
     header('Location: ../index.php');
     exit();
