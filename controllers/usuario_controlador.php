@@ -3,16 +3,11 @@ session_start();
 require_once '../config/database.php';
 require_once '../models/Usuario.php';
 
-// Configurar headers para JSON y manejar CORS
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+// Configuración para producción - desactivar display_errors
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
 
-// Manejar preflight requests
-if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
-    exit(0);
-}
+header('Content-Type: application/json');
 
 class UsuarioControlador {
     private $usuarioModel;
@@ -24,13 +19,12 @@ class UsuarioControlador {
     
     public function obtener() {
         try {
-            // Verificar sesión de manera más robusta
-            if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            // Verificar sesión
+            if (!isset($_SESSION['id_usuario'])) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'No autenticado',
-                    'redirect' => '../index.php'
+                    'error' => 'No autenticado'
                 ]);
                 return;
             }
@@ -60,7 +54,7 @@ class UsuarioControlador {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'error' => 'Error del servidor: ' . $e->getMessage()
+                'error' => 'Error del servidor'
             ]);
         }
     }
@@ -68,7 +62,7 @@ class UsuarioControlador {
     public function obtener_estadisticas() {
         try {
             // Verificar sesión
-            if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            if (!isset($_SESSION['id_usuario'])) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
@@ -79,8 +73,13 @@ class UsuarioControlador {
             
             $id_usuario = $_SESSION['id_usuario'];
             
-            // Obtener estadísticas reales del usuario
-            $estadisticas = $this->usuarioModel->obtenerEstadisticas($id_usuario);
+            // Estadísticas temporales - puedes implementar la lógica real después
+            $estadisticas = [
+                'reportes' => 0,
+                'likes' => 0, 
+                'comentarios' => 0,
+                'vistas' => 0
+            ];
             
             echo json_encode([
                 'success' => true,
@@ -91,14 +90,14 @@ class UsuarioControlador {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'error' => 'Error obteniendo estadísticas: ' . $e->getMessage()
+                'error' => 'Error obteniendo estadísticas'
             ]);
         }
     }
     
     public function obtener_id() {
         try {
-            if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            if (!isset($_SESSION['id_usuario'])) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
@@ -123,7 +122,7 @@ class UsuarioControlador {
     
     public function actualizar() {
         try {
-            if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            if (!isset($_SESSION['id_usuario'])) {
                 http_response_code(401);
                 echo json_encode(['success' => false, 'error' => 'No autenticado']);
                 return;
@@ -151,23 +150,13 @@ class UsuarioControlador {
             http_response_code(500);
             echo json_encode([
                 'success' => false, 
-                'error' => 'Error del servidor: ' . $e->getMessage()
+                'error' => 'Error del servidor'
             ]);
         }
     }
 }
 
-// Manejar errores no capturados
-set_exception_handler(function($e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'error' => 'Error interno del servidor: ' . $e->getMessage()
-    ]);
-    exit;
-});
-
-// Ejecutar acción
+// Manejar la acción
 try {
     if (isset($_GET['action'])) {
         $controlador = new UsuarioControlador();
@@ -179,7 +168,7 @@ try {
             http_response_code(404);
             echo json_encode([
                 'success' => false,
-                'error' => 'Acción no válida: ' . $action
+                'error' => 'Acción no válida'
             ]);
         }
     } else {
@@ -193,7 +182,7 @@ try {
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Error fatal: ' . $e->getMessage()
+        'error' => 'Error interno del servidor'
     ]);
 }
 ?>
