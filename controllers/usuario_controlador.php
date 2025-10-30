@@ -1,5 +1,5 @@
 <?php
-session_start();
+// AL INICIO - Solo incluir database.php que ahora maneja sesiones
 require_once '../config/database.php';
 require_once '../models/usuario.php';
 
@@ -10,7 +10,8 @@ ini_set('log_errors', 1);
 header('Content-Type: application/json');
 
 // Debug: loguear información de sesión
-error_log("SESSION en usuario_controlador: " . print_r($_SESSION, true));
+error_log("🎯 usuario_controlador.php cargado - SESSION ID: " . session_id());
+error_log("🔍 DATOS SESION: " . print_r($_SESSION, true));
 
 class UsuarioControlador {
     private $usuarioModel;
@@ -20,19 +21,59 @@ class UsuarioControlador {
         $this->usuarioModel = new Usuario($conn);
     }
     
+    public function verificar_sesion() {
+        try {
+            $sesionActiva = isset($_SESSION['id_usuario']);
+            
+            error_log("🔍 VERIFICANDO SESION - Activa: " . ($sesionActiva ? 'SI' : 'NO'));
+            error_log("🔍 SESSION ID: " . session_id());
+            error_log("🔍 USER ID en sesión: " . ($_SESSION['id_usuario'] ?? 'NO'));
+            
+            if ($sesionActiva) {
+                echo json_encode([
+                    'success' => true,
+                    'sesion_activa' => true,
+                    'id_usuario' => $_SESSION['id_usuario'],
+                    'nombres' => $_SESSION['nombres'] ?? '',
+                    'correo' => $_SESSION['correo'] ?? '',
+                    'session_id' => session_id(),
+                    'session_age' => isset($_SESSION['last_regeneration']) ? 
+                        time() - $_SESSION['last_regeneration'] : 0
+                ]);
+            } else {
+                echo json_encode([
+                    'success' => false,
+                    'sesion_activa' => false,
+                    'error' => 'Sesión no activa',
+                    'session_id' => session_id(),
+                    'session_data' => $_SESSION
+                ]);
+            }
+            
+        } catch (Exception $e) {
+            error_log("❌ Error en verificar_sesion: " . $e->getMessage());
+            echo json_encode([
+                'success' => false,
+                'sesion_activa' => false,
+                'error' => 'Error verificando sesión'
+            ]);
+        }
+    }
+    
     public function obtener() {
         try {
             // Debug más detallado
             error_log("🔍 Verificando sesión en obtener(): " . (isset($_SESSION['id_usuario']) ? $_SESSION['id_usuario'] : 'NO HAY SESION'));
             
-            // Verificar sesión de manera más flexible para debug
+            // Verificar sesión
             if (!isset($_SESSION['id_usuario'])) {
-                error_log("❌ SESION NO ENCONTRADA en obtener()");
+                error_log("❌ SESION NO ENCONTRADA en obtener() - SESSION ID: " . session_id());
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
                     'error' => 'No autenticado - Sesión no encontrada',
-                    'session_debug' => $_SESSION
+                    'session_expired' => true,
+                    'session_id' => session_id()
                 ]);
                 return;
             }
@@ -43,6 +84,11 @@ class UsuarioControlador {
             $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
             
             if ($usuario) {
+                // Actualizar datos en sesión
+                $_SESSION['nombres'] = $usuario['nombres'] ?? '';
+                $_SESSION['correo'] = $usuario['correo'] ?? '';
+                $_SESSION['apellidos'] = $usuario['apellidos'] ?? '';
+                
                 echo json_encode([
                     'success' => true,
                     'id_usuario' => $usuario['id_usuario'],
@@ -51,7 +97,8 @@ class UsuarioControlador {
                     'correo' => $usuario['correo'] ?? '',
                     'telefono' => $usuario['telefono'] ?? '',
                     'nombre_rol' => $usuario['nombre_rol'] ?? 'Usuario',
-                    'fecha_registro' => $usuario['fecha_registro'] ?? ''
+                    'fecha_registro' => $usuario['fecha_registro'] ?? '',
+                    'session_id' => session_id()
                 ]);
             } else {
                 echo json_encode([
@@ -146,6 +193,10 @@ class UsuarioControlador {
             $resultado = $this->usuarioModel->actualizar($id_usuario, $datos);
             
             if ($resultado) {
+                // Actualizar sesión con nuevos datos
+                if (isset($datos['nombres'])) $_SESSION['nombres'] = $datos['nombres'];
+                if (isset($datos['apellidos'])) $_SESSION['apellidos'] = $datos['apellidos'];
+                
                 echo json_encode([
                     'success' => true, 
                     'mensaje' => 'Perfil actualizado correctamente'
@@ -173,13 +224,15 @@ try {
         $controlador = new UsuarioControlador();
         $action = $_GET['action'];
         
+        error_log("🎯 Acción usuario_controlador: " . $action);
+        
         if (method_exists($controlador, $action)) {
             $controlador->$action();
         } else {
             http_response_code(404);
             echo json_encode([
                 'success' => false,
-                'error' => 'Acción no válida'
+                'error' => 'Acción no válida: ' . $action
             ]);
         }
     } else {
@@ -190,10 +243,11 @@ try {
         ]);
     }
 } catch (Exception $e) {
+    error_log("💥 ERROR GLOBAL en usuario_controlador: " . $e->getMessage());
     http_response_code(500);
     echo json_encode([
         'success' => false,
-        'error' => 'Error interno del servidor: ' . $e->getMessage()
+        'error' => 'Error interno del servidor'
     ]);
 }
 ?>

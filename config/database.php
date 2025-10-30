@@ -1,4 +1,7 @@
 <?php
+
+require_once __DIR__ . '/sessions.php';
+
 class Database {
     private $host;
     private $port; 
@@ -47,7 +50,6 @@ class Database {
             $dsn = "pgsql:host={$this->host};port={$this->port};dbname={$this->dbname}";
             
             error_log("🔌 Intentando conectar a: {$this->host}:{$this->port}/{$this->dbname}");
-            error_log("🔌 Usuario: {$this->user}");
             
             $this->conn = new PDO($dsn, $this->user, $this->password, [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -59,8 +61,6 @@ class Database {
             
         } catch (PDOException $e) {
             error_log("❌ Error de conexión a PostgreSQL: " . $e->getMessage());
-            error_log("❌ DSN: pgsql:host={$this->host};port={$this->port};dbname={$this->dbname}");
-            error_log("❌ Usuario: " . $this->user);
             echo "Error de conexión a la base de datos. Revisa los logs.";
         }
 
