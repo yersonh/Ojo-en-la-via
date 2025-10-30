@@ -1,64 +1,10 @@
 <?php
-// Configuración robusta de sesiones para producción
-ini_set('session.cookie_httponly', 1);
-ini_set('session.cookie_secure', 1);
-ini_set('session.cookie_samesite', 'Strict');
-ini_set('session.use_strict_mode', 1);
-ini_set('session.gc_maxlifetime', 86400); // 24 horas
-
-// Configurar parámetros de cookie de sesión
-session_set_cookie_params([
-    'lifetime' => 86400, // 24 horas
-    'path' => '/',
-    'domain' => $_SERVER['HTTP_HOST'],
-    'secure' => isset($_SERVER['HTTPS']),
-    'httponly' => true,
-    'samesite' => 'Strict'
-]);
 
 session_start();
-
-
-
-// Verificar sesión de manera robusta
-if (!isset($_SESSION['usuario_id']) || !isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
-    // Si no hay sesión, verificar si hay cookie de remember
-    if (isset($_COOKIE['remember_token'])) {
-        require_once '../config/database.php';
-        $database = new Database();
-        $db = $database->conectar();
-        
-        $token = $_COOKIE['remember_token'];
-        $stmt = $db->prepare("SELECT u.* FROM usuario u 
-                             INNER JOIN remember_tokens rt ON u.id_usuario = rt.id_usuario 
-                             WHERE rt.token = :token AND rt.expiracion > NOW()");
-        $stmt->bindParam(':token', $token);
-        $stmt->execute();
-        $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
-        
-        if ($usuario) {
-            // Reestablecer sesión desde el token
-            session_regenerate_id(true);
-            $_SESSION['usuario_id'] = $usuario['id_usuario'];
-            $_SESSION['rol'] = $usuario['id_rol'];
-            $_SESSION['nombres'] = $usuario['nombres'];
-            $_SESSION['correo'] = $usuario['correo'];
-            $_SESSION['loggedin'] = true;
-            $_SESSION['last_activity'] = time();
-        } else {
-            // Token inválido, redirigir al login
-            header("Location: ../index.php");
-            exit();
-        }
-    } else {
-        // No hay sesión ni token, redirigir al login
-        header("Location: ../index.php");
-        exit();
-    }
+if (!isset($_SESSION['usuario_id'])) {
+    header('Location: ../index.php');
+    exit();
 }
-
-// Actualizar tiempo de última actividad
-$_SESSION['last_activity'] = time();
 
 // Obtener datos del usuario de la sesión
 $usuario_id = $_SESSION['usuario_id'];
@@ -89,16 +35,11 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         window.usuarioId = <?php echo json_encode($usuario_id); ?>;
         window.usuarioNombres = <?php echo json_encode($usuario_nombres); ?>;
         window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
-        window.sessionData = {
-            loggedin: <?php echo json_encode($_SESSION['loggedin'] ?? false); ?>,
-            lastActivity: <?php echo json_encode($_SESSION['last_activity'] ?? time()); ?>
-        };
         
         console.log('👤 Usuario cargado:', {
             id: window.usuarioId,
             nombres: window.usuarioNombres,
-            correo: window.usuarioCorreo,
-            session: window.sessionData
+            correo: window.usuarioCorreo
         });
     </script>
     
@@ -724,121 +665,6 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     <script type="module" src="components/mapa/index.js"></script>
     <script type="module" src="components/formulario/index.js"></script>
     <script src="components/comentarios.js"></script>
-    
-    <!-- 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN -->
-    <script>
-        class SessionManager {
-            constructor() {
-                this.sessionCheckInterval = 5 * 60 * 1000; // 5 minutos
-                this.activityTimeout = 30 * 60 * 1000; // 30 minutos
-                this.lastActivity = Date.now();
-                this.init();
-            }
-
-            init() {
-                // Detectar actividad del usuario
-                this.setupActivityListeners();
-                
-                // Verificar sesión periódicamente
-                this.startSessionChecks();
-                
-                // Verificar sesión al cargar
-                this.checkSession();
-            }
-
-            setupActivityListeners() {
-                const activities = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart'];
-                
-                activities.forEach(event => {
-                    document.addEventListener(event, () => {
-                        this.lastActivity = Date.now();
-                    }, { passive: true });
-                });
-            }
-
-            startSessionChecks() {
-                setInterval(() => {
-                    this.checkSession();
-                }, this.sessionCheckInterval);
-            }
-
-            async checkSession() {
-                try {
-                    const inactivity = Date.now() - this.lastActivity;
-                    
-                    // Si hay mucha inactividad, verificar sesión
-                    if (inactivity > this.activityTimeout) {
-                        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
-                            credentials: 'include'
-                        });
-                        
-                        if (!resp.ok) {
-                            if (resp.status === 401) {
-                                this.handleSessionExpired();
-                                return;
-                            }
-                        }
-                        
-                        const data = await resp.json();
-                        if (!data.success) {
-                            this.handleSessionExpired();
-                        }
-                    }
-                } catch (error) {
-                    console.warn('Error verificando sesión:', error);
-                }
-            }
-
-            handleSessionExpired() {
-                console.warn('🔐 Sesión expirada');
-                
-                // Mostrar notificación
-                this.showSessionExpiredNotification();
-                
-                // Redirigir después de 5 segundos
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 5000);
-            }
-
-            showSessionExpiredNotification() {
-                const notification = document.createElement('div');
-                notification.style.cssText = `
-                    position: fixed;
-                    top: 20px;
-                    right: 20px;
-                    background: #e74c3c;
-                    color: white;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    z-index: 10000;
-                    font-family: Arial;
-                    font-size: 14px;
-                    max-width: 300px;
-                    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-                `;
-                notification.innerHTML = `
-                    <strong>⚠️ Sesión Expirada</strong>
-                    <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login.</p>
-                `;
-                
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    if (notification.parentElement) {
-                        notification.remove();
-                    }
-                }, 5000);
-            }
-        }
-
-        // Inicializar el manager de sesión cuando se cargue el panel
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar el manager de sesión
-            window.sessionManager = new SessionManager();
-        });
-    </script>
-
     <script>
     // Detectar modo claro/oscuro del sistema y aplicar estilos
     function aplicarModoColor() {
