@@ -1,5 +1,5 @@
 // perfil.js - Gestión completa del perfil de usuario
-// Este archivo maneja toda la lógica relacionada con el perfil del usuario
+// Esta versión usa datos de sesión inmediatamente y carga datos adicionales después
 
 class PerfilManager {
     constructor() {
@@ -81,7 +81,7 @@ class PerfilManager {
         }
     }
 
-    // CARGA DE DATOS DEL PERFIL
+    // CARGA DE DATOS DEL PERFIL - VERSIÓN SIMPLIFICADA
     async cargarPerfil() {
         if (this.perfilCargado) {
             console.log('📊 Perfil ya cargado, mostrando datos existentes');
@@ -89,46 +89,71 @@ class PerfilManager {
             return;
         }
 
-        const profileView = document.getElementById('profileView');
-        if (!profileView) {
-            console.error('❌ Vista de perfil no encontrada');
-            return;
-        }
+        console.log('📱 Cargando perfil desde datos de sesión...');
+        
+        // Usar los datos que YA tenemos en las variables de sesión
+        const datosBasicos = {
+            id_usuario: window.usuarioId || 0,
+            nombres: window.usuarioNombres || 'Usuario',
+            apellidos: '', // No disponible en sesión inicialmente
+            correo: window.usuarioCorreo || '',
+            telefono: '', // No disponible en sesión inicialmente  
+            foto_perfil: '/imagenes/default-avatar.png',
+            nombre_rol: 'Usuario'
+        };
+        
+        console.log('✅ Datos básicos desde sesión:', {
+            id: datosBasicos.id_usuario,
+            nombres: datosBasicos.nombres,
+            correo: datosBasicos.correo
+        });
+        
+        // Actualizar la UI inmediatamente con datos básicos
+        this.datosUsuario = datosBasicos;
+        this.perfilCargado = true;
+        this.mostrarDatosEnUI();
+        
+        // Intentar cargar datos adicionales del servidor en segundo plano
+        this.cargarDatosAdicionales();
+    }
 
+    // CARGA DE DATOS ADICIONALES DESDE EL SERVIDOR
+    async cargarDatosAdicionales() {
         try {
-            this.mostrarEstadoCarga(true);
-            console.log('📥 Iniciando carga de datos del perfil...');
-
+            console.log('🔄 Cargando datos adicionales del servidor...');
+            
             const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-                credentials: 'include',
-                headers: {
-                    'Cache-Control': 'no-cache',
-                    'Pragma': 'no-cache'
-                }
+                credentials: 'include'
             });
 
             if (!resp.ok) {
-                throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
+                throw new Error(`Error HTTP: ${resp.status}`);
             }
 
             const data = await resp.json();
-            console.log('📊 Datos del perfil recibidos:', data);
-
+            
             if (data.success) {
-                this.datosUsuario = data;
-                this.perfilCargado = true;
+                console.log('✅ Datos adicionales cargados:', data);
+                
+                // Combinar datos básicos con datos adicionales del servidor
+                this.datosUsuario = { 
+                    ...this.datosUsuario, 
+                    ...data,
+                    // Mantener foto_perfil si no viene del servidor
+                    foto_perfil: data.foto_perfil || this.datosUsuario.foto_perfil
+                };
+                
                 this.mostrarDatosEnUI();
-                this.cargarEstadisticas(); // Cargar estadísticas por separado
-                console.log('✅ Perfil cargado y mostrado correctamente');
+                this.cargarEstadisticas();
+                
+                console.log('✅ Perfil completo cargado correctamente');
             } else {
-                throw new Error(data.error || 'Error desconocido al cargar perfil');
+                throw new Error(data.error || 'Error en respuesta del servidor');
             }
-
+            
         } catch (error) {
-            console.error('❌ Error cargando perfil:', error);
-            this.mostrarError(`Error al cargar el perfil: ${error.message}`);
-        } finally {
-            this.mostrarEstadoCarga(false);
+            console.log('⚠️ No se pudieron cargar datos adicionales:', error.message);
+            console.log('ℹ️ Usando datos básicos de sesión');
         }
     }
 
@@ -702,6 +727,11 @@ function diagnosticarSistemaPerfil() {
     console.log('  • btnEditProfile:', document.getElementById('btnEditProfile'));
     console.log('  • btnSaveProfile:', document.getElementById('btnSaveProfile'));
     console.log('- Estilos inyectados:', document.getElementById('perfil-styles'));
+    console.log('- Datos sesión JS:', {
+        usuarioId: window.usuarioId,
+        usuarioNombres: window.usuarioNombres,
+        usuarioCorreo: window.usuarioCorreo
+    });
 }
 
 // INICIALIZAR CUANDO EL DOCUMENTO ESTÉ LISTO
