@@ -225,35 +225,24 @@ document.addEventListener('DOMContentLoaded', function() {
 function cargarDatosInicialesDesdePHP() {
     console.log('🔍 Buscando datos de usuario desde PHP...');
     
-    // Buscar elementos que puedan contener datos incrustados por PHP
-    const scriptElements = document.querySelectorAll('script[type="application/json"]');
-    
-    for (let script of scriptElements) {
-        try {
-            const data = JSON.parse(script.textContent);
-            if (data.usuario || data.user) {
-                console.log('✅ Datos de usuario encontrados en script JSON:', data);
-                window.usuarioData = data.usuario || data.user;
-                return true;
-            }
-        } catch (e) {
-            // Continuar con el siguiente script
-        }
+    // Verificar si las variables globales de PHP ya están disponibles
+    if (window.usuarioId && window.usuarioNombres) {
+        console.log('✅ Datos de usuario encontrados en variables globales:', {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
+        });
+        
+        // Crear objeto de usuario con datos disponibles
+        window.usuarioData = {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
+        };
+        return true;
     }
     
-    // Buscar en data attributes del body
-    const bodyData = document.body.getAttribute('data-usuario');
-    if (bodyData) {
-        try {
-            window.usuarioData = JSON.parse(bodyData);
-            console.log('✅ Datos de usuario encontrados en body data:', window.usuarioData);
-            return true;
-        } catch (e) {
-            console.warn('❌ Error parseando datos del body:', e);
-        }
-    }
-    
-    console.warn('📝 No se encontraron datos de usuario incrustados en PHP');
+    console.warn('📝 No se encontraron datos de usuario incrustados en PHP - Se cargarán desde API');
     return false;
 }
 
@@ -273,6 +262,29 @@ async function cargarPerfilSuave() {
         
         console.log('🔍 Estado de respuesta perfil:', resp.status, resp.statusText);
         
+        // MANEJO ESPECÍFICO DEL ERROR 401
+        if (resp.status === 401) {
+            console.error('❌ Error 401 - Sesión expirada o no válida');
+            
+            // Intentar usar datos de las variables PHP como respaldo
+            if (window.usuarioId && window.usuarioNombres) {
+                console.log('🔄 Usando datos de respaldo desde variables PHP');
+                const userData = {
+                    id_usuario: window.usuarioId,
+                    nombres: window.usuarioNombres,
+                    correo: window.usuarioCorreo,
+                    apellidos: '',
+                    telefono: ''
+                };
+                actualizarUIUsuario(userData);
+                return;
+            }
+            
+            // Si no hay datos de respaldo, mostrar error
+            mostrarErrorSesionExpirada();
+            return;
+        }
+        
         if (!resp.ok) {
             throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
         }
@@ -282,6 +294,8 @@ async function cargarPerfilSuave() {
 
         if (!data.success) {
             console.error('❌ Error del servidor:', data.error);
+            
+            // Intentar con datos alternativos
             await cargarDatosUsuarioAlternativo();
             return;
         }
@@ -297,6 +311,21 @@ async function cargarPerfilSuave() {
     } catch (err) {
         console.error('❌ Error cargando perfil:', err);
         await cargarDatosUsuarioAlternativo();
+    }
+}
+function mostrarErrorSesionExpirada() {
+    const profileView = document.getElementById('profileView');
+    if (profileView) {
+        profileView.innerHTML = `
+            <div class="error-state">
+                <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
+                <h3>Sesión Expirada</h3>
+                <p>Tu sesión ha expirado. Por favor inicia sesión nuevamente.</p>
+                <button onclick="window.location.href='../index.php'" class="btn btn-primary">
+                    <i class="fas fa-sign-in-alt"></i> Iniciar Sesión
+                </button>
+            </div>
+        `;
     }
 }
 
