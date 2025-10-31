@@ -221,35 +221,12 @@ document.addEventListener('DOMContentLoaded', function() {
 function cargarDatosInicialesDesdePHP() {
     console.log('🔍 Buscando datos de usuario desde PHP...');
     
-    // Buscar elementos que puedan contener datos incrustados por PHP
-    const scriptElements = document.querySelectorAll('script[type="application/json"]');
-    
-    for (let script of scriptElements) {
-        try {
-            const data = JSON.parse(script.textContent);
-            if (data.usuario || data.user) {
-                console.log('✅ Datos de usuario encontrados en script JSON:', data);
-                window.usuarioData = data.usuario || data.user;
-                return true;
-            }
-        } catch (e) {
-            // Continuar con el siguiente script
-        }
+    if (typeof window.usuarioData !== 'undefined') {
+        console.log('✅ Datos de usuario encontrados en window.usuarioData:', window.usuarioData);
+        return true;
     }
     
-    // Buscar en data attributes del body
-    const bodyData = document.body.getAttribute('data-usuario');
-    if (bodyData) {
-        try {
-            window.usuarioData = JSON.parse(bodyData);
-            console.log('✅ Datos de usuario encontrados en body data:', window.usuarioData);
-            return true;
-        } catch (e) {
-            console.warn('❌ Error parseando datos del body:', e);
-        }
-    }
-    
-    console.warn('📝 No se encontraron datos de usuario incrustados en PHP');
+    console.warn('📝 No se encontraron datos de usuario en window.usuarioData');
     return false;
 }
 
