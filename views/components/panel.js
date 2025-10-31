@@ -26,9 +26,8 @@ document.addEventListener('DOMContentLoaded', function() {
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
             
-            // Cargar datos iniciales
+            // Cargar datos iniciales SOLO del feed (el perfil se carga al hacer clic)
             cargarFeedSuave();
-            cargarPerfilSuave();
 
             // Configurar botones del perfil
             const btnEditProfile = document.getElementById('btnEditProfile');
@@ -172,6 +171,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetElement) {
                     targetElement.style.display = 'block';
                     
+                    // CARGAR CONTENIDO ESPECÍFICO DE CADA VISTA
+                    if (target === 'profileView') {
+                        await cargarPerfilCompletoSuave();
+                    } else if (target === 'feedView') {
+                        cargarFeedSuave();
+                    } else if (target === 'notificationsView') {
+                        cargarNotificacionesSuave();
+                    }
+                    
                     const mapButton = document.querySelector('.map-floating-button');
                     
                     if (target === 'mapView') {
@@ -205,10 +213,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 showNavigation();
-
-                if (target === 'feedView') cargarFeedSuave();
-                if (target === 'notificationsView') cargarNotificacionesSuave();
-                if (target === 'profileView') cargarPerfilCompletoSuave();
             }
 
         } catch (error) {
@@ -267,31 +271,28 @@ async function cargarPerfilSuave() {
             }
         });
         
-        console.log('🔍 Estado de respuesta:', resp.status, resp.statusText);
+        console.log('🔍 Estado de respuesta perfil:', resp.status, resp.statusText);
         
-        // Si hay error 401, intentamos una estrategia diferente
         if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('⚠️ Error 401 - Intentando cargar datos de sesión PHP');
-                
-                // Intentamos obtener datos desde una fuente alternativa
-                await cargarDatosUsuarioAlternativo();
-                return;
-            }
             throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
         }
         
-        const user = await resp.json();
-        console.log('📦 Datos recibidos del servidor:', user);
+        const data = await resp.json();
+        console.log('📦 Datos completos recibidos:', data);
 
-        if (user && user.success === false) {
-            console.warn('❌ Error del servidor:', user.error);
+        if (!data.success) {
+            console.error('❌ Error del servidor:', data.error);
             await cargarDatosUsuarioAlternativo();
             return;
         }
 
-        console.log('✅ Datos del usuario recibidos:', user);
-        actualizarUIUsuario(user);
+        console.log('✅ Datos del usuario recibidos:', data);
+        
+        // Actualizar datos del usuario
+        actualizarUIUsuario(data);
+        
+        // Cargar estadísticas después de cargar el perfil
+        await cargarEstadisticasUsuario();
 
     } catch (err) {
         console.error('❌ Error cargando perfil:', err);
@@ -391,37 +392,37 @@ function actualizarUIUsuario(user) {
     const elementosPerfil = [
         { 
             id: 'profileName', 
-            valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.nombre_completo || 'Usuario',
+            valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim(),
             defecto: 'Usuario'
         },
         { 
             id: 'profileEmail', 
-            valor: user.correo || user.email,
+            valor: user.correo,
             defecto: 'Correo no disponible' 
         },
         { 
             id: 'profilePhone', 
-            valor: user.telefono || user.phone,
+            valor: user.telefono,
             defecto: 'Sin teléfono' 
         },
         { 
             id: 'profileNames', 
-            valor: user.nombres || user.first_names,
+            valor: user.nombres,
             defecto: 'No disponible' 
         },
         { 
             id: 'profileLastnames', 
-            valor: user.apellidos || user.last_names,
+            valor: user.apellidos,
             defecto: 'No disponible' 
         },
         { 
             id: 'profileEmailCard', 
-            valor: user.correo || user.email,
+            valor: user.correo,
             defecto: 'Correo no disponible' 
         },
         { 
             id: 'profilePhoneCard', 
-            valor: user.telefono || user.phone,
+            valor: user.telefono,
             defecto: 'Sin teléfono' 
         }
     ];
@@ -435,14 +436,14 @@ function actualizarUIUsuario(user) {
     const profileAvatar = document.getElementById('profileAvatar');
     const headerAvatar = document.getElementById('headerAvatar');
     
-    const avatarUrl = user.foto_perfil || user.avatar || '/imagenes/fiveicon.png';
+    const avatarUrl = user.foto_perfil || '/imagenes/fiveicon.png';
     
     if (profileAvatar) {
         profileAvatar.src = avatarUrl;
         profileAvatar.onerror = function() {
             console.warn('❌ Error cargando avatar, usando imagen por defecto');
             this.src = '/imagenes/default-avatar.png';
-            this.onerror = null; // Prevenir bucles infinitos
+            this.onerror = null;
         };
     }
     
@@ -459,18 +460,142 @@ function actualizarUIUsuario(user) {
     const inpApellidos = document.getElementById('inpApellidos');
     const inpTelefono = document.getElementById('inpTelefono');
     
-    if (inpNombres) inpNombres.value = user.nombres || user.first_names || '';
-    if (inpApellidos) inpApellidos.value = user.apellidos || user.last_names || '';
-    if (inpTelefono) inpTelefono.value = user.telefono || user.phone || '';
-
-    // Guardar datos en storage para uso futuro
-    try {
-        localStorage.setItem('usuarioData', JSON.stringify(user));
-    } catch (storageError) {
-        console.warn('⚠️ No se pudo guardar en localStorage:', storageError);
-    }
+    if (inpNombres) inpNombres.value = user.nombres || '';
+    if (inpApellidos) inpApellidos.value = user.apellidos || '';
+    if (inpTelefono) inpTelefono.value = user.telefono || '';
 
     console.log('✅ UI de perfil actualizada exitosamente');
+}
+
+// FUNCIÓN PARA CARGAR PERFIL COMPLETO
+async function cargarPerfilCompletoSuave() {
+    try {
+        console.log('👤 Cargando perfil completo...');
+        
+        // Mostrar estado de carga
+        const profileView = document.getElementById('profileView');
+        if (profileView && profileView.style.display !== 'none') {
+            const existingContent = profileView.querySelector('.profile-container');
+            if (existingContent) {
+                existingContent.style.opacity = '0.5';
+            }
+        }
+        
+        await cargarPerfilSuave();
+        console.log('✅ Perfil completo cargado exitosamente');
+        
+        // Restaurar opacidad
+        if (profileView) {
+            const existingContent = profileView.querySelector('.profile-container');
+            if (existingContent) {
+                existingContent.style.opacity = '1';
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cargando perfil completo:', error);
+        
+        // Mostrar error en la UI
+        const profileView = document.getElementById('profileView');
+        if (profileView) {
+            profileView.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
+                    <p>Error al cargar el perfil</p>
+                    <button onclick="cargarPerfilCompletoSuave()" class="btn btn-primary">
+                        Reintentar
+                    </button>
+                </div>
+            `;
+        }
+    }
+}
+
+// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
+async function cargarEstadisticasUsuario() {
+    try {
+        console.log('📊 Cargando estadísticas del usuario...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        console.log('🔍 Estado de respuesta estadísticas:', resp.status);
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Error 401 en estadísticas - usando valores por defecto');
+                // Usamos valores por defecto sin redirigir
+                actualizarEstadisticasUI({
+                    reportes: 0,
+                    likes: 0,
+                    comentarios: 0,
+                    vistas: 0
+                });
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        console.log('📦 Datos de estadísticas recibidos:', data);
+        
+        if (!data.success) {
+            console.warn('❌ Error en respuesta de estadísticas:', data.error);
+            throw new Error(data.error || 'Error al cargar estadísticas');
+        }
+        
+        const stats = data.estadisticas || {
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        };
+        
+        console.log('✅ Estadísticas cargadas:', stats);
+        actualizarEstadisticasUI(stats);
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        // No mostramos error al usuario, usamos valores por defecto
+        actualizarEstadisticasUI({
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        });
+    }
+}
+
+// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
+function actualizarEstadisticasUI(stats) {
+    function formatearNumero(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+    
+    const elementosStats = [
+        { id: 'statReports', valor: stats.reportes },
+        { id: 'statLikes', valor: stats.likes },
+        { id: 'statComments', valor: stats.comentarios },
+        { id: 'statViews', valor: stats.vistas }
+    ];
+    
+    elementosStats.forEach(stat => {
+        const elemento = document.getElementById(stat.id);
+        if (elemento) {
+            elemento.textContent = formatearNumero(stat.valor);
+        }
+    });
 }
 
 // Cargar feed de forma segura
@@ -669,104 +794,6 @@ async function guardarPerfilSuave() {
         console.error(err);
         alert('Error al guardar perfil');
     }
-}
-
-async function cargarPerfilCompletoSuave() {
-    try {
-        console.log('👤 Cargando perfil completo...');
-        await cargarPerfilSuave();
-        await cargarEstadisticasUsuario();
-        console.log('✅ Perfil completo cargado exitosamente');
-    } catch (error) {
-        console.error('❌ Error cargando perfil completo:', error);
-    }
-}
-
-// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
-async function cargarEstadisticasUsuario() {
-    try {
-        console.log('📊 Cargando estadísticas del usuario...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        console.log('🔍 Estado de respuesta estadísticas:', resp.status);
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('⚠️ Error 401 en estadísticas - usando valores por defecto');
-                // Usamos valores por defecto sin redirigir
-                actualizarEstadisticasUI({
-                    reportes: 0,
-                    likes: 0,
-                    comentarios: 0,
-                    vistas: 0
-                });
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const data = await resp.json();
-        console.log('📦 Datos de estadísticas recibidos:', data);
-        
-        if (!data.success) {
-            console.warn('❌ Error en respuesta de estadísticas:', data.error);
-            throw new Error(data.error || 'Error al cargar estadísticas');
-        }
-        
-        const stats = data.estadisticas || {
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        };
-        
-        console.log('✅ Estadísticas cargadas:', stats);
-        actualizarEstadisticasUI(stats);
-        
-    } catch (error) {
-        console.error('❌ Error cargando estadísticas:', error);
-        // No mostramos error al usuario, usamos valores por defecto
-        actualizarEstadisticasUI({
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        });
-    }
-}
-
-// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
-function actualizarEstadisticasUI(stats) {
-    function formatearNumero(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    }
-    
-    const elementosStats = [
-        { id: 'statReports', valor: stats.reportes },
-        { id: 'statLikes', valor: stats.likes },
-        { id: 'statComments', valor: stats.comentarios },
-        { id: 'statViews', valor: stats.vistas }
-    ];
-    
-    elementosStats.forEach(stat => {
-        const elemento = document.getElementById(stat.id);
-        if (elemento) {
-            elemento.textContent = formatearNumero(stat.valor);
-        }
-    });
 }
 
 // FUNCIÓN PARA OBTENER ID DE USUARIO
