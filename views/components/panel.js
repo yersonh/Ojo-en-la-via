@@ -1,8 +1,10 @@
-// Panel.js - gestiona navegación inferior, feed, notificaciones y perfil
+// Panel.js - Versión corregida con carga robusta de perfil
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando panel...');
     
-    // Esperar un poco más para que el DOM esté completamente cargado
+    // Primero intentar cargar datos desde PHP
+    cargarDatosInicialesDesdePHP();
+    
     setTimeout(() => {
         try {
             const navItems = document.querySelectorAll('.nav-item');
@@ -24,11 +26,10 @@ document.addEventListener('DOMContentLoaded', function() {
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
             
-            // Cargar datos iniciales
-            cargarFeed();
-            cargarPerfil();
+            // Cargar datos iniciales SOLO del feed (el perfil se carga al hacer clic)
+            cargarFeedSuave();
 
-            // Configurar botones del perfil de forma SEGURA
+            // Configurar botones del perfil
             const btnEditProfile = document.getElementById('btnEditProfile');
             const btnCancelProfile = document.getElementById('btnCancelProfile');
             const btnSaveProfile = document.getElementById('btnSaveProfile');
@@ -50,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
             
             if (btnSaveProfile) {
                 btnSaveProfile.addEventListener('click', async () => {
-                    await guardarPerfil();
+                    await guardarPerfilSuave();
                 });
             }
             
@@ -63,32 +64,23 @@ document.addEventListener('DOMContentLoaded', function() {
 
             console.log('✅ Panel inicializado correctamente');
 
-            // Función para inicializar el auto-ocultado de la navegación
             function initAutoHideNav() {
-                // Ocultar después de 3 segundos de inactividad
                 hideTimeout = setTimeout(hideNavigation, 3000);
-                
-                // Mostrar navegación al hacer hover en la zona de activación
                 navActivationZone.addEventListener('mouseenter', showNavigation);
                 navActivationZone.addEventListener('touchstart', showNavigation);
-                
-                // Mostrar navegación al hacer hover sobre ella misma
                 bottomNav.addEventListener('mouseenter', showNavigation);
                 bottomNav.addEventListener('touchstart', showNavigation);
                 
-                // Ocultar al salir del área de la navegación
                 bottomNav.addEventListener('mouseleave', () => {
                     if (!isUserInteracting()) {
                         hideTimeout = setTimeout(hideNavigation, 1000);
                     }
                 });
                 
-                // Detectar scroll para auto-ocultar
                 if (mainContent) {
                     mainContent.addEventListener('scroll', handleScroll);
                 }
                 
-                // Resetear timer en interacciones
                 document.addEventListener('mousemove', resetHideTimer);
                 document.addEventListener('touchstart', resetHideTimer);
                 document.addEventListener('click', resetHideTimer);
@@ -96,8 +88,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             function handleScroll() {
                 const scrollTop = mainContent.scrollTop;
-                
-                // Determinar dirección del scroll
                 if (scrollTop > lastScrollTop) {
                     scrollDirection = 'down';
                 } else {
@@ -105,7 +95,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 lastScrollTop = scrollTop;
                 
-                // Ocultar al hacer scroll hacia abajo, mostrar al hacer scroll hacia arriba
                 if (scrollDirection === 'down' && !isNavHidden) {
                     hideNavigation();
                 } else if (scrollDirection === 'up' && isNavHidden) {
@@ -128,10 +117,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (mapButton && bottomNav) {
                     if (bottomNav.classList.contains('hidden')) {
-                        // Navegación oculta - botón más abajo
                         mapButton.style.bottom = '20px';
                     } else {
-                        // Navegación visible - botón arriba de la navegación
                         mapButton.style.bottom = '80px';
                     }
                 }
@@ -147,8 +134,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         mainContent.classList.add('with-hidden-nav');
                     }
                     isNavHidden = true;
-                    
-                    // Actualizar posición del botón
                     actualizarPosicionBoton();
                 }
             }
@@ -164,16 +149,12 @@ document.addEventListener('DOMContentLoaded', function() {
                         mainContent.classList.add('with-visible-nav');
                     }
                     isNavHidden = false;
-                    
-                    // Actualizar posición del botón
                     actualizarPosicionBoton();
-                    
                     hideTimeout = setTimeout(hideNavigation, 3000);
                 }
             }
 
             function isUserInteracting() {
-                // Verificar si el usuario está interactuando con la navegación
                 return bottomNav.matches(':hover') || navActivationZone.matches(':hover');
             }
 
@@ -190,11 +171,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (targetElement) {
                     targetElement.style.display = 'block';
                     
-                    // Manejar el botón flotante
+                    // CARGAR CONTENIDO ESPECÍFICO DE CADA VISTA
+                    if (target === 'profileView') {
+                        await cargarPerfilCompletoSuave();
+                    } else if (target === 'feedView') {
+                        cargarFeedSuave();
+                    } else if (target === 'notificationsView') {
+                        cargarNotificacionesSuave();
+                    }
+                    
                     const mapButton = document.querySelector('.map-floating-button');
                     
                     if (target === 'mapView') {
-                        // Configurar mapa en pantalla completa
                         targetElement.style.position = 'fixed';
                         targetElement.style.top = '44px';
                         targetElement.style.left = '0';
@@ -204,21 +192,18 @@ document.addEventListener('DOMContentLoaded', function() {
                         targetElement.style.height = 'calc(100vh - 44px)';
                         targetElement.style.zIndex = '998';
                         
-                        // Mostrar botón
                         if (mapButton) {
                             mapButton.style.display = 'flex';
                             mapButton.classList.add('visible');
                             mapButton.classList.remove('hidden');
                         }
                         
-                        // Asegurar que el iframe ocupe todo
                         const iframe = targetElement.querySelector('iframe');
                         if (iframe) {
                             iframe.style.width = '100%';
                             iframe.style.height = '100%';
                         }
                     } else {
-                        // Ocultar botón en otras vistas
                         if (mapButton) {
                             mapButton.style.display = 'none';
                             mapButton.classList.remove('visible');
@@ -228,10 +213,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
 
                 showNavigation();
-
-                if (target === 'feedView') cargarFeed();
-                if (target === 'notificationsView') cargarNotificaciones();
-                if (target === 'profileView') cargarPerfilCompleto();
             }
 
         } catch (error) {
@@ -240,185 +221,395 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// 🆕 SISTEMA DE MANTENIMIENTO DE SESIÓN
-class SessionManager {
-    constructor() {
-        this.sessionCheckInterval = 2 * 60 * 1000; // 2 minutos (más frecuente)
-        this.activityTimeout = 25 * 60 * 1000; // 25 minutos (antes del timeout de 30 min)
-        this.lastActivity = Date.now();
-        this.isChecking = false;
-        this.init();
-    }
-
-    init() {
-        console.log('🔐 SessionManager inicializado');
-        
-        // Detectar actividad del usuario
-        this.setupActivityListeners();
-        
-        // Verificar sesión periódicamente
-        this.startSessionChecks();
-        
-        // Verificar sesión al cargar
-        setTimeout(() => this.checkSession(), 1000);
-    }
-
-    setupActivityListeners() {
-        const activities = ['mousemove', 'keypress', 'click', 'scroll', 'touchstart', 'mousedown'];
-        
-        activities.forEach(event => {
-            document.addEventListener(event, () => {
-                this.lastActivity = Date.now();
-                // Verificar sesión después de actividad prolongada
-                if (Date.now() - this.lastActivity > 10 * 60 * 1000) { // 10 minutos
-                    this.checkSession();
-                }
-            }, { passive: true });
+// FUNCIÓN PARA VERIFICAR SESIÓN
+async function verificarSesion() {
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+            method: 'GET',
+            credentials: 'include'
         });
+        
+        const data = await resp.json();
+        console.log('🔐 Estado sesión:', data);
+        
+        if (!data.sesion_activa) {
+            console.warn('⚠️ Sesión no activa, redirigiendo...');
+            window.location.href = '../index.php';
+            return false;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error verificando sesión:', error);
+        return false;
+    }
+}
 
-        // También verificar al hacer focus en la ventana
-        window.addEventListener('focus', () => {
-            this.checkSession();
+// FUNCIÓN PARA CARGAR DATOS INICIALES DESDE PHP - MODIFICADA
+function cargarDatosInicialesDesdePHP() {
+    console.log('🔍 Buscando datos de usuario desde PHP...');
+    
+    // Verificar si las variables globales de PHP ya están disponibles
+    if (window.usuarioId && window.usuarioNombres) {
+        console.log('✅ Datos de usuario encontrados en variables globales:', {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
         });
-    }
-
-    startSessionChecks() {
-        setInterval(() => {
-            this.checkSession();
-        }, this.sessionCheckInterval);
-    }
-
-    async checkSession() {
-        // Evitar múltiples verificaciones simultáneas
-        if (this.isChecking) return;
         
-        this.isChecking = true;
+        // Crear objeto de usuario con datos disponibles
+        window.usuarioData = {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
+        };
+        return true;
+    }
+    
+    console.warn('📝 No se encontraron datos de usuario incrustados en PHP - Se cargarán desde API');
+    return false;
+}
+
+// FUNCIÓN MEJORADA PARA CARGAR IMÁGENES
+function cargarImagenSegura(elemento, url) {
+    if (!elemento) return;
+    
+    // Si no hay URL o está vacía, usar imagen por defecto
+    if (!url || url === '' || url === 'null') {
+        elemento.src = window.location.origin + '/imagenes/default-avatar.png';
+        return;
+    }
+    
+    // Si la URL ya es absoluta, usarla directamente
+    if (url.startsWith('http')) {
+        elemento.src = url;
+    } else {
+        // Si es relativa, convertir a absoluta
+        const baseUrl = window.location.origin;
+        elemento.src = baseUrl + (url.startsWith('/') ? url : '/' + url);
+    }
+    
+    // Manejar errores de carga de manera más robusta
+    elemento.onerror = function() {
+        console.warn('❌ Error cargando imagen:', this.src);
+        // Usar imagen por defecto absoluta
+        this.src = window.location.origin + '/imagenes/default-avatar.png';
+        this.onerror = null; // Prevenir bucles infinitos
+    };
+    
+    // Verificar si la imagen carga correctamente
+    elemento.onload = function() {
+        console.log('✅ Imagen cargada correctamente:', this.src);
+    };
+}
+
+// FUNCIÓN MEJORADA PARA CARGAR PERFIL
+async function cargarPerfilSuave() {
+    try {
+        console.log('👤 Cargando información del perfil...');
         
-        try {
-            const inactivity = Date.now() - this.lastActivity;
-            
-            // Solo verificar si hay actividad reciente o es tiempo de verificación regular
-            if (inactivity < this.activityTimeout) {
-                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-                    credentials: 'include',
-                    headers: {
-                        'Cache-Control': 'no-cache'
-                    }
-                });
-                
-                if (!resp.ok) {
-                    console.warn('❌ Error HTTP en verificación de sesión:', resp.status);
-                    if (resp.status === 401) {
-                        this.handleSessionExpired();
-                        return;
-                    }
-                }
-                
-                const data = await resp.json();
-                
-                if (!data.success || !data.sesion_activa) {
-                    console.warn('🔐 Sesión no activa:', data.error);
-                    this.handleSessionExpired();
-                } else {
-                    console.log('✅ Sesión activa - Usuario:', data.nombres);
-                }
-            } else {
-                console.warn('⚡ Mucha inactividad, verificando sesión...');
-                // Forzar verificación incluso con inactividad
-                const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
-                    credentials: 'include'
-                });
-                
-                if (!resp.ok || resp.status === 401) {
-                    this.handleSessionExpired();
-                }
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
             }
-        } catch (error) {
-            console.warn('🌐 Error de red verificando sesión:', error.message);
-            // No hacer nada en caso de error de red, podría ser temporal
-        } finally {
-            this.isChecking = false;
+        });
+        
+        console.log('🔍 Estado de respuesta perfil:', resp.status, resp.statusText);
+        
+        if (resp.status === 401) {
+            console.error('❌ Error 401 - Sesión expirada o no válida');
+            
+            // Intentar usar datos de las variables PHP como respaldo
+            if (window.usuarioId && window.usuarioNombres) {
+                console.log('🔄 Usando datos de respaldo desde variables PHP');
+                const userData = {
+                    id_usuario: window.usuarioId,
+                    nombres: window.usuarioNombres,
+                    correo: window.usuarioCorreo,
+                    apellidos: '',
+                    telefono: '',
+                    foto_perfil: '/imagenes/default-avatar.png'
+                };
+                actualizarUIUsuario(userData);
+                return;
+            }
+            
+            // Si no hay datos de respaldo, intentar verificar sesión
+            const sesionValida = await verificarSesion();
+            if (!sesionValida) {
+                return;
+            }
+        }
+        
+        if (!resp.ok) {
+            throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
+        }
+        
+        const data = await resp.json();
+        console.log('📦 Datos completos recibidos del servidor:', data);
+
+        if (!data.success) {
+            console.error('❌ Error del servidor:', data.error);
+            return;
+        }
+
+        console.log('✅ Datos específicos para mostrar:', {
+            nombres: data.nombres,
+            apellidos: data.apellidos,
+            telefono: data.telefono,
+            correo: data.correo,
+            foto_perfil: data.foto_perfil
+        });
+        
+        // Verificar si los campos están vacíos
+        if (!data.apellidos && !data.telefono) {
+            console.warn('⚠️ Campos apellidos y telefono están vacíos o no existen');
+        } else if (!data.apellidos) {
+            console.warn('⚠️ Campo apellidos está vacío o no existe');
+        } else if (!data.telefono) {
+            console.warn('⚠️ Campo telefono está vacío o no existe');
+        }
+        
+        // Actualizar datos del usuario
+        actualizarUIUsuario(data);
+        
+        // Cargar estadísticas después de cargar el perfil
+        await cargarEstadisticasUsuario();
+
+    } catch (err) {
+        console.error('❌ Error cargando perfil:', err);
+    }
+}
+
+// FUNCIÓN MEJORADA PARA ACTUALIZAR LA UI DEL USUARIO
+function actualizarUIUsuario(user) {
+    console.log('🎨 Actualizando UI con datos completos:', user);
+    
+    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            // Manejar valores null, undefined, vacíos o 'null' como string
+            let valorSeguro = valor;
+            if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+                valorSeguro = '';
+            } else {
+                valorSeguro = String(valor).trim();
+            }
+            
+            elemento.textContent = valorSeguro || valorPorDefecto;
+            elemento.style.color = valorSeguro ? '' : '#999';
         }
     }
 
-    handleSessionExpired() {
-        console.warn('🔐 Sesión expirada - Redirigiendo al login');
-        
-        // Mostrar notificación
-        this.showSessionExpiredNotification();
-        
-        // Redirigir después de 3 segundos
-        setTimeout(() => {
-            window.location.href = '../index.php';
-        }, 3000);
-    }
+    // Mapeo de elementos a actualizar - CON VALORES POR DEFECTO ESPECÍFICOS
+    const elementosPerfil = [
+        { 
+            id: 'profileName', 
+            valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim(),
+            defecto: 'Usuario'
+        },
+        { 
+            id: 'profileEmail', 
+            valor: user.correo,
+            defecto: 'Correo no disponible' 
+        },
+        { 
+            id: 'profilePhone', 
+            valor: user.telefono,
+            defecto: 'Sin teléfono registrado' 
+        },
+        { 
+            id: 'profileNames', 
+            valor: user.nombres,
+            defecto: 'No especificado' 
+        },
+        { 
+            id: 'profileLastnames', 
+            valor: user.apellidos,
+            defecto: 'No especificado' 
+        },
+        { 
+            id: 'profileEmailCard', 
+            valor: user.correo,
+            defecto: 'Correo no disponible' 
+        },
+        { 
+            id: 'profilePhoneCard', 
+            valor: user.telefono,
+            defecto: 'Sin teléfono registrado' 
+        }
+    ];
 
-    showSessionExpiredNotification() {
-        // Evitar múltiples notificaciones
-        if (document.getElementById('sessionExpiredNotification')) return;
+    // Actualizar cada elemento
+    elementosPerfil.forEach(item => {
+        actualizarElemento(item.id, item.valor, item.defecto);
+    });
+
+    // Actualizar avatars de forma SEGURA
+    const profileAvatar = document.getElementById('profileAvatar');
+    const headerAvatar = document.getElementById('headerAvatar');
+    
+    // Usar foto_perfil del usuario o imagen por defecto
+    const avatarUrl = user.foto_perfil || '/imagenes/default-avatar.png';
+    console.log('🖼️ Cargando avatar:', avatarUrl);
+    
+    cargarImagenSegura(profileAvatar, avatarUrl);
+    cargarImagenSegura(headerAvatar, avatarUrl);
+
+    // Prefill form de edición - CON VALORES POR DEFECTO
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) inpNombres.value = user.nombres || '';
+    if (inpApellidos) inpApellidos.value = user.apellidos || '';
+    if (inpTelefono) inpTelefono.value = user.telefono || '';
+
+    console.log('✅ UI de perfil actualizada');
+    console.log('📋 Estado campos:', {
+        nombres: user.nombres || 'VACÍO',
+        apellidos: user.apellidos || 'VACÍO',
+        telefono: user.telefono || 'VACÍO',
+        foto_perfil: user.foto_perfil || 'VACÍO'
+    });
+}
+
+// FUNCIÓN PARA CARGAR PERFIL COMPLETO
+async function cargarPerfilCompletoSuave() {
+    try {
+        console.log('👤 Cargando perfil completo...');
         
-        const notification = document.createElement('div');
-        notification.id = 'sessionExpiredNotification';
-        notification.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            background: #e74c3c;
-            color: white;
-            padding: 15px 20px;
-            border-radius: 8px;
-            z-index: 10000;
-            font-family: Arial;
-            font-size: 14px;
-            max-width: 300px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            animation: slideIn 0.3s ease;
-        `;
-        
-        // Agregar animación CSS
-        const style = document.createElement('style');
-        style.textContent = `
-            @keyframes slideIn {
-                from { transform: translateX(100%); opacity: 0; }
-                to { transform: translateX(0); opacity: 1; }
+        // Mostrar estado de carga
+        const profileView = document.getElementById('profileView');
+        if (profileView && profileView.style.display !== 'none') {
+            const existingContent = profileView.querySelector('.profile-container');
+            if (existingContent) {
+                existingContent.style.opacity = '0.5';
             }
-        `;
-        document.head.appendChild(style);
+        }
         
-        notification.innerHTML = `
-            <strong>⚠️ Sesión Expirada</strong>
-            <p style="margin: 5px 0; font-size: 12px;">Tu sesión ha expirado. Serás redirigido al login.</p>
-        `;
+        await cargarPerfilSuave();
+        console.log('✅ Perfil completo cargado exitosamente');
         
-        document.body.appendChild(notification);
-        
-        // Auto-eliminar después de 5 segundos
-        setTimeout(() => {
-            if (notification.parentElement) {
-                notification.remove();
+        // Restaurar opacidad
+        if (profileView) {
+            const existingContent = profileView.querySelector('.profile-container');
+            if (existingContent) {
+                existingContent.style.opacity = '1';
             }
-        }, 5000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error cargando perfil completo:', error);
+        
+        // Mostrar error en la UI
+        const profileView = document.getElementById('profileView');
+        if (profileView) {
+            profileView.innerHTML = `
+                <div class="error-state">
+                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
+                    <p>Error al cargar el perfil</p>
+                    <button onclick="cargarPerfilCompletoSuave()" class="btn btn-primary">
+                        Reintentar
+                    </button>
+                </div>
+            `;
+        }
     }
 }
 
-// Inicializar el manager de sesión cuando se cargue el panel
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar el manager de sesión
-    window.sessionManager = new SessionManager();
-});
-
-// Función para cerrar sesión
-function cerrarSesion() {
-    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
-        window.location.href = '../logout.php';
+// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
+async function cargarEstadisticasUsuario() {
+    try {
+        console.log('📊 Cargando estadísticas del usuario...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        console.log('🔍 Estado de respuesta estadísticas:', resp.status);
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Error 401 en estadísticas - usando valores por defecto');
+                // Usamos valores por defecto sin redirigir
+                actualizarEstadisticasUI({
+                    reportes: 0,
+                    likes: 0,
+                    comentarios: 0,
+                    vistas: 0
+                });
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+        console.log('📦 Datos de estadísticas recibidos:', data);
+        
+        if (!data.success) {
+            console.warn('❌ Error en respuesta de estadísticas:', data.error);
+            throw new Error(data.error || 'Error al cargar estadísticas');
+        }
+        
+        const stats = data.estadisticas || {
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        };
+        
+        console.log('✅ Estadísticas cargadas:', stats);
+        actualizarEstadisticasUI(stats);
+        
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        // No mostramos error al usuario, usamos valores por defecto
+        actualizarEstadisticasUI({
+            reportes: 0,
+            likes: 0,
+            comentarios: 0,
+            vistas: 0
+        });
     }
 }
 
-// Mejorar la experiencia en móviles
-document.addEventListener('touchstart', function() {}, { passive: true });
+// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
+function actualizarEstadisticasUI(stats) {
+    function formatearNumero(num) {
+        if (num >= 1000000) {
+            return (num / 1000000).toFixed(1) + 'M';
+        } else if (num >= 1000) {
+            return (num / 1000).toFixed(1) + 'K';
+        }
+        return num.toString();
+    }
+    
+    const elementosStats = [
+        { id: 'statReports', valor: stats.reportes },
+        { id: 'statLikes', valor: stats.likes },
+        { id: 'statComments', valor: stats.comentarios },
+        { id: 'statViews', valor: stats.vistas }
+    ];
+    
+    elementosStats.forEach(stat => {
+        const elemento = document.getElementById(stat.id);
+        if (elemento) {
+            elemento.textContent = formatearNumero(stat.valor);
+        }
+    });
+}
 
-// Cargar feed de reportes - VERSIÓN MEJORADA
-async function cargarFeed() {
+// Cargar feed de forma segura
+async function cargarFeedSuave() {
     console.log('📰 Cargando feed de reportes...');
     
     const feedView = document.getElementById('feedView');
@@ -427,12 +618,10 @@ async function cargarFeed() {
         return;
     }
     
-    // Mostrar estados de carga de forma segura
     const postsContainer = document.getElementById('postsContainer');
     const loadingPosts = document.getElementById('loadingPosts');
     const noPosts = document.getElementById('noPosts');
     
-    // Función segura para mostrar/ocultar elementos
     function mostrarElemento(elemento, mostrar) {
         if (elemento && elemento.style) {
             elemento.style.display = mostrar ? 'block' : 'none';
@@ -444,8 +633,6 @@ async function cargarFeed() {
         mostrarElemento(loadingPosts, true);
         mostrarElemento(noPosts, false);
     } else {
-        // Fallback seguro
-        console.warn('⚠️ Elementos del feed no encontrados, usando fallback');
         feedView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando reportes...</p></div>';
     }
     
@@ -454,8 +641,13 @@ async function cargarFeed() {
             credentials: 'include'
         });
         
-        // Verificar respuesta
+        // MANEJO SEGURO DE ERRORES - SIN REDIRECCIONES
         if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Posible problema de sesión al cargar feed');
+                // No redirigir, solo mostrar error
+                throw new Error('Problema de autenticación');
+            }
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
@@ -470,12 +662,11 @@ async function cargarFeed() {
                 mostrarElemento(loadingPosts, false);
                 mostrarElemento(noPosts, true);
             } else {
-                feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles. ¡Sé el primero en reportar!</p>';
+                feedView.innerHTML = '<p style="text-align:center; color:var(--text-muted); padding: 40px;">No hay reportes disponibles.</p>';
             }
             return;
         }
 
-        // Limpiar y mostrar posts de forma segura
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             postsContainer.innerHTML = '';
@@ -491,7 +682,6 @@ async function cargarFeed() {
                 }
             });
         } else {
-            // Fallback seguro
             feedView.innerHTML = '';
             data.forEach(post => {
                 try {
@@ -510,18 +700,135 @@ async function cargarFeed() {
     } catch (err) {
         console.error('❌ Error cargando feed:', err);
         
-        // Manejo seguro de errores
+        // MOSTRAR ERROR SIN REDIRIGIR
         if (postsContainer && loadingPosts && noPosts) {
             mostrarElemento(loadingPosts, false);
             mostrarElemento(noPosts, true);
-            noPosts.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+            noPosts.innerHTML = '<p style="text-align:center; color:var(--warning); padding: 20px;">Problema al cargar reportes. Intenta recargar la página.</p>';
         } else {
-            feedView.innerHTML = '<p style="text-align:center; color:var(--danger); padding: 20px;">Error al cargar reportes</p>';
+            feedView.innerHTML = '<p style="text-align:center; color:var(--warning); padding: 20px;">Problema al cargar reportes.</p>';
         }
     }
 }
 
-// Función para crear elemento de post - VERSIÓN ACTUALIZADA CON LIKES Y COMENTARIOS
+// Versiones seguras de otras funciones
+async function cargarNotificacionesSuave() {
+    const notificationsView = document.getElementById('notificationsView');
+    if (!notificationsView) return;
+    
+    notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
+    
+    try {
+        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
+            credentials: 'include'
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                notificationsView.innerHTML = '<div class="notification">Problema de sesión al cargar notificaciones</div>';
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const data = await resp.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+            notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
+            return;
+        }
+
+        notificationsView.innerHTML = '';
+        data.forEach(n => {
+            const div = document.createElement('div');
+            div.className = 'notification';
+            div.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <strong>${escapeHtml(n.origen_nombres || 'Sistema')}</strong>
+                        <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
+                        <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
+                        <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
+                    </div>
+                </div>
+            `;
+            notificationsView.appendChild(div);
+        });
+    } catch (err) {
+        console.error(err);
+        notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
+    }
+}
+
+async function guardarPerfilSuave() {
+    const form = new FormData();
+    const foto = document.getElementById('fotoPerfil');
+    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
+    
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) form.append('nombres', inpNombres.value);
+    if (inpApellidos) form.append('apellidos', inpApellidos.value);
+    if (inpTelefono) form.append('telefono', inpTelefono.value);
+
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
+            method: 'POST', 
+            body: form,
+            credentials: 'include'
+        });
+        
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+        
+        const res = await resp.json();
+        if (res.success) {
+            alert('Perfil actualizado');
+            const profileForm = document.getElementById('profileForm');
+            if (profileForm) profileForm.style.display = 'none';
+            await cargarPerfilSuave();
+        } else {
+            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Error al guardar perfil');
+    }
+}
+
+// FUNCIÓN PARA OBTENER ID DE USUARIO
+async function obtenerUsuarioId() {
+    if (window.usuarioId) {
+        return window.usuarioId;
+    }
+    
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
+            credentials: 'include'
+        });
+        const data = await resp.json();
+        if (data.success && data.id_usuario) {
+            window.usuarioId = data.id_usuario;
+            return data.id_usuario;
+        }
+    } catch (error) {
+        console.error('Error obteniendo ID de usuario:', error);
+    }
+    
+    return 0;
+}
+
+// Función para crear elemento de post
 function crearPostElement(reporte) {
     try {
         const avatar = '/imagenes/default-avatar.png';
@@ -627,8 +934,6 @@ function crearPostElement(reporte) {
     }
 }
 
-// 🆕 FUNCIONES PARA EL SISTEMA DE LIKES Y COMENTARIOS
-
 // Función para cargar likes de un post
 async function cargarLikesPost(id_reporte, postElement) {
     try {
@@ -691,7 +996,7 @@ async function verificarLikeUsuario(id_reporte, postElement) {
     }
 }
 
-// Función para toggle like (ACTUALIZADA)
+// Función para toggle like
 window.toggleLike = async function(id_reporte, btn) {
     try {
         const id_usuario = await obtenerUsuarioId();
@@ -727,248 +1032,6 @@ window.toggleLike = async function(id_reporte, btn) {
         alert('Error al conectar con el servidor');
     }
 }
-
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR PERFIL
-async function cargarPerfil() {
-    try {
-        console.log('👤 Cargando información del perfil...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            credentials: 'include'
-        });
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('🔐 Error 401 - Sesión expirada en cargarPerfil');
-                mostrarErrorPerfil('Sesión expirada. Redirigiendo al login...');
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 2000);
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const user = await resp.json();
-
-        if (user && user.success === false) {
-            console.warn('❌ Error del servidor:', user.error);
-            
-            // Si es error de autenticación, redirigir
-            if (user.error && user.error.includes('No autenticado')) {
-                mostrarErrorPerfil('Sesión expirada. Redirigiendo...');
-                setTimeout(() => {
-                    window.location.href = '../index.php';
-                }, 2000);
-                return;
-            }
-            
-            mostrarErrorPerfil(user.error || 'Error del servidor');
-            return;
-        }
-
-        console.log('✅ Datos del usuario recibidos:', user);
-        actualizarUIUsuario(user);
-
-    } catch (err) {
-        console.error('❌ Error cargando perfil:', err);
-        
-        // Si es error de red, podría ser problema de sesión
-        if (err.message.includes('401') || err.message.includes('No autenticado')) {
-            mostrarErrorPerfil('Sesión expirada. Por favor inicia sesión nuevamente.');
-        } else {
-            mostrarErrorPerfil('Error al cargar información del perfil');
-        }
-    }
-}
-
-// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
-function actualizarUIUsuario(user) {
-    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            const valorSeguro = valor ? String(valor).trim() : '';
-            elemento.textContent = valorSeguro || valorPorDefecto;
-            elemento.style.color = '';
-        }
-    }
-
-    const elementosPerfil = [
-        { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
-        { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-        { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
-        { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
-        { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
-    ];
-
-    elementosPerfil.forEach(item => {
-        actualizarElemento(item.id, item.valor, item.defecto);
-    });
-
-    // Actualizar avatars
-    const profileAvatar = document.getElementById('profileAvatar');
-    const headerAvatar = document.getElementById('headerAvatar');
-    
-    if (profileAvatar) {
-        profileAvatar.src = '/imagenes/fiveicon.png';
-        profileAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-    
-    if (headerAvatar) {
-        headerAvatar.src = '/imagenes/fiveicon.png';
-        headerAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-
-    // Prefill form
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) inpNombres.value = user.nombres || '';
-    if (inpApellidos) inpApellidos.value = user.apellidos || '';
-    if (inpTelefono) inpTelefono.value = user.telefono || '';
-
-    console.log('✅ Perfil cargado exitosamente');
-}
-
-// 🆕 FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
-async function cargarEstadisticasUsuario() {
-    try {
-        console.log('📊 Cargando estadísticas del usuario...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            credentials: 'include'
-        });
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('🔐 Sesión expirada en estadísticas');
-                return; // No hacer nada, ya se manejó en cargarPerfil
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const data = await resp.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'Error al cargar estadísticas');
-        }
-        
-        const stats = data.estadisticas || {
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        };
-        
-        console.log('✅ Estadísticas cargadas:', stats);
-        actualizarEstadisticasUI(stats);
-        
-    } catch (error) {
-        console.error('❌ Error cargando estadísticas:', error);
-        // No mostrar error para no molestar al usuario
-        actualizarEstadisticasUI({
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        });
-    }
-}
-
-// 🆕 FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
-function actualizarEstadisticasUI(stats) {
-    function formatearNumero(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    }
-    
-    const elementosStats = [
-        { id: 'statReports', valor: stats.reportes },
-        { id: 'statLikes', valor: stats.likes },
-        { id: 'statComments', valor: stats.comentarios },
-        { id: 'statViews', valor: stats.vistas }
-    ];
-    
-    elementosStats.forEach(stat => {
-        const elemento = document.getElementById(stat.id);
-        if (elemento) {
-            elemento.textContent = formatearNumero(stat.valor);
-        }
-    });
-}
-
-// 🆕 FUNCIÓN PARA CARGAR PERFIL COMPLETO
-async function cargarPerfilCompleto() {
-    try {
-        console.log('👤 Cargando perfil completo...');
-        
-        await cargarPerfil();
-        await cargarEstadisticasUsuario();
-        
-        console.log('✅ Perfil completo cargado exitosamente');
-        
-    } catch (error) {
-        console.error('❌ Error cargando perfil completo:', error);
-    }
-}
-
-// 🆕 FUNCIÓN PARA OBTENER ID DE USUARIO
-async function obtenerUsuarioId() {
-    if (window.usuarioId) {
-        return window.usuarioId;
-    }
-    
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
-            credentials: 'include'
-        });
-        const data = await resp.json();
-        if (data.success && data.id_usuario) {
-            window.usuarioId = data.id_usuario;
-            return data.id_usuario;
-        }
-    } catch (error) {
-        console.error('Error obteniendo ID de usuario:', error);
-    }
-    
-    return 0;
-}
-
-// 🆕 FUNCIÓN PARA MOSTRAR ERRORES EN PERFIL
-function mostrarErrorPerfil(mensaje) {
-    console.log('🔄 Mostrando mensaje de error en perfil:', mensaje);
-    
-    const elementosError = [
-        'profileName',
-        'profileEmail', 
-        'profilePhone',
-        'profileNames',
-        'profileLastnames',
-        'profileEmailCard',
-        'profilePhoneCard'
-    ];
-    
-    elementosError.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            elemento.textContent = 'Error al cargar';
-            elemento.style.color = '#e74c3c';
-        }
-    });
-}
-
-// ... (el resto de las funciones auxiliares se mantienen igual)
 
 // Función auxiliar para crear estructura de imágenes simple
 function crearEstructuraImagenesSimple(imagenes) {
@@ -1057,85 +1120,6 @@ function enviarCoordenadasAlMapa(reporte) {
         } catch (error) {
             console.error('Error enviando coordenadas al mapa:', error);
         }
-    }
-}
-
-// Notificaciones
-async function cargarNotificaciones() {
-    const notificationsView = document.getElementById('notificationsView');
-    if (!notificationsView) {
-        console.warn('❌ notificationsView no encontrado');
-        return;
-    }
-    
-    notificationsView.innerHTML = '<div class="loading"><div class="loading-spinner"></div><p>Cargando notificaciones...</p></div>';
-    try {
-        const resp = await fetch('../controllers/notificacion_controlador.php?action=listar', {
-            credentials: 'include'
-        });
-        const data = await resp.json();
-
-        if (!Array.isArray(data) || data.length === 0) {
-            notificationsView.innerHTML = '<div class="notification">No tienes notificaciones.</div>';
-            return;
-        }
-
-        notificationsView.innerHTML = '';
-        data.forEach(n => {
-            const div = document.createElement('div');
-            div.className = 'notification';
-            div.innerHTML = `
-                <div style="display:flex; justify-content:space-between; align-items:center;">
-                    <div>
-                        <strong>${escapeHtml(n.origen_nombres || 'Sistema')}</strong>
-                        <div style="font-size:13px; color:#666;">${escapeHtml(n.mensaje || n.tipo)}</div>
-                        <div style="font-size:12px; color:#999;">${new Date(n.fecha).toLocaleString()}</div>
-                    </div>
-                    <div style="display:flex; flex-direction:column; gap:6px;">
-                        <button class="btn-small" onclick="verNotificacion(${n.id_notificacion}, ${n.id_reporte || 'null'})">Ver</button>
-                        <button class="btn-small" onclick="marcarLeida(${n.id_notificacion}, this)">${n.leida == 1 ? 'Leída' : 'Marcar leída'}</button>
-                    </div>
-                </div>
-            `;
-            notificationsView.appendChild(div);
-        });
-    } catch (err) {
-        console.error(err);
-        notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
-    }
-}
-
-async function guardarPerfil() {
-    const form = new FormData();
-    const foto = document.getElementById('fotoPerfil');
-    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
-    
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) form.append('nombres', inpNombres.value);
-    if (inpApellidos) form.append('apellidos', inpApellidos.value);
-    if (inpTelefono) form.append('telefono', inpTelefono.value);
-
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', 
-            body: form,
-            credentials: 'include'
-        });
-        const res = await resp.json();
-        if (res.success) {
-            alert('Perfil actualizado');
-            const profileForm = document.getElementById('profileForm');
-            if (profileForm) profileForm.style.display = 'none';
-            await cargarPerfil();
-        } else {
-            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Error al guardar perfil');
     }
 }
 
@@ -1260,3 +1244,49 @@ window.ampliarImagen = function(src) {
 }
 
 window.navegarAlMapa = navegarAlMapa;
+
+// Función para cerrar sesión (solo cuando el usuario lo solicita)
+function cerrarSesion() {
+    if (confirm('¿Estás seguro de que quieres cerrar sesión?')) {
+        window.location.href = '../logout.php';
+    }
+}
+
+// FUNCIÓN TEMPORAL PARA DEBUGGEAR DATOS DEL USUARIO
+function debugUserData() {
+    console.log('🐛 DEBUG USER DATA:');
+    console.log('  - window.usuarioId:', window.usuarioId);
+    console.log('  - window.usuarioNombres:', window.usuarioNombres);
+    console.log('  - window.usuarioCorreo:', window.usuarioCorreo);
+    console.log('  - window.usuarioData:', window.usuarioData);
+    
+    // Verificar elementos del DOM
+    const elements = ['profileName', 'profileNames', 'profileLastnames', 'profilePhone'];
+    elements.forEach(id => {
+        const el = document.getElementById(id);
+        if (el) {
+            console.log(`  - ${id}:`, el.textContent);
+        }
+    });
+}
+
+// Agregar botón de debug temporal
+document.addEventListener('DOMContentLoaded', function() {
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = '🐛 Debug Datos';
+    debugBtn.style.position = 'fixed';
+    debugBtn.style.top = '10px';
+    debugBtn.style.right = '10px';
+    debugBtn.style.zIndex = '9999';
+    debugBtn.style.background = '#ff4444';
+    debugBtn.style.color = 'white';
+    debugBtn.style.border = 'none';
+    debugBtn.style.padding = '5px 10px';
+    debugBtn.style.borderRadius = '5px';
+    debugBtn.style.cursor = 'pointer';
+    debugBtn.onclick = debugUserData;
+    document.body.appendChild(debugBtn);
+});
+
+// Mejorar la experiencia en móviles
+document.addEventListener('touchstart', function() {}, { passive: true });
