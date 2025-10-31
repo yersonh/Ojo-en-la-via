@@ -97,10 +97,10 @@ self.addEventListener('fetch', (event) => {
 function isApiRequest(request) {
     const url = request.url.toLowerCase();
     return API_ENDPOINTS.some(endpoint => url.includes(endpoint)) ||
-           request.headers.get('Accept')?.includes('application/json') ||
-           url.includes('?action=') ||
-           url.includes('/controllers/') ||
-           url.includes('/api/');
+        request.headers.get('Accept')?.includes('application/json') ||
+        url.includes('?action=') ||
+        url.includes('/controllers/') ||
+        url.includes('/api/');
 }
 
 // 🌐 ESTRATEGIA NETWORK-FIRST (SIEMPRE VERSIÓN MÁS RECIENTE)
