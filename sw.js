@@ -165,7 +165,6 @@ async function cacheResponse(request, response) {
     try {
         const cache = await caches.open(CACHE_NAME);
         await cache.put(request, response);
-        console.log('💾 Cache actualizado:', request.url);
     } catch (error) {
         console.log('⚠️ Error actualizando cache:', error);
     }
