@@ -62,23 +62,54 @@ class Usuario {
 
     // MÉTODOS ADICIONALES (opcionales pero útiles)
     public function obtenerPorId($id_usuario) {
-        $sql = "SELECT u.*, p.nombres, p.apellidos, p.telefono 
-                FROM usuario u 
-                JOIN persona p ON u.id_persona = p.id_persona 
-                WHERE u.id_usuario = :id_usuario";
+    $sql = "SELECT 
+                u.id_usuario,
+                u.correo,
+                u.fecha_registro,
+                u.id_rol,
+                p.id_persona,
+                p.nombres,
+                p.apellidos, 
+                p.telefono,
+                p.foto_perfil,
+                r.nombre as nombre_rol
+            FROM usuario u 
+            JOIN persona p ON u.id_persona = p.id_persona 
+            LEFT JOIN roles r ON u.id_rol = r.id_rol
+            WHERE u.id_usuario = :id_usuario";
+    
+    $stmt = $this->conn->prepare($sql);
+    $stmt->bindParam(':id_usuario', $id_usuario);
+    
+    try {
+        $stmt->execute();
+        $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         
-        $stmt = $this->conn->prepare($sql);
-        $stmt->bindParam(':id_usuario', $id_usuario);
-        
-        try {
-            $stmt->execute();
-            return $stmt->fetch(PDO::FETCH_ASSOC);
-        } catch (PDOException $e) {
-            echo "❌ Error al obtener usuario por ID: " . $e->getMessage();
-            return false;
+        if ($resultado) {
+            // Asegurar que foto_perfil sea una URL absoluta en producción
+            $foto_perfil = $resultado['foto_perfil'] ?? '/imagenes/default-avatar.png';
+            
+            // Si es una ruta relativa, convertir a absoluta para producción
+            if (strpos($foto_perfil, 'http') !== 0 && $foto_perfil !== '/imagenes/default-avatar.png') {
+                // En producción, asumimos que las imágenes están en un bucket o CDN
+                $foto_perfil = '/imagenes/' . basename($foto_perfil);
+            }
+            
+            $resultado['foto_perfil'] = $foto_perfil;
+            
+            error_log("📊 DATOS OBTENIDOS DE BD:");
+            error_log("  - nombres: " . $resultado['nombres']);
+            error_log("  - apellidos: " . $resultado['apellidos']);
+            error_log("  - telefono: " . ($resultado['telefono'] ?? 'NULL'));
+            error_log("  - foto_perfil: " . $resultado['foto_perfil']);
         }
+        
+        return $resultado;
+    } catch (PDOException $e) {
+        error_log("❌ Error al obtener usuario por ID: " . $e->getMessage());
+        return false;
     }
-
+}
     public function actualizarEstado($id_usuario, $id_estado) {
         $sql = "UPDATE usuario SET id_estado = :id_estado WHERE id_usuario = :id_usuario";
         $stmt = $this->conn->prepare($sql);
