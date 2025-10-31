@@ -86,27 +86,18 @@ class Usuario {
         $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($resultado) {
-            // Asegurar que foto_perfil sea una URL absoluta en producción
-            $foto_perfil = $resultado['foto_perfil'] ?? '/imagenes/default-avatar.png';
-            
-            // Si es una ruta relativa, convertir a absoluta para producción
-            if (strpos($foto_perfil, 'http') !== 0 && $foto_perfil !== '/imagenes/default-avatar.png') {
-                // En producción, asumimos que las imágenes están en un bucket o CDN
-                $foto_perfil = '/imagenes/' . basename($foto_perfil);
-            }
-            
-            $resultado['foto_perfil'] = $foto_perfil;
-            
-            error_log("📊 DATOS OBTENIDOS DE BD:");
+            error_log("✅ DATOS BD PARA USUARIO $id_usuario:");
             error_log("  - nombres: " . $resultado['nombres']);
-            error_log("  - apellidos: " . $resultado['apellidos']);
+            error_log("  - apellidos: " . ($resultado['apellidos'] ?? 'NULL'));
             error_log("  - telefono: " . ($resultado['telefono'] ?? 'NULL'));
-            error_log("  - foto_perfil: " . $resultado['foto_perfil']);
+            error_log("  - foto_perfil: " . ($resultado['foto_perfil'] ?? 'NULL'));
+        } else {
+            error_log("❌ No se encontraron datos para usuario: $id_usuario");
         }
         
         return $resultado;
     } catch (PDOException $e) {
-        error_log("❌ Error al obtener usuario por ID: " . $e->getMessage());
+        error_log("❌ Error en obtenerPorId: " . $e->getMessage());
         return false;
     }
 }

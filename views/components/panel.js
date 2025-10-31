@@ -221,6 +221,30 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
+// FUNCIÓN PARA VERIFICAR SESIÓN
+async function verificarSesion() {
+    try {
+        const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        
+        const data = await resp.json();
+        console.log('🔐 Estado sesión:', data);
+        
+        if (!data.sesion_activa) {
+            console.warn('⚠️ Sesión no activa, redirigiendo...');
+            window.location.href = '../index.php';
+            return false;
+        }
+        
+        return true;
+    } catch (error) {
+        console.error('Error verificando sesión:', error);
+        return false;
+    }
+}
+
 // FUNCIÓN PARA CARGAR DATOS INICIALES DESDE PHP - MODIFICADA
 function cargarDatosInicialesDesdePHP() {
     console.log('🔍 Buscando datos de usuario desde PHP...');
@@ -246,7 +270,40 @@ function cargarDatosInicialesDesdePHP() {
     return false;
 }
 
-// FUNCIÓN MEJORADA PARA CARGAR PERFIL - CON DEBUG DETALLADO
+// FUNCIÓN MEJORADA PARA CARGAR IMÁGENES
+function cargarImagenSegura(elemento, url) {
+    if (!elemento) return;
+    
+    // Si no hay URL o está vacía, usar imagen por defecto
+    if (!url || url === '' || url === 'null') {
+        elemento.src = window.location.origin + '/imagenes/default-avatar.png';
+        return;
+    }
+    
+    // Si la URL ya es absoluta, usarla directamente
+    if (url.startsWith('http')) {
+        elemento.src = url;
+    } else {
+        // Si es relativa, convertir a absoluta
+        const baseUrl = window.location.origin;
+        elemento.src = baseUrl + (url.startsWith('/') ? url : '/' + url);
+    }
+    
+    // Manejar errores de carga de manera más robusta
+    elemento.onerror = function() {
+        console.warn('❌ Error cargando imagen:', this.src);
+        // Usar imagen por defecto absoluta
+        this.src = window.location.origin + '/imagenes/default-avatar.png';
+        this.onerror = null; // Prevenir bucles infinitos
+    };
+    
+    // Verificar si la imagen carga correctamente
+    elemento.onload = function() {
+        console.log('✅ Imagen cargada correctamente:', this.src);
+    };
+}
+
+// FUNCIÓN MEJORADA PARA CARGAR PERFIL
 async function cargarPerfilSuave() {
     try {
         console.log('👤 Cargando información del perfil...');
@@ -262,7 +319,6 @@ async function cargarPerfilSuave() {
         
         console.log('🔍 Estado de respuesta perfil:', resp.status, resp.statusText);
         
-        // MANEJO ESPECÍFICO DEL ERROR 401
         if (resp.status === 401) {
             console.error('❌ Error 401 - Sesión expirada o no válida');
             
@@ -274,12 +330,18 @@ async function cargarPerfilSuave() {
                     nombres: window.usuarioNombres,
                     correo: window.usuarioCorreo,
                     apellidos: '',
-                    telefono: ''
+                    telefono: '',
+                    foto_perfil: '/imagenes/default-avatar.png'
                 };
                 actualizarUIUsuario(userData);
                 return;
             }
-            return;
+            
+            // Si no hay datos de respaldo, intentar verificar sesión
+            const sesionValida = await verificarSesion();
+            if (!sesionValida) {
+                return;
+            }
         }
         
         if (!resp.ok) {
@@ -287,7 +349,7 @@ async function cargarPerfilSuave() {
         }
         
         const data = await resp.json();
-        console.log('📦 DATOS COMPLETOS RECIBIDOS DEL SERVIDOR:', data);
+        console.log('📦 Datos completos recibidos del servidor:', data);
 
         if (!data.success) {
             console.error('❌ Error del servidor:', data.error);
@@ -322,102 +384,23 @@ async function cargarPerfilSuave() {
     }
 }
 
-// FUNCIÓN MEJORADA PARA CARGAR DATOS ALTERNATIVOS DEL USUARIO
-async function cargarDatosUsuarioAlternativo() {
-    console.log('🔄 Intentando cargar datos de usuario alternativos...');
-    
-    try {
-        // PRIMERO: Intentar con variables globales de PHP
-        if (window.usuarioId && window.usuarioNombres) {
-            console.log('✅ Usando datos de variables PHP globales');
-            const userData = {
-                id_usuario: window.usuarioId,
-                nombres: window.usuarioNombres,
-                correo: window.usuarioCorreo || 'No disponible',
-                apellidos: '',
-                telefono: ''
-            };
-            actualizarUIUsuario(userData);
-            return;
-        }
-        
-        // SEGUNDO: Intentar con datos de sessionStorage/localStorage
-        const usuarioGuardado = localStorage.getItem('usuarioData') || sessionStorage.getItem('usuarioData');
-        if (usuarioGuardado) {
-            const userData = JSON.parse(usuarioGuardado);
-            console.log('✅ Usando datos de storage:', userData);
-            actualizarUIUsuario(userData);
-            return;
-        }
-        
-        // TERCERO: Mostrar datos por defecto
-        console.warn('📝 Mostrando datos por defecto - no se pudieron cargar datos del usuario');
-        mostrarDatosPerfilPorDefecto();
-        
-    } catch (error) {
-        console.error('❌ Error cargando datos alternativos:', error);
-        mostrarDatosPerfilPorDefecto();
-    }
-}
-
-// FUNCIÓN PARA MOSTRAR DATOS POR DEFECTO
-function mostrarDatosPerfilPorDefecto() {
-    console.log('🔄 Mostrando datos de perfil por defecto...');
-    
-    const elementosPerfil = [
-        'profileName', 'profileEmail', 'profilePhone', 
-        'profileNames', 'profileLastnames', 'profileEmailCard', 'profilePhoneCard'
-    ];
-    
-    elementosPerfil.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            // Intentar recuperar valor original del data attribute
-            const valorOriginal = elemento.getAttribute('data-valor-original');
-            
-            if (valorOriginal && valorOriginal !== 'null' && valorOriginal !== 'undefined') {
-                elemento.textContent = valorOriginal;
-                elemento.style.color = '';
-            } else {
-                // Usar valores por defecto
-                if (id === 'profileName') elemento.textContent = 'Usuario';
-                else if (id.includes('Email')) elemento.textContent = 'correo@ejemplo.com';
-                else if (id.includes('Phone')) elemento.textContent = 'Sin teléfono';
-                else elemento.textContent = 'No disponible';
-                elemento.style.color = '#999';
-            }
-        }
-    });
-
-    // Actualizar avatars por defecto
-    const profileAvatar = document.getElementById('profileAvatar');
-    const headerAvatar = document.getElementById('headerAvatar');
-    
-    if (profileAvatar) {
-        profileAvatar.src = '/imagenes/default-avatar.png';
-    }
-    if (headerAvatar) {
-        headerAvatar.src = '/imagenes/default-avatar.png';
-    }
-}
-
 // FUNCIÓN MEJORADA PARA ACTUALIZAR LA UI DEL USUARIO
 function actualizarUIUsuario(user) {
-    console.log('🎨 Actualizando UI con datos:', user);
+    console.log('🎨 Actualizando UI con datos completos:', user);
     
     function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
         const elemento = document.getElementById(id);
         if (elemento) {
-            // Manejar valores null, undefined o vacíos
-            const valorSeguro = (valor !== null && valor !== undefined && valor !== '') 
-                ? String(valor).trim() 
-                : '';
-                
+            // Manejar valores null, undefined, vacíos o 'null' como string
+            let valorSeguro = valor;
+            if (valor === null || valor === undefined || valor === '' || valor === 'null') {
+                valorSeguro = '';
+            } else {
+                valorSeguro = String(valor).trim();
+            }
+            
             elemento.textContent = valorSeguro || valorPorDefecto;
             elemento.style.color = valorSeguro ? '' : '#999';
-            
-            // Guardar en data attribute para referencia
-            elemento.setAttribute('data-valor-original', valorSeguro);
         }
     }
 
@@ -465,32 +448,14 @@ function actualizarUIUsuario(user) {
         actualizarElemento(item.id, item.valor, item.defecto);
     });
 
-    // Actualizar avatars de forma SEGURA con HTTPS
+    // Actualizar avatars de forma SEGURA
     const profileAvatar = document.getElementById('profileAvatar');
     const headerAvatar = document.getElementById('headerAvatar');
     
-    // Función para cargar imagen segura
-    function cargarImagenSegura(elemento, url) {
-        if (!elemento) return;
-        
-        // Si la URL ya es absoluta, usarla directamente
-        if (url.startsWith('http')) {
-            elemento.src = url;
-        } else {
-            // Si es relativa, convertir a absoluta
-            const baseUrl = window.location.origin;
-            elemento.src = baseUrl + (url.startsWith('/') ? url : '/' + url);
-        }
-        
-        // Manejar errores de carga
-        elemento.onerror = function() {
-            console.warn('❌ Error cargando avatar, usando imagen por defecto');
-            this.src = window.location.origin + '/imagenes/default-avatar.png';
-            this.onerror = null;
-        };
-    }
-    
+    // Usar foto_perfil del usuario o imagen por defecto
     const avatarUrl = user.foto_perfil || '/imagenes/default-avatar.png';
+    console.log('🖼️ Cargando avatar:', avatarUrl);
+    
     cargarImagenSegura(profileAvatar, avatarUrl);
     cargarImagenSegura(headerAvatar, avatarUrl);
 
@@ -503,10 +468,12 @@ function actualizarUIUsuario(user) {
     if (inpApellidos) inpApellidos.value = user.apellidos || '';
     if (inpTelefono) inpTelefono.value = user.telefono || '';
 
-    console.log('✅ UI de perfil actualizada exitosamente');
-    console.log('📋 Campos críticos:', {
+    console.log('✅ UI de perfil actualizada');
+    console.log('📋 Estado campos:', {
+        nombres: user.nombres || 'VACÍO',
         apellidos: user.apellidos || 'VACÍO',
-        telefono: user.telefono || 'VACÍO'
+        telefono: user.telefono || 'VACÍO',
+        foto_perfil: user.foto_perfil || 'VACÍO'
     });
 }
 

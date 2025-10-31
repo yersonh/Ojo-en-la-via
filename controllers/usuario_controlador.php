@@ -61,61 +61,76 @@ class UsuarioControlador {
     }
     
     public function obtener() {
-        try {
-            // Debug más detallado
-            error_log("🔍 Verificando sesión en obtener(): " . (isset($_SESSION['id_usuario']) ? $_SESSION['id_usuario'] : 'NO HAY SESION'));
-            
-            // Verificar sesión
-            if (!isset($_SESSION['id_usuario'])) {
-                error_log("❌ SESION NO ENCONTRADA en obtener() - SESSION ID: " . session_id());
-                http_response_code(401);
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'No autenticado - Sesión no encontrada',
-                    'session_expired' => true,
-                    'session_id' => session_id()
-                ]);
-                return;
-            }
-            
-            $id_usuario = $_SESSION['id_usuario'];
-            error_log("✅ Sesión encontrada, ID: " . $id_usuario);
-            
-            $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
-            
-            if ($usuario) {
-                // Actualizar datos en sesión
-                $_SESSION['nombres'] = $usuario['nombres'] ?? '';
-                $_SESSION['correo'] = $usuario['correo'] ?? '';
-                $_SESSION['apellidos'] = $usuario['apellidos'] ?? '';
-                
-                echo json_encode([
-                    'success' => true,
-                    'id_usuario' => $usuario['id_usuario'],
-                    'nombres' => $usuario['nombres'] ?? '',
-                    'apellidos' => $usuario['apellidos'] ?? '',
-                    'correo' => $usuario['correo'] ?? '',
-                    'telefono' => $usuario['telefono'] ?? '',
-                    'nombre_rol' => $usuario['nombre_rol'] ?? 'Usuario',
-                    'fecha_registro' => $usuario['fecha_registro'] ?? '',
-                    'session_id' => session_id()
-                ]);
-            } else {
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Usuario no encontrado en la base de datos'
-                ]);
-            }
-            
-        } catch (Exception $e) {
-            error_log("❌ Error en obtener(): " . $e->getMessage());
-            http_response_code(500);
+    try {
+        // DEBUG DETALLADO DE SESIÓN
+        error_log("=== DEBUG SESIÓN EN OBTENER() ===");
+        error_log("SESSION ID: " . session_id());
+        error_log("SESSION STATUS: " . session_status());
+        error_log("SESSION DATA: " . print_r($_SESSION, true));
+        error_log("HEADERS SENT: " . (headers_sent() ? 'SI' : 'NO'));
+        
+        // Verificar sesión de manera más robusta
+        if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            error_log("❌ SESIÓN INVALIDA - id_usuario no encontrado");
+            http_response_code(401);
             echo json_encode([
                 'success' => false,
-                'error' => 'Error del servidor'
+                'error' => 'Sesión no válida o expirada',
+                'session_expired' => true,
+                'session_id' => session_id(),
+                'session_data' => $_SESSION
+            ]);
+            return;
+        }
+        
+        $id_usuario = $_SESSION['id_usuario'];
+        error_log("✅ Sesión válida, ID: " . $id_usuario);
+        
+        $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
+        
+        if ($usuario) {
+            // DEBUG: Verificar qué datos vienen de la BD
+            error_log("📊 DATOS DESDE BD:");
+            error_log("  - nombres: " . ($usuario['nombres'] ?? 'NO'));
+            error_log("  - apellidos: " . ($usuario['apellidos'] ?? 'NO'));
+            error_log("  - telefono: " . ($usuario['telefono'] ?? 'NO'));
+            error_log("  - correo: " . ($usuario['correo'] ?? 'NO'));
+            error_log("  - foto_perfil: " . ($usuario['foto_perfil'] ?? 'NO'));
+            
+            // Si los campos están vacíos en la BD, usar valores por defecto
+            $response = [
+                'success' => true,
+                'id_usuario' => $usuario['id_usuario'],
+                'nombres' => $usuario['nombres'] ?? '',
+                'apellidos' => $usuario['apellidos'] ?? 'No especificado',
+                'correo' => $usuario['correo'] ?? '',
+                'telefono' => $usuario['telefono'] ?? 'No registrado',
+                'foto_perfil' => $usuario['foto_perfil'] ?? '/imagenes/default-avatar.png',
+                'nombre_rol' => $usuario['nombre_rol'] ?? 'Usuario',
+                'fecha_registro' => $usuario['fecha_registro'] ?? ''
+            ];
+            
+            error_log("🎯 RESPUESTA FINAL:");
+            error_log(print_r($response, true));
+            
+            echo json_encode($response);
+        } else {
+            error_log("❌ Usuario no encontrado en BD para ID: " . $id_usuario);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Usuario no encontrado'
             ]);
         }
+        
+    } catch (Exception $e) {
+        error_log("❌ Error en obtener(): " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'success' => false,
+            'error' => 'Error del servidor'
+        ]);
     }
+}
     
     public function obtener_estadisticas() {
         try {
