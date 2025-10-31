@@ -1,9 +1,6 @@
-// Panel.js - Versión corregida con carga robusta de perfil
+// Panel.js - Versión sin carga de perfil
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando panel...');
-    
-    // Primero intentar cargar datos desde PHP
-    cargarDatosInicialesDesdePHP();
     
     setTimeout(() => {
         try {
@@ -26,41 +23,8 @@ document.addEventListener('DOMContentLoaded', function() {
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
             
-            // Cargar datos iniciales SOLO del feed (el perfil se carga al hacer clic)
+            // Cargar datos iniciales del feed
             cargarFeedSuave();
-
-            // Configurar botones del perfil
-            const btnEditProfile = document.getElementById('btnEditProfile');
-            const btnCancelProfile = document.getElementById('btnCancelProfile');
-            const btnSaveProfile = document.getElementById('btnSaveProfile');
-            const editAvatarBtn = document.getElementById('editAvatarBtn');
-            
-            if (btnEditProfile) {
-                btnEditProfile.addEventListener('click', () => {
-                    const profileForm = document.getElementById('profileForm');
-                    if (profileForm) profileForm.style.display = 'block';
-                });
-            }
-            
-            if (btnCancelProfile) {
-                btnCancelProfile.addEventListener('click', () => {
-                    const profileForm = document.getElementById('profileForm');
-                    if (profileForm) profileForm.style.display = 'none';
-                });
-            }
-            
-            if (btnSaveProfile) {
-                btnSaveProfile.addEventListener('click', async () => {
-                    await guardarPerfilSuave();
-                });
-            }
-            
-            if (editAvatarBtn) {
-                editAvatarBtn.addEventListener('click', () => {
-                    const fotoPerfil = document.getElementById('fotoPerfil');
-                    if (fotoPerfil) fotoPerfil.click();
-                });
-            }
 
             console.log('✅ Panel inicializado correctamente');
 
@@ -172,9 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     targetElement.style.display = 'block';
                     
                     // CARGAR CONTENIDO ESPECÍFICO DE CADA VISTA
-                    if (target === 'profileView') {
-                        await cargarPerfilCompletoSuave();
-                    } else if (target === 'feedView') {
+                    if (target === 'feedView') {
                         cargarFeedSuave();
                     } else if (target === 'notificationsView') {
                         cargarNotificacionesSuave();
@@ -245,31 +207,6 @@ async function verificarSesion() {
     }
 }
 
-// FUNCIÓN PARA CARGAR DATOS INICIALES DESDE PHP - MODIFICADA
-function cargarDatosInicialesDesdePHP() {
-    console.log('🔍 Buscando datos de usuario desde PHP...');
-    
-    // Verificar si las variables globales de PHP ya están disponibles
-    if (window.usuarioId && window.usuarioNombres) {
-        console.log('✅ Datos de usuario encontrados en variables globales:', {
-            id: window.usuarioId,
-            nombres: window.usuarioNombres,
-            correo: window.usuarioCorreo
-        });
-        
-        // Crear objeto de usuario con datos disponibles
-        window.usuarioData = {
-            id: window.usuarioId,
-            nombres: window.usuarioNombres,
-            correo: window.usuarioCorreo
-        };
-        return true;
-    }
-    
-    console.warn('📝 No se encontraron datos de usuario incrustados en PHP - Se cargarán desde API');
-    return false;
-}
-
 // FUNCIÓN MEJORADA PARA CARGAR IMÁGENES
 function cargarImagenSegura(elemento, url) {
     if (!elemento) return;
@@ -301,311 +238,6 @@ function cargarImagenSegura(elemento, url) {
     elemento.onload = function() {
         console.log('✅ Imagen cargada correctamente:', this.src);
     };
-}
-
-// FUNCIÓN MEJORADA PARA CARGAR PERFIL
-async function cargarPerfilSuave() {
-    try {
-        console.log('👤 Cargando información del perfil...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        console.log('🔍 Estado de respuesta perfil:', resp.status, resp.statusText);
-        
-        if (resp.status === 401) {
-            console.error('❌ Error 401 - Sesión expirada o no válida');
-            
-            // Intentar usar datos de las variables PHP como respaldo
-            if (window.usuarioId && window.usuarioNombres) {
-                console.log('🔄 Usando datos de respaldo desde variables PHP');
-                const userData = {
-                    id_usuario: window.usuarioId,
-                    nombres: window.usuarioNombres,
-                    correo: window.usuarioCorreo,
-                    apellidos: '',
-                    telefono: '',
-                    foto_perfil: '/imagenes/default-avatar.png'
-                };
-                actualizarUIUsuario(userData);
-                return;
-            }
-            
-            // Si no hay datos de respaldo, intentar verificar sesión
-            const sesionValida = await verificarSesion();
-            if (!sesionValida) {
-                return;
-            }
-        }
-        
-        if (!resp.ok) {
-            throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
-        }
-        
-        const data = await resp.json();
-        console.log('📦 Datos completos recibidos del servidor:', data);
-
-        if (!data.success) {
-            console.error('❌ Error del servidor:', data.error);
-            return;
-        }
-
-        console.log('✅ Datos específicos para mostrar:', {
-            nombres: data.nombres,
-            apellidos: data.apellidos,
-            telefono: data.telefono,
-            correo: data.correo,
-            foto_perfil: data.foto_perfil
-        });
-        
-        // Verificar si los campos están vacíos
-        if (!data.apellidos && !data.telefono) {
-            console.warn('⚠️ Campos apellidos y telefono están vacíos o no existen');
-        } else if (!data.apellidos) {
-            console.warn('⚠️ Campo apellidos está vacío o no existe');
-        } else if (!data.telefono) {
-            console.warn('⚠️ Campo telefono está vacío o no existe');
-        }
-        
-        // Actualizar datos del usuario
-        actualizarUIUsuario(data);
-        
-        // Cargar estadísticas después de cargar el perfil
-        await cargarEstadisticasUsuario();
-
-    } catch (err) {
-        console.error('❌ Error cargando perfil:', err);
-    }
-}
-
-// FUNCIÓN MEJORADA PARA ACTUALIZAR LA UI DEL USUARIO
-function actualizarUIUsuario(user) {
-    console.log('🎨 Actualizando UI con datos completos:', user);
-    
-    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            // Manejar valores null, undefined, vacíos o 'null' como string
-            let valorSeguro = valor;
-            if (valor === null || valor === undefined || valor === '' || valor === 'null') {
-                valorSeguro = '';
-            } else {
-                valorSeguro = String(valor).trim();
-            }
-            
-            elemento.textContent = valorSeguro || valorPorDefecto;
-            elemento.style.color = valorSeguro ? '' : '#999';
-        }
-    }
-
-    // Mapeo de elementos a actualizar - CON VALORES POR DEFECTO ESPECÍFICOS
-    const elementosPerfil = [
-        { 
-            id: 'profileName', 
-            valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim(),
-            defecto: 'Usuario'
-        },
-        { 
-            id: 'profileEmail', 
-            valor: user.correo,
-            defecto: 'Correo no disponible' 
-        },
-        { 
-            id: 'profilePhone', 
-            valor: user.telefono,
-            defecto: 'Sin teléfono registrado' 
-        },
-        { 
-            id: 'profileNames', 
-            valor: user.nombres,
-            defecto: 'No especificado' 
-        },
-        { 
-            id: 'profileLastnames', 
-            valor: user.apellidos,
-            defecto: 'No especificado' 
-        },
-        { 
-            id: 'profileEmailCard', 
-            valor: user.correo,
-            defecto: 'Correo no disponible' 
-        },
-        { 
-            id: 'profilePhoneCard', 
-            valor: user.telefono,
-            defecto: 'Sin teléfono registrado' 
-        }
-    ];
-
-    // Actualizar cada elemento
-    elementosPerfil.forEach(item => {
-        actualizarElemento(item.id, item.valor, item.defecto);
-    });
-
-    // Actualizar avatars de forma SEGURA
-    const profileAvatar = document.getElementById('profileAvatar');
-    const headerAvatar = document.getElementById('headerAvatar');
-    
-    // Usar foto_perfil del usuario o imagen por defecto
-    const avatarUrl = user.foto_perfil || '/imagenes/default-avatar.png';
-    console.log('🖼️ Cargando avatar:', avatarUrl);
-    
-    cargarImagenSegura(profileAvatar, avatarUrl);
-    cargarImagenSegura(headerAvatar, avatarUrl);
-
-    // Prefill form de edición - CON VALORES POR DEFECTO
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) inpNombres.value = user.nombres || '';
-    if (inpApellidos) inpApellidos.value = user.apellidos || '';
-    if (inpTelefono) inpTelefono.value = user.telefono || '';
-
-    console.log('✅ UI de perfil actualizada');
-    console.log('📋 Estado campos:', {
-        nombres: user.nombres || 'VACÍO',
-        apellidos: user.apellidos || 'VACÍO',
-        telefono: user.telefono || 'VACÍO',
-        foto_perfil: user.foto_perfil || 'VACÍO'
-    });
-}
-
-// FUNCIÓN PARA CARGAR PERFIL COMPLETO
-async function cargarPerfilCompletoSuave() {
-    try {
-        console.log('👤 Cargando perfil completo...');
-        
-        // Mostrar estado de carga
-        const profileView = document.getElementById('profileView');
-        if (profileView && profileView.style.display !== 'none') {
-            const existingContent = profileView.querySelector('.profile-container');
-            if (existingContent) {
-                existingContent.style.opacity = '0.5';
-            }
-        }
-        
-        await cargarPerfilSuave();
-        console.log('✅ Perfil completo cargado exitosamente');
-        
-        // Restaurar opacidad
-        if (profileView) {
-            const existingContent = profileView.querySelector('.profile-container');
-            if (existingContent) {
-                existingContent.style.opacity = '1';
-            }
-        }
-        
-    } catch (error) {
-        console.error('❌ Error cargando perfil completo:', error);
-        
-        // Mostrar error en la UI
-        const profileView = document.getElementById('profileView');
-        if (profileView) {
-            profileView.innerHTML = `
-                <div class="error-state">
-                    <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #e74c3c; margin-bottom: 1rem;"></i>
-                    <p>Error al cargar el perfil</p>
-                    <button onclick="cargarPerfilCompletoSuave()" class="btn btn-primary">
-                        Reintentar
-                    </button>
-                </div>
-            `;
-        }
-    }
-}
-
-// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
-async function cargarEstadisticasUsuario() {
-    try {
-        console.log('📊 Cargando estadísticas del usuario...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            method: 'GET',
-            credentials: 'include',
-            headers: {
-                'Accept': 'application/json',
-                'Cache-Control': 'no-cache'
-            }
-        });
-        
-        console.log('🔍 Estado de respuesta estadísticas:', resp.status);
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('⚠️ Error 401 en estadísticas - usando valores por defecto');
-                // Usamos valores por defecto sin redirigir
-                actualizarEstadisticasUI({
-                    reportes: 0,
-                    likes: 0,
-                    comentarios: 0,
-                    vistas: 0
-                });
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const data = await resp.json();
-        console.log('📦 Datos de estadísticas recibidos:', data);
-        
-        if (!data.success) {
-            console.warn('❌ Error en respuesta de estadísticas:', data.error);
-            throw new Error(data.error || 'Error al cargar estadísticas');
-        }
-        
-        const stats = data.estadisticas || {
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        };
-        
-        console.log('✅ Estadísticas cargadas:', stats);
-        actualizarEstadisticasUI(stats);
-        
-    } catch (error) {
-        console.error('❌ Error cargando estadísticas:', error);
-        // No mostramos error al usuario, usamos valores por defecto
-        actualizarEstadisticasUI({
-            reportes: 0,
-            likes: 0,
-            comentarios: 0,
-            vistas: 0
-        });
-    }
-}
-
-// FUNCIÓN PARA ACTUALIZAR ESTADÍSTICAS EN UI
-function actualizarEstadisticasUI(stats) {
-    function formatearNumero(num) {
-        if (num >= 1000000) {
-            return (num / 1000000).toFixed(1) + 'M';
-        } else if (num >= 1000) {
-            return (num / 1000).toFixed(1) + 'K';
-        }
-        return num.toString();
-    }
-    
-    const elementosStats = [
-        { id: 'statReports', valor: stats.reportes },
-        { id: 'statLikes', valor: stats.likes },
-        { id: 'statComments', valor: stats.comentarios },
-        { id: 'statViews', valor: stats.vistas }
-    ];
-    
-    elementosStats.forEach(stat => {
-        const elemento = document.getElementById(stat.id);
-        if (elemento) {
-            elemento.textContent = formatearNumero(stat.valor);
-        }
-    });
 }
 
 // Cargar feed de forma segura
@@ -760,49 +392,6 @@ async function cargarNotificacionesSuave() {
     } catch (err) {
         console.error(err);
         notificationsView.innerHTML = '<div class="notification">Error al cargar notificaciones</div>';
-    }
-}
-
-async function guardarPerfilSuave() {
-    const form = new FormData();
-    const foto = document.getElementById('fotoPerfil');
-    if (foto && foto.files[0]) form.append('foto', foto.files[0]);
-    
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) form.append('nombres', inpNombres.value);
-    if (inpApellidos) form.append('apellidos', inpApellidos.value);
-    if (inpTelefono) form.append('telefono', inpTelefono.value);
-
-    try {
-        const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
-            method: 'POST', 
-            body: form,
-            credentials: 'include'
-        });
-        
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                alert('Tu sesión ha expirado. Por favor inicia sesión nuevamente.');
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const res = await resp.json();
-        if (res.success) {
-            alert('Perfil actualizado');
-            const profileForm = document.getElementById('profileForm');
-            if (profileForm) profileForm.style.display = 'none';
-            await cargarPerfilSuave();
-        } else {
-            alert('Error: ' + (res.mensaje || res.error || 'desconocido'));
-        }
-    } catch (err) {
-        console.error(err);
-        alert('Error al guardar perfil');
     }
 }
 
@@ -1251,42 +840,6 @@ function cerrarSesion() {
         window.location.href = '../logout.php';
     }
 }
-
-// FUNCIÓN TEMPORAL PARA DEBUGGEAR DATOS DEL USUARIO
-function debugUserData() {
-    console.log('🐛 DEBUG USER DATA:');
-    console.log('  - window.usuarioId:', window.usuarioId);
-    console.log('  - window.usuarioNombres:', window.usuarioNombres);
-    console.log('  - window.usuarioCorreo:', window.usuarioCorreo);
-    console.log('  - window.usuarioData:', window.usuarioData);
-    
-    // Verificar elementos del DOM
-    const elements = ['profileName', 'profileNames', 'profileLastnames', 'profilePhone'];
-    elements.forEach(id => {
-        const el = document.getElementById(id);
-        if (el) {
-            console.log(`  - ${id}:`, el.textContent);
-        }
-    });
-}
-
-// Agregar botón de debug temporal
-document.addEventListener('DOMContentLoaded', function() {
-    const debugBtn = document.createElement('button');
-    debugBtn.textContent = '🐛 Debug Datos';
-    debugBtn.style.position = 'fixed';
-    debugBtn.style.top = '10px';
-    debugBtn.style.right = '10px';
-    debugBtn.style.zIndex = '9999';
-    debugBtn.style.background = '#ff4444';
-    debugBtn.style.color = 'white';
-    debugBtn.style.border = 'none';
-    debugBtn.style.padding = '5px 10px';
-    debugBtn.style.borderRadius = '5px';
-    debugBtn.style.cursor = 'pointer';
-    debugBtn.onclick = debugUserData;
-    document.body.appendChild(debugBtn);
-});
 
 // Mejorar la experiencia en móviles
 document.addEventListener('touchstart', function() {}, { passive: true });
