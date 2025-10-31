@@ -71,7 +71,7 @@ class Usuario {
                 p.nombres,
                 p.apellidos, 
                 p.telefono,
-                p.foto_perfil,  // ← ESTA LÍNEA ESTÁ BIEN, foto_perfil SÍ existe en persona
+                p.foto_perfil, 
                 r.nombre as nombre_rol
             FROM usuario u 
             JOIN persona p ON u.id_persona = p.id_persona 
