@@ -12,6 +12,46 @@ $usuario_id = $_SESSION['usuario_id'];
 $usuario_nombres = $_SESSION['nombres'] ?? 'Usuario';
 $usuario_correo = $_SESSION['correo'] ?? '';
 
+// CONSULTAR DATOS COMPLETOS DEL USUARIO CON JOIN
+try {
+    $stmt = $pdo->prepare("
+        SELECT 
+            p.id_persona,
+            p.nombres,
+            p.apellidos, 
+            p.telefono,
+            p.foto_perfil,
+            u.correo,
+            u.id_rol
+        FROM usuario u
+        INNER JOIN persona p ON u.id_persona = p.id_persona
+        WHERE u.id_usuario = ?
+    ");
+    $stmt->execute([$usuario_id]);
+    $usuario_data = $stmt->fetch(PDO::FETCH_ASSOC);
+    
+    if ($usuario_data) {
+        // Actualizar variables con datos completos
+        $usuario_nombres = $usuario_data['nombres'];
+        $usuario_apellidos = $usuario_data['apellidos'];
+        $usuario_telefono = $usuario_data['telefono'] ?? 'No especificado';
+        $usuario_correo = $usuario_data['correo'];
+        $foto_perfil = $usuario_data['foto_perfil'];
+        
+        // Actualizar sesión con datos completos
+        $_SESSION['nombres'] = $usuario_nombres;
+        $_SESSION['apellidos'] = $usuario_apellidos;
+        $_SESSION['telefono'] = $usuario_telefono;
+        $_SESSION['correo'] = $usuario_correo;
+        $_SESSION['foto_perfil'] = $foto_perfil;
+    }
+} catch (PDOException $e) {
+    // Manejar error sin romper la aplicación
+    error_log("Error al cargar datos del usuario: " . $e->getMessage());
+    $usuario_apellidos = 'Error al cargar';
+    $usuario_telefono = 'Error al cargar';
+}
+
 // Determinar la URL base para el iframe - ACTUALIZADO A HTTPS
 $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
 if ($_SERVER['HTTP_HOST'] === 'localhost:8080') {
@@ -35,12 +75,16 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         // Variables globales con datos del usuario desde PHP
         window.usuarioId = <?php echo json_encode($usuario_id); ?>;
         window.usuarioNombres = <?php echo json_encode($usuario_nombres); ?>;
+        window.usuarioApellidos = <?php echo json_encode($usuario_apellidos ?? ''); ?>;
         window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
+        window.usuarioTelefono = <?php echo json_encode($usuario_telefono ?? ''); ?>;
         
         console.log('👤 Usuario cargado:', {
             id: window.usuarioId,
             nombres: window.usuarioNombres,
-            correo: window.usuarioCorreo
+            apellidos: window.usuarioApellidos,
+            correo: window.usuarioCorreo,
+            telefono: window.usuarioTelefono
         });
     </script>
     
@@ -313,15 +357,15 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                 </div>-->
                             </div>
                             <div class="profile-hero-info">
-                                <h1 id="profileName">Cargando...</h1>
+                                <h1 id="profileName"><?php echo htmlspecialchars($usuario_nombres . ' ' . ($usuario_apellidos ?? '')); ?></h1>
                                 <div class="profile-hero-stats">
                                     <div class="hero-stat">
                                         <i class="fas fa-envelope"></i>
-                                        <span id="profileEmail">cargando...</span>
+                                        <span id="profileEmail"><?php echo htmlspecialchars($usuario_correo); ?></span>
                                     </div>
                                     <div class="hero-stat">
                                         <i class="fas fa-phone"></i>
-                                        <span id="profilePhone">Cargando...</span>
+                                        <span id="profilePhone"><?php echo htmlspecialchars($usuario_telefono ?? 'No especificado'); ?></span>
                                     </div>
                                 </div>
                             </div>
@@ -343,7 +387,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                         </div>
                                         <div class="contact-details">
                                             <div class="contact-label">Nombres</div>
-                                            <div class="contact-value" id="profileNames">cargando...</div>
+                                            <div class="contact-value" id="profileNames"><?php echo htmlspecialchars($usuario_nombres); ?></div>
                                         </div>
                                     </div>
                                     <div class="contact-item">
@@ -352,7 +396,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                         </div>
                                         <div class="contact-details">
                                             <div class="contact-label">Apellidos</div>
-                                            <div class="contact-value" id="profileLastnames">cargando...</div>
+                                            <div class="contact-value" id="profileLastnames"><?php echo htmlspecialchars($usuario_apellidos ?? 'No especificado'); ?></div>
                                         </div>
                                     </div>
                                     <div class="contact-item">
@@ -361,7 +405,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                         </div>
                                         <div class="contact-details">
                                             <div class="contact-label">Correo Electrónico</div>
-                                            <div class="contact-value" id="profileEmailCard">cargando...</div>
+                                            <div class="contact-value" id="profileEmailCard"><?php echo htmlspecialchars($usuario_correo); ?></div>
                                         </div>
                                     </div>
                                     <div class="contact-item">
@@ -370,7 +414,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                         </div>
                                         <div class="contact-details">
                                             <div class="contact-label">Teléfono</div>
-                                            <div class="contact-value" id="profilePhoneCard">cargando...</div>
+                                            <div class="contact-value" id="profilePhoneCard"><?php echo htmlspecialchars($usuario_telefono ?? 'No especificado'); ?></div>
                                         </div>
                                     </div>
                                 </div>
@@ -386,15 +430,15 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label for="inpNombres" class="form-label">Nombres</label>
-                                        <input type="text" name="nombres" id="inpNombres" class="form-input" placeholder="Tus nombres">
+                                        <input type="text" name="nombres" id="inpNombres" class="form-input" placeholder="Tus nombres" value="<?php echo htmlspecialchars($usuario_nombres); ?>">
                                     </div>
                                     <div class="form-group">
                                         <label for="inpApellidos" class="form-label">Apellidos</label>
-                                        <input type="text" name="apellidos" id="inpApellidos" class="form-input" placeholder="Tus apellidos">
+                                        <input type="text" name="apellidos" id="inpApellidos" class="form-input" placeholder="Tus apellidos" value="<?php echo htmlspecialchars($usuario_apellidos ?? ''); ?>">
                                     </div>
                                     <div class="form-group">
                                         <label for="inpTelefono" class="form-label">Teléfono</label>
-                                        <input type="tel" name="telefono" id="inpTelefono" class="form-input" placeholder="Tu teléfono">
+                                        <input type="tel" name="telefono" id="inpTelefono" class="form-input" placeholder="Tu teléfono" value="<?php echo htmlspecialchars($usuario_telefono ?? ''); ?>">
                                     </div>
                                 </div>
                                 
