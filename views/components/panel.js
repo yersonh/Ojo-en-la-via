@@ -1,6 +1,9 @@
-// Panel.js - Versión corregida sin cierres de sesión agresivos
+// Panel.js - Versión corregida con carga robusta de perfil
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando panel...');
+    
+    // Primero intentar cargar datos desde PHP
+    cargarDatosInicialesDesdePHP();
     
     setTimeout(() => {
         try {
@@ -23,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
             navItems.forEach(i => i.addEventListener('click', onNavClick));
             initAutoHideNav();
             
-            // Cargar datos iniciales (sin verificaciones agresivas de sesión)
+            // Cargar datos iniciales
             cargarFeedSuave();
             cargarPerfilSuave();
 
@@ -214,7 +217,261 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// VERSIÓN SEGURA DE LAS FUNCIONES PRINCIPALES - SIN REDIRECCIONES AGRESIVAS
+// FUNCIÓN PARA CARGAR DATOS INICIALES DESDE PHP
+function cargarDatosInicialesDesdePHP() {
+    console.log('🔍 Buscando datos de usuario desde PHP...');
+    
+    // Buscar elementos que puedan contener datos incrustados por PHP
+    const scriptElements = document.querySelectorAll('script[type="application/json"]');
+    
+    for (let script of scriptElements) {
+        try {
+            const data = JSON.parse(script.textContent);
+            if (data.usuario || data.user) {
+                console.log('✅ Datos de usuario encontrados en script JSON:', data);
+                window.usuarioData = data.usuario || data.user;
+                return true;
+            }
+        } catch (e) {
+            // Continuar con el siguiente script
+        }
+    }
+    
+    // Buscar en data attributes del body
+    const bodyData = document.body.getAttribute('data-usuario');
+    if (bodyData) {
+        try {
+            window.usuarioData = JSON.parse(bodyData);
+            console.log('✅ Datos de usuario encontrados en body data:', window.usuarioData);
+            return true;
+        } catch (e) {
+            console.warn('❌ Error parseando datos del body:', e);
+        }
+    }
+    
+    console.warn('📝 No se encontraron datos de usuario incrustados en PHP');
+    return false;
+}
+
+// FUNCIÓN MEJORADA PARA CARGAR PERFIL
+async function cargarPerfilSuave() {
+    try {
+        console.log('👤 Cargando información del perfil...');
+        
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
+        });
+        
+        console.log('🔍 Estado de respuesta:', resp.status, resp.statusText);
+        
+        // Si hay error 401, intentamos una estrategia diferente
+        if (!resp.ok) {
+            if (resp.status === 401) {
+                console.warn('⚠️ Error 401 - Intentando cargar datos de sesión PHP');
+                
+                // Intentamos obtener datos desde una fuente alternativa
+                await cargarDatosUsuarioAlternativo();
+                return;
+            }
+            throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
+        }
+        
+        const user = await resp.json();
+        console.log('📦 Datos recibidos del servidor:', user);
+
+        if (user && user.success === false) {
+            console.warn('❌ Error del servidor:', user.error);
+            await cargarDatosUsuarioAlternativo();
+            return;
+        }
+
+        console.log('✅ Datos del usuario recibidos:', user);
+        actualizarUIUsuario(user);
+
+    } catch (err) {
+        console.error('❌ Error cargando perfil:', err);
+        await cargarDatosUsuarioAlternativo();
+    }
+}
+
+// FUNCIÓN PARA CARGAR DATOS ALTERNATIVOS DEL USUARIO
+async function cargarDatosUsuarioAlternativo() {
+    console.log('🔄 Intentando cargar datos de usuario alternativos...');
+    
+    try {
+        // Intentamos obtener datos desde variables globales que puedan estar definidas en PHP
+        if (typeof window.usuarioData !== 'undefined') {
+            console.log('✅ Usando datos de window.usuarioData:', window.usuarioData);
+            actualizarUIUsuario(window.usuarioData);
+            return;
+        }
+        
+        // Si no hay datos globales, intentamos obtener del localStorage o sessionStorage
+        const usuarioGuardado = localStorage.getItem('usuarioData') || sessionStorage.getItem('usuarioData');
+        if (usuarioGuardado) {
+            const userData = JSON.parse(usuarioGuardado);
+            console.log('✅ Usando datos de storage:', userData);
+            actualizarUIUsuario(userData);
+            return;
+        }
+        
+        // Si todo falla, mostramos datos por defecto
+        console.warn('📝 Mostrando datos por defecto - no se pudieron cargar datos del usuario');
+        mostrarDatosPerfilPorDefecto();
+        
+    } catch (error) {
+        console.error('❌ Error cargando datos alternativos:', error);
+        mostrarDatosPerfilPorDefecto();
+    }
+}
+
+// FUNCIÓN PARA MOSTRAR DATOS POR DEFECTO
+function mostrarDatosPerfilPorDefecto() {
+    console.log('🔄 Mostrando datos de perfil por defecto...');
+    
+    const elementosPerfil = [
+        'profileName', 'profileEmail', 'profilePhone', 
+        'profileNames', 'profileLastnames', 'profileEmailCard', 'profilePhoneCard'
+    ];
+    
+    elementosPerfil.forEach(id => {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            // Intentar recuperar valor original del data attribute
+            const valorOriginal = elemento.getAttribute('data-valor-original');
+            
+            if (valorOriginal && valorOriginal !== 'null' && valorOriginal !== 'undefined') {
+                elemento.textContent = valorOriginal;
+                elemento.style.color = '';
+            } else {
+                // Usar valores por defecto
+                if (id === 'profileName') elemento.textContent = 'Usuario';
+                else if (id.includes('Email')) elemento.textContent = 'correo@ejemplo.com';
+                else if (id.includes('Phone')) elemento.textContent = 'Sin teléfono';
+                else elemento.textContent = 'No disponible';
+                elemento.style.color = '#999';
+            }
+        }
+    });
+
+    // Actualizar avatars por defecto
+    const profileAvatar = document.getElementById('profileAvatar');
+    const headerAvatar = document.getElementById('headerAvatar');
+    
+    if (profileAvatar) {
+        profileAvatar.src = '/imagenes/default-avatar.png';
+    }
+    if (headerAvatar) {
+        headerAvatar.src = '/imagenes/default-avatar.png';
+    }
+}
+
+// FUNCIÓN MEJORADA PARA ACTUALIZAR LA UI DEL USUARIO
+function actualizarUIUsuario(user) {
+    console.log('🎨 Actualizando UI con datos:', user);
+    
+    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
+        const elemento = document.getElementById(id);
+        if (elemento) {
+            const valorSeguro = valor ? String(valor).trim() : '';
+            elemento.textContent = valorSeguro || valorPorDefecto;
+            elemento.style.color = valorSeguro ? '' : '#999';
+            
+            // Guardar en data attribute para referencia
+            elemento.setAttribute('data-valor-original', valorSeguro);
+        }
+    }
+
+    // Mapeo de elementos a actualizar
+    const elementosPerfil = [
+        { 
+            id: 'profileName', 
+            valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || user.nombre_completo || 'Usuario',
+            defecto: 'Usuario'
+        },
+        { 
+            id: 'profileEmail', 
+            valor: user.correo || user.email,
+            defecto: 'Correo no disponible' 
+        },
+        { 
+            id: 'profilePhone', 
+            valor: user.telefono || user.phone,
+            defecto: 'Sin teléfono' 
+        },
+        { 
+            id: 'profileNames', 
+            valor: user.nombres || user.first_names,
+            defecto: 'No disponible' 
+        },
+        { 
+            id: 'profileLastnames', 
+            valor: user.apellidos || user.last_names,
+            defecto: 'No disponible' 
+        },
+        { 
+            id: 'profileEmailCard', 
+            valor: user.correo || user.email,
+            defecto: 'Correo no disponible' 
+        },
+        { 
+            id: 'profilePhoneCard', 
+            valor: user.telefono || user.phone,
+            defecto: 'Sin teléfono' 
+        }
+    ];
+
+    // Actualizar cada elemento
+    elementosPerfil.forEach(item => {
+        actualizarElemento(item.id, item.valor, item.defecto);
+    });
+
+    // Actualizar avatars de forma segura
+    const profileAvatar = document.getElementById('profileAvatar');
+    const headerAvatar = document.getElementById('headerAvatar');
+    
+    const avatarUrl = user.foto_perfil || user.avatar || '/imagenes/fiveicon.png';
+    
+    if (profileAvatar) {
+        profileAvatar.src = avatarUrl;
+        profileAvatar.onerror = function() {
+            console.warn('❌ Error cargando avatar, usando imagen por defecto');
+            this.src = '/imagenes/default-avatar.png';
+            this.onerror = null; // Prevenir bucles infinitos
+        };
+    }
+    
+    if (headerAvatar) {
+        headerAvatar.src = avatarUrl;
+        headerAvatar.onerror = function() {
+            this.src = '/imagenes/default-avatar.png';
+            this.onerror = null;
+        };
+    }
+
+    // Prefill form de edición
+    const inpNombres = document.getElementById('inpNombres');
+    const inpApellidos = document.getElementById('inpApellidos');
+    const inpTelefono = document.getElementById('inpTelefono');
+    
+    if (inpNombres) inpNombres.value = user.nombres || user.first_names || '';
+    if (inpApellidos) inpApellidos.value = user.apellidos || user.last_names || '';
+    if (inpTelefono) inpTelefono.value = user.telefono || user.phone || '';
+
+    // Guardar datos en storage para uso futuro
+    try {
+        localStorage.setItem('usuarioData', JSON.stringify(user));
+    } catch (storageError) {
+        console.warn('⚠️ No se pudo guardar en localStorage:', storageError);
+    }
+
+    console.log('✅ UI de perfil actualizada exitosamente');
+}
 
 // Cargar feed de forma segura
 async function cargarFeedSuave() {
@@ -317,64 +574,6 @@ async function cargarFeedSuave() {
             feedView.innerHTML = '<p style="text-align:center; color:var(--warning); padding: 20px;">Problema al cargar reportes.</p>';
         }
     }
-}
-
-// Cargar perfil de forma segura
-async function cargarPerfilSuave() {
-    try {
-        console.log('👤 Cargando información del perfil...');
-        
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
-            credentials: 'include'
-        });
-        
-        // MANEJO SEGURO - NO REDIRIGIR EN ERROR 401
-        if (!resp.ok) {
-            if (resp.status === 401) {
-                console.warn('⚠️ Posible problema de sesión al cargar perfil');
-                // Mostrar datos por defecto en lugar de redirigir
-                mostrarDatosPerfilPorDefecto();
-                return;
-            }
-            throw new Error(`Error HTTP: ${resp.status}`);
-        }
-        
-        const user = await resp.json();
-
-        if (user && user.success === false) {
-            console.warn('❌ Error del servidor:', user.error);
-            // Mostrar datos por defecto en lugar de redirigir
-            mostrarDatosPerfilPorDefecto();
-            return;
-        }
-
-        console.log('✅ Datos del usuario recibidos:', user);
-        actualizarUIUsuario(user);
-
-    } catch (err) {
-        console.error('❌ Error cargando perfil:', err);
-        // Mostrar datos por defecto en lugar de redirigir
-        mostrarDatosPerfilPorDefecto();
-    }
-}
-
-// Función para mostrar datos por defecto cuando hay problemas de sesión
-function mostrarDatosPerfilPorDefecto() {
-    const elementosPerfil = [
-        'profileName', 'profileEmail', 'profilePhone', 
-        'profileNames', 'profileLastnames', 'profileEmailCard', 'profilePhoneCard'
-    ];
-    
-    elementosPerfil.forEach(id => {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            if (id === 'profileName') elemento.textContent = 'Usuario';
-            else if (id.includes('Email')) elemento.textContent = 'correo@ejemplo.com';
-            else if (id.includes('Phone')) elemento.textContent = 'Sin teléfono';
-            else elemento.textContent = 'No disponible';
-            elemento.style.color = '#999';
-        }
-    });
 }
 
 // Versiones seguras de otras funciones
@@ -483,26 +682,42 @@ async function cargarPerfilCompletoSuave() {
     }
 }
 
-// FUNCIÓN PARA CARGAR ESTADÍSTICAS
+// FUNCIÓN MEJORADA PARA CARGAR ESTADÍSTICAS
 async function cargarEstadisticasUsuario() {
     try {
         console.log('📊 Cargando estadísticas del usuario...');
         
         const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
-            credentials: 'include'
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Accept': 'application/json',
+                'Cache-Control': 'no-cache'
+            }
         });
+        
+        console.log('🔍 Estado de respuesta estadísticas:', resp.status);
         
         if (!resp.ok) {
             if (resp.status === 401) {
-                console.warn('🔐 Sesión expirada en estadísticas');
+                console.warn('⚠️ Error 401 en estadísticas - usando valores por defecto');
+                // Usamos valores por defecto sin redirigir
+                actualizarEstadisticasUI({
+                    reportes: 0,
+                    likes: 0,
+                    comentarios: 0,
+                    vistas: 0
+                });
                 return;
             }
             throw new Error(`Error HTTP: ${resp.status}`);
         }
         
         const data = await resp.json();
+        console.log('📦 Datos de estadísticas recibidos:', data);
         
         if (!data.success) {
+            console.warn('❌ Error en respuesta de estadísticas:', data.error);
             throw new Error(data.error || 'Error al cargar estadísticas');
         }
         
@@ -518,6 +733,7 @@ async function cargarEstadisticasUsuario() {
         
     } catch (error) {
         console.error('❌ Error cargando estadísticas:', error);
+        // No mostramos error al usuario, usamos valores por defecto
         actualizarEstadisticasUI({
             reportes: 0,
             likes: 0,
@@ -551,61 +767,6 @@ function actualizarEstadisticasUI(stats) {
             elemento.textContent = formatearNumero(stat.valor);
         }
     });
-}
-
-// FUNCIÓN PARA ACTUALIZAR LA UI DEL USUARIO
-function actualizarUIUsuario(user) {
-    function actualizarElemento(id, valor, valorPorDefecto = 'No disponible') {
-        const elemento = document.getElementById(id);
-        if (elemento) {
-            const valorSeguro = valor ? String(valor).trim() : '';
-            elemento.textContent = valorSeguro || valorPorDefecto;
-            elemento.style.color = '';
-        }
-    }
-
-    const elementosPerfil = [
-        { id: 'profileName', valor: `${user.nombres || ''} ${user.apellidos || ''}`.trim() || 'Usuario' },
-        { id: 'profileEmail', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhone', valor: user.telefono, defecto: 'Sin teléfono' },
-        { id: 'profileNames', valor: user.nombres, defecto: 'No disponible' },
-        { id: 'profileLastnames', valor: user.apellidos, defecto: 'No disponible' },
-        { id: 'profileEmailCard', valor: user.correo, defecto: 'Correo no disponible' },
-        { id: 'profilePhoneCard', valor: user.telefono, defecto: 'Sin teléfono' }
-    ];
-
-    elementosPerfil.forEach(item => {
-        actualizarElemento(item.id, item.valor, item.defecto);
-    });
-
-    // Actualizar avatars
-    const profileAvatar = document.getElementById('profileAvatar');
-    const headerAvatar = document.getElementById('headerAvatar');
-    
-    if (profileAvatar) {
-        profileAvatar.src = '/imagenes/fiveicon.png';
-        profileAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-    
-    if (headerAvatar) {
-        headerAvatar.src = '/imagenes/fiveicon.png';
-        headerAvatar.onerror = function() {
-            this.src = '/imagenes/default-avatar.png';
-        };
-    }
-
-    // Prefill form
-    const inpNombres = document.getElementById('inpNombres');
-    const inpApellidos = document.getElementById('inpApellidos');
-    const inpTelefono = document.getElementById('inpTelefono');
-    
-    if (inpNombres) inpNombres.value = user.nombres || '';
-    if (inpApellidos) inpApellidos.value = user.apellidos || '';
-    if (inpTelefono) inpTelefono.value = user.telefono || '';
-
-    console.log('✅ Perfil cargado exitosamente');
 }
 
 // FUNCIÓN PARA OBTENER ID DE USUARIO

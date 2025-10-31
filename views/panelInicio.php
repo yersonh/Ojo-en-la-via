@@ -1,5 +1,5 @@
 <?php
-
+session_start();
 require_once '../config/database.php'; 
 
 if (!isset($_SESSION['usuario_id'])) {
@@ -10,7 +10,9 @@ if (!isset($_SESSION['usuario_id'])) {
 // Obtener datos del usuario de la sesión
 $usuario_id = $_SESSION['usuario_id'];
 $usuario_nombres = $_SESSION['nombres'] ?? 'Usuario';
+$usuario_apellidos = $_SESSION['apellidos'] ?? '';
 $usuario_correo = $_SESSION['correo'] ?? '';
+$usuario_telefono = $_SESSION['telefono'] ?? '';
 
 // Determinar la URL base para el iframe - ACTUALIZADO A HTTPS
 $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
@@ -35,13 +37,31 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         // Variables globales con datos del usuario desde PHP
         window.usuarioId = <?php echo json_encode($usuario_id); ?>;
         window.usuarioNombres = <?php echo json_encode($usuario_nombres); ?>;
+        window.usuarioApellidos = <?php echo json_encode($usuario_apellidos); ?>;
         window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
+        window.usuarioTelefono = <?php echo json_encode($usuario_telefono); ?>;
         
         console.log('👤 Usuario cargado:', {
             id: window.usuarioId,
             nombres: window.usuarioNombres,
-            correo: window.usuarioCorreo
+            apellidos: window.usuarioApellidos,
+            correo: window.usuarioCorreo,
+            telefono: window.usuarioTelefono
         });
+    </script>
+    
+    <!-- Incrustar datos del usuario en formato JSON -->
+    <script type="application/json" id="userData">
+    {
+        "usuario": {
+            "id": <?php echo json_encode($usuario_id); ?>,
+            "nombres": <?php echo json_encode($usuario_nombres); ?>,
+            "apellidos": <?php echo json_encode($usuario_apellidos); ?>,
+            "correo": <?php echo json_encode($usuario_correo); ?>,
+            "telefono": <?php echo json_encode($usuario_telefono); ?>,
+            "foto_perfil": "/imagenes/fiveicon.png"
+        }
+    }
     </script>
     
     <!-- Forzar HTTPS en producción -->
@@ -236,7 +256,14 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     }
 </style>
 </head>
-<body>
+<body data-usuario='<?php echo json_encode([
+    'id' => $usuario_id,
+    'nombres' => $usuario_nombres,
+    'apellidos' => $usuario_apellidos,
+    'correo' => $usuario_correo,
+    'telefono' => $usuario_telefono,
+    'foto_perfil' => '/imagenes/fiveicon.png'
+]); ?>'>
     <div class="app">
         <!-- Header mejorado -->
         <header class="app-header">
