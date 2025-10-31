@@ -1,5 +1,5 @@
 <?php
-require_once '../config/bootstrap_session.php';
+require_once __DIR__ . '/config/bootstrap_session.php';;
 require_once '../config/database.php'; 
 
 if (!isset($_SESSION['usuario_id'])) {

@@ -1,15 +1,16 @@
 <?php
-// usuario_controlador.php - VERSIÓN MEJORADA
-
 // AL INICIO - Solo incluir database.php que ahora maneja sesiones
-require_once '../config/database.php';
-require_once '../models/usuario.php';
+require_once '../config/bootstrap_session.php';
 
 // Configuración para producción
 ini_set('display_errors', 0);
 ini_set('log_errors', 1);
 
 header('Content-Type: application/json');
+
+// Debug: loguear información de sesión
+error_log("🎯 usuario_controlador.php cargado - SESSION ID: " . session_id());
+error_log("🔍 DATOS SESION: " . print_r($_SESSION, true));
 
 class UsuarioControlador {
     private $usuarioModel;
@@ -19,31 +20,45 @@ class UsuarioControlador {
         $this->usuarioModel = new Usuario($conn);
     }
     
-    // VERIFICAR QUE EL MÉTODO obtenerPorId EXISTE EN EL MODELO
-    private function verificarModelo() {
-        if (!method_exists($this->usuarioModel, 'obtenerPorId')) {
-            throw new Exception("El método obtenerPorId no existe en el modelo Usuario");
-        }
+    // FUNCIÓN HELPER PARA OBTENER EL ID CORRECTO
+    private function obtenerIdUsuarioSesion() {
+        // Prioridad: id_usuario > usuario_id > null
+        $id_usuario = $_SESSION['id_usuario'] ?? $_SESSION['usuario_id'] ?? null;
+        
+        error_log("🔍 MAPEO ID USUARIO:");
+        error_log("  - id_usuario (sesión): " . ($_SESSION['id_usuario'] ?? 'NO'));
+        error_log("  - usuario_id (sesión): " . ($_SESSION['usuario_id'] ?? 'NO'));
+        error_log("  - ID final: " . ($id_usuario ?: 'NO ENCONTRADO'));
+        
+        return $id_usuario;
     }
     
     public function verificar_sesion() {
         try {
-            $sesionActiva = isset($_SESSION['id_usuario']) && !empty($_SESSION['id_usuario']);
+            $id_usuario = $this->obtenerIdUsuarioSesion();
+            $sesionActiva = !empty($id_usuario);
+            
+            error_log("🔍 VERIFICANDO SESION - Activa: " . ($sesionActiva ? 'SI' : 'NO'));
+            error_log("🔍 USER ID en sesión: " . ($id_usuario ?: 'NO'));
             
             if ($sesionActiva) {
                 echo json_encode([
                     'success' => true,
                     'sesion_activa' => true,
-                    'id_usuario' => $_SESSION['id_usuario'],
+                    'id_usuario' => $id_usuario,
                     'nombres' => $_SESSION['nombres'] ?? '',
                     'correo' => $_SESSION['correo'] ?? '',
-                    'session_id' => session_id()
+                    'session_id' => session_id(),
+                    'session_age' => isset($_SESSION['last_regeneration']) ? 
+                        time() - $_SESSION['last_regeneration'] : 0
                 ]);
             } else {
                 echo json_encode([
                     'success' => false,
                     'sesion_activa' => false,
-                    'error' => 'Sesión no activa'
+                    'error' => 'Sesión no activa',
+                    'session_id' => session_id(),
+                    'session_keys' => array_keys($_SESSION)
                 ]);
             }
             
@@ -59,44 +74,65 @@ class UsuarioControlador {
     
     public function obtener() {
         try {
-            // Verificar sesión de manera más robusta
-            if (!isset($_SESSION['id_usuario']) || empty($_SESSION['id_usuario'])) {
+            // DEBUG DETALLADO DE SESIÓN
+            error_log("=== DEBUG SESIÓN EN OBTENER() ===");
+            error_log("SESSION ID: " . session_id());
+            error_log("SESSION STATUS: " . session_status());
+            error_log("SESSION DATA: " . print_r($_SESSION, true));
+            error_log("SESSION KEYS: " . implode(', ', array_keys($_SESSION)));
+            
+            // Obtener ID usando el mapeo inteligente
+            $id_usuario = $this->obtenerIdUsuarioSesion();
+            
+            if (empty($id_usuario)) {
+                error_log("❌ SESIÓN INVALIDA - No se encontró ID de usuario");
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
                     'error' => 'Sesión no válida o expirada',
-                    'session_expired' => true
+                    'session_expired' => true,
+                    'session_id' => session_id(),
+                    'session_keys' => array_keys($_SESSION)
                 ]);
                 return;
             }
             
-            $id_usuario = intval($_SESSION['id_usuario']);
-            
-            // Verificar que el modelo tenga el método necesario
-            $this->verificarModelo();
+            error_log("✅ Sesión válida, ID para BD: " . $id_usuario);
             
             $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
             
-            if ($usuario && !empty($usuario['id_usuario'])) {
-                // Sanitizar datos antes de enviarlos
+            if ($usuario) {
+                // DEBUG: Verificar qué datos vienen de la BD
+                error_log("📊 DATOS DESDE BD:");
+                error_log("  - id_usuario: " . ($usuario['id_usuario'] ?? 'NO'));
+                error_log("  - nombres: " . ($usuario['nombres'] ?? 'NO'));
+                error_log("  - apellidos: " . ($usuario['apellidos'] ?? 'NO'));
+                error_log("  - telefono: " . ($usuario['telefono'] ?? 'NO'));
+                error_log("  - correo: " . ($usuario['correo'] ?? 'NO'));
+                error_log("  - foto_perfil: " . ($usuario['foto_perfil'] ?? 'NO'));
+                
+                // Si los campos están vacíos en la BD, usar valores por defecto
                 $response = [
                     'success' => true,
-                    'id_usuario' => intval($usuario['id_usuario']),
-                    'nombres' => htmlspecialchars($usuario['nombres'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'apellidos' => htmlspecialchars($usuario['apellidos'] ?? 'No especificado', ENT_QUOTES, 'UTF-8'),
-                    'correo' => htmlspecialchars($usuario['correo'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'telefono' => htmlspecialchars($usuario['telefono'] ?? 'No registrado', ENT_QUOTES, 'UTF-8'),
-                    'foto_perfil' => $this->validarFotoPerfil($usuario['foto_perfil'] ?? ''),
-                    'nombre_rol' => htmlspecialchars($usuario['nombre_rol'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'),
+                    'id_usuario' => $usuario['id_usuario'],
+                    'nombres' => $usuario['nombres'] ?? '',
+                    'apellidos' => $usuario['apellidos'] ?? 'No especificado',
+                    'correo' => $usuario['correo'] ?? '',
+                    'telefono' => $usuario['telefono'] ?? 'No registrado',
+                    'foto_perfil' => $usuario['foto_perfil'] ?? '/imagenes/default-avatar.png',
+                    'nombre_rol' => $usuario['nombre_rol'] ?? 'Usuario',
                     'fecha_registro' => $usuario['fecha_registro'] ?? ''
                 ];
+                
+                error_log("🎯 RESPUESTA FINAL:");
+                error_log(print_r($response, true));
                 
                 echo json_encode($response);
             } else {
                 error_log("❌ Usuario no encontrado en BD para ID: " . $id_usuario);
                 echo json_encode([
                     'success' => false,
-                    'error' => 'Usuario no encontrado en la base de datos'
+                    'error' => 'Usuario no encontrado'
                 ]);
             }
             
@@ -105,34 +141,17 @@ class UsuarioControlador {
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'error' => 'Error del servidor al obtener datos del usuario'
+                'error' => 'Error del servidor'
             ]);
         }
     }
     
-    // VALIDAR FOTO DE PERFIL
-    private function validarFotoPerfil($foto) {
-        if (empty($foto) || $foto === 'null') {
-            return '/imagenes/default-avatar.png';
-        }
-        
-        // Si es una URL válida, mantenerla
-        if (filter_var($foto, FILTER_VALIDATE_URL)) {
-            return $foto;
-        }
-        
-        // Si es una ruta relativa, asegurarse de que empiece con /
-        if (strpos($foto, '/') !== 0) {
-            return '/' . $foto;
-        }
-        
-        return $foto;
-    }
-    
     public function obtener_estadisticas() {
         try {
-            // Verificar sesión
-            if (!isset($_SESSION['id_usuario'])) {
+            // Obtener ID usando el mapeo inteligente
+            $id_usuario = $this->obtenerIdUsuarioSesion();
+            
+            if (empty($id_usuario)) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
@@ -141,31 +160,20 @@ class UsuarioControlador {
                 return;
             }
             
-            $id_usuario = intval($_SESSION['id_usuario']);
+            // Estadísticas temporales
+            $estadisticas = [
+                'reportes' => 0,
+                'likes' => 0, 
+                'comentarios' => 0,
+                'vistas' => 0
+            ];
             
-            // OBTENER ESTADÍSTICAS REALES - ASÍ DEBERÍA SER TU MODELO
-            $estadisticas = $this->usuarioModel->obtenerEstadisticas($id_usuario);
-            
-            if ($estadisticas) {
-                echo json_encode([
-                    'success' => true,
-                    'estadisticas' => $estadisticas
-                ]);
-            } else {
-                // Estadísticas por defecto si no hay datos
-                echo json_encode([
-                    'success' => true,
-                    'estadisticas' => [
-                        'reportes' => 0,
-                        'likes' => 0, 
-                        'comentarios' => 0,
-                        'vistas' => 0
-                    ]
-                ]);
-            }
+            echo json_encode([
+                'success' => true,
+                'estadisticas' => $estadisticas
+            ]);
             
         } catch (Exception $e) {
-            error_log("❌ Error en obtener_estadisticas: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -176,7 +184,10 @@ class UsuarioControlador {
     
     public function obtener_id() {
         try {
-            if (!isset($_SESSION['id_usuario'])) {
+            // Obtener ID usando el mapeo inteligente
+            $id_usuario = $this->obtenerIdUsuarioSesion();
+            
+            if (empty($id_usuario)) {
                 http_response_code(401);
                 echo json_encode([
                     'success' => false,
@@ -187,11 +198,10 @@ class UsuarioControlador {
             
             echo json_encode([
                 'success' => true,
-                'id_usuario' => intval($_SESSION['id_usuario'])
+                'id_usuario' => $id_usuario
             ]);
             
         } catch (Exception $e) {
-            error_log("❌ Error en obtener_id: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -202,186 +212,106 @@ class UsuarioControlador {
     
     public function actualizar() {
         try {
-            if (!isset($_SESSION['id_usuario'])) {
+            // Obtener ID usando el mapeo inteligente
+            $id_usuario = $this->obtenerIdUsuarioSesion();
+            
+            if (empty($id_usuario)) {
                 http_response_code(401);
                 echo json_encode(['success' => false, 'error' => 'No autenticado']);
                 return;
             }
             
-            $id_usuario = intval($_SESSION['id_usuario']);
-            
-            // VALIDAR Y SANITIZAR DATOS DE ENTRADA
-            $datos = [
-                'nombres' => trim($_POST['nombres'] ?? ''),
-                'apellidos' => trim($_POST['apellidos'] ?? ''),
-                'telefono' => trim($_POST['telefono'] ?? '')
-            ];
-            
-            // Validaciones básicas
-            if (empty($datos['nombres'])) {
-                echo json_encode([
-                    'success' => false, 
-                    'error' => 'El nombre es obligatorio'
-                ]);
-                return;
-            }
-            
-            if (empty($datos['apellidos'])) {
-                echo json_encode([
-                    'success' => false, 
-                    'error' => 'Los apellidos son obligatorios'
-                ]);
-                return;
-            }
-            
-            // Validar teléfono si se proporciona
-            if (!empty($datos['telefono']) && !preg_match('/^[\d\s\-\+\(\)]{8,20}$/', $datos['telefono'])) {
-                echo json_encode([
-                    'success' => false, 
-                    'error' => 'Formato de teléfono inválido'
-                ]);
-                return;
-            }
+            $datos = $_POST;
             
             // Lógica para actualizar usuario
             $resultado = $this->usuarioModel->actualizar($id_usuario, $datos);
             
             if ($resultado) {
                 // Actualizar sesión con nuevos datos
-                $_SESSION['nombres'] = $datos['nombres'];
-                $_SESSION['apellidos'] = $datos['apellidos'];
+                if (isset($datos['nombres'])) $_SESSION['nombres'] = $datos['nombres'];
+                if (isset($datos['apellidos'])) $_SESSION['apellidos'] = $datos['apellidos'];
                 
                 echo json_encode([
                     'success' => true, 
-                    'mensaje' => 'Perfil actualizado correctamente',
-                    'datos_actualizados' => [
-                        'nombres' => $datos['nombres'],
-                        'apellidos' => $datos['apellidos'],
-                        'telefono' => $datos['telefono']
-                    ]
+                    'mensaje' => 'Perfil actualizado correctamente'
                 ]);
             } else {
                 echo json_encode([
                     'success' => false, 
-                    'error' => 'Error al actualizar el perfil en la base de datos'
+                    'error' => 'Error al actualizar el perfil'
                 ]);
             }
             
         } catch (Exception $e) {
-            error_log("❌ Error en actualizar: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false, 
-                'error' => 'Error del servidor al actualizar el perfil'
+                'error' => 'Error del servidor'
             ]);
         }
     }
     
-    // NUEVO MÉTODO PARA OBTENER PERFIL COMPLETO
-    public function obtener_perfil_completo() {
+    // NUEVO MÉTODO PARA NORMALIZAR LAS CLAVES DE SESIÓN
+    public function normalizar_sesion() {
         try {
-            if (!isset($_SESSION['id_usuario'])) {
-                http_response_code(401);
-                echo json_encode(['success' => false, 'error' => 'No autenticado']);
-                return;
+            error_log("🔄 Normalizando claves de sesión...");
+            
+            // Si existe usuario_id pero no id_usuario, copiar el valor
+            if (isset($_SESSION['usuario_id']) && !isset($_SESSION['id_usuario'])) {
+                $_SESSION['id_usuario'] = $_SESSION['usuario_id'];
+                error_log("✅ Copiado usuario_id → id_usuario: " . $_SESSION['usuario_id']);
             }
             
-            $id_usuario = intval($_SESSION['id_usuario']);
-            
-            // Obtener datos básicos
-            $usuario = $this->usuarioModel->obtenerPorId($id_usuario);
-            
-            if (!$usuario) {
-                echo json_encode([
-                    'success' => false,
-                    'error' => 'Usuario no encontrado'
-                ]);
-                return;
+            // Si existe id_usuario pero no usuario_id, copiar el valor (opcional)
+            if (isset($_SESSION['id_usuario']) && !isset($_SESSION['usuario_id'])) {
+                $_SESSION['usuario_id'] = $_SESSION['id_usuario'];
+                error_log("✅ Copiado id_usuario → usuario_id: " . $_SESSION['id_usuario']);
             }
             
-            // Obtener estadísticas
-            $estadisticas = $this->usuarioModel->obtenerEstadisticas($id_usuario);
-            
-            $response = [
+            echo json_encode([
                 'success' => true,
-                'datos' => [
-                    'id_usuario' => intval($usuario['id_usuario']),
-                    'nombres' => htmlspecialchars($usuario['nombres'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'apellidos' => htmlspecialchars($usuario['apellidos'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'correo' => htmlspecialchars($usuario['correo'] ?? '', ENT_QUOTES, 'UTF-8'),
-                    'telefono' => htmlspecialchars($usuario['telefono'] ?? 'No registrado', ENT_QUOTES, 'UTF-8'),
-                    'foto_perfil' => $this->validarFotoPerfil($usuario['foto_perfil'] ?? ''),
-                    'nombre_rol' => htmlspecialchars($usuario['nombre_rol'] ?? 'Usuario', ENT_QUOTES, 'UTF-8'),
-                    'fecha_registro' => $usuario['fecha_registro'] ?? ''
-                ],
-                'estadisticas' => $estadisticas ?: [
-                    'reportes' => 0,
-                    'likes' => 0,
-                    'comentarios' => 0,
-                    'vistas' => 0
+                'message' => 'Sesión normalizada',
+                'session_data' => [
+                    'id_usuario' => $_SESSION['id_usuario'] ?? null,
+                    'usuario_id' => $_SESSION['usuario_id'] ?? null,
+                    'nombres' => $_SESSION['nombres'] ?? null
                 ]
-            ];
-            
-            echo json_encode($response);
+            ]);
             
         } catch (Exception $e) {
-            error_log("❌ Error en obtener_perfil_completo: " . $e->getMessage());
-            http_response_code(500);
+            error_log("❌ Error normalizando sesión: " . $e->getMessage());
             echo json_encode([
                 'success' => false,
-                'error' => 'Error al cargar el perfil completo'
+                'error' => 'Error normalizando sesión'
             ]);
         }
     }
 }
 
-// MANEJADOR PRINCIPAL MEJORADO
+// Manejar la acción
 try {
-    // Verificar que la acción existe y es válida
-    if (!isset($_GET['action'])) {
+    if (isset($_GET['action'])) {
+        $controlador = new UsuarioControlador();
+        $action = $_GET['action'];
+        
+        error_log("🎯 Acción usuario_controlador: " . $action);
+        
+        if (method_exists($controlador, $action)) {
+            $controlador->$action();
+        } else {
+            http_response_code(404);
+            echo json_encode([
+                'success' => false,
+                'error' => 'Acción no válida: ' . $action
+            ]);
+        }
+    } else {
         http_response_code(400);
         echo json_encode([
             'success' => false,
             'error' => 'Acción no especificada'
         ]);
-        exit;
     }
-    
-    $action = $_GET['action'];
-    $controlador = new UsuarioControlador();
-    
-    // Lista de acciones permitidas para seguridad
-    $accionesPermitidas = [
-        'verificar_sesion',
-        'obtener', 
-        'obtener_estadisticas',
-        'obtener_id',
-        'actualizar',
-        'obtener_perfil_completo'
-    ];
-    
-    if (!in_array($action, $accionesPermitidas)) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'error' => 'Acción no válida: ' . $action
-        ]);
-        exit;
-    }
-    
-    // Verificar que el método existe
-    if (!method_exists($controlador, $action)) {
-        http_response_code(404);
-        echo json_encode([
-            'success' => false,
-            'error' => 'Método no implementado: ' . $action
-        ]);
-        exit;
-    }
-    
-    // Ejecutar la acción
-    $controlador->$action();
-    
 } catch (Exception $e) {
     error_log("💥 ERROR GLOBAL en usuario_controlador: " . $e->getMessage());
     http_response_code(500);

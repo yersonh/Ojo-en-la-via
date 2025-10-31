@@ -1,5 +1,5 @@
 <?php
-require_once '../config/sessions.php'; 
+require_once __DIR__ . '/config/bootstrap_session.php';
 
 // Eliminar token de "Recuérdame" si existe
 if (isset($_COOKIE['remember_token'])) {
