@@ -22,12 +22,12 @@ class UsuarioControlador {
     
     // FUNCIÓN HELPER PARA OBTENER EL ID CORRECTO
     private function obtenerIdUsuarioSesion() {
-        // Prioridad: id_usuario > usuario_id > null
-        $id_usuario = $_SESSION['id_usuario'] ?? $_SESSION['usuario_id'] ?? null;
+        // Prioridad: usuario_id (como está en sesión) > id_usuario
+        $id_usuario = $_SESSION['usuario_id'] ?? $_SESSION['id_usuario'] ?? null;
         
         error_log("🔍 MAPEO ID USUARIO:");
-        error_log("  - id_usuario (sesión): " . ($_SESSION['id_usuario'] ?? 'NO'));
         error_log("  - usuario_id (sesión): " . ($_SESSION['usuario_id'] ?? 'NO'));
+        error_log("  - id_usuario (sesión): " . ($_SESSION['id_usuario'] ?? 'NO'));
         error_log("  - ID final: " . ($id_usuario ?: 'NO ENCONTRADO'));
         
         return $id_usuario;
@@ -110,6 +110,7 @@ class UsuarioControlador {
                 error_log("  - telefono: " . ($usuario['telefono'] ?? 'NO'));
                 error_log("  - correo: " . ($usuario['correo'] ?? 'NO'));
                 error_log("  - foto_perfil: " . ($usuario['foto_perfil'] ?? 'NO'));
+                error_log("  - nombre_rol: " . ($usuario['nombre_rol'] ?? 'NO'));
                 
                 // Si los campos están vacíos en la BD, usar valores por defecto
                 $response = [
@@ -138,10 +139,11 @@ class UsuarioControlador {
             
         } catch (Exception $e) {
             error_log("❌ Error en obtener(): " . $e->getMessage());
+            error_log("❌ TRAZA: " . $e->getTraceAsString());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
-                'error' => 'Error del servidor'
+                'error' => 'Error del servidor al obtener datos del usuario'
             ]);
         }
     }
@@ -174,6 +176,7 @@ class UsuarioControlador {
             ]);
             
         } catch (Exception $e) {
+            error_log("❌ Error en obtener_estadisticas: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -202,6 +205,7 @@ class UsuarioControlador {
             ]);
             
         } catch (Exception $e) {
+            error_log("❌ Error en obtener_id: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false,
@@ -243,10 +247,11 @@ class UsuarioControlador {
             }
             
         } catch (Exception $e) {
+            error_log("❌ Error en actualizar: " . $e->getMessage());
             http_response_code(500);
             echo json_encode([
                 'success' => false, 
-                'error' => 'Error del servidor'
+                'error' => 'Error del servidor al actualizar el perfil'
             ]);
         }
     }

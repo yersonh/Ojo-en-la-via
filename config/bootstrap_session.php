@@ -1,8 +1,9 @@
 <?php
 // config/bootstrap_session.php
 
-// Verificar SI la sesión ya está iniciada ANTES de incluir sessions.php
-if (session_status() !== PHP_SESSION_ACTIVE) {
+// VERIFICAR de manera más robusta si la sesión ya está activa
+if (session_status() === PHP_SESSION_NONE) {
+    // Solo iniciar si NO hay sesión activa
     require_once __DIR__ . '/sessions.php';
     
     SessionManager::start();
@@ -11,6 +12,6 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     
     error_log("✅ bootstrap_session.php ejecutado - Sesión iniciada: " . session_id());
 } else {
-    error_log("⚠️ bootstrap_session.php: Sesión ya activa, no se reinicia - ID: " . session_id());
+    error_log("⚠️ bootstrap_session.php: Sesión YA activa - ID: " . session_id());
 }
 ?>

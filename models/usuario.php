@@ -71,7 +71,7 @@ class Usuario {
                 p.nombres,
                 p.apellidos, 
                 p.telefono,
-                p.foto_perfil,
+                p.foto_perfil,  // ← ESTA LÍNEA ESTÁ BIEN, foto_perfil SÍ existe en persona
                 r.nombre as nombre_rol
             FROM usuario u 
             JOIN persona p ON u.id_persona = p.id_persona 
@@ -91,6 +91,7 @@ class Usuario {
             error_log("  - apellidos: " . ($resultado['apellidos'] ?? 'NULL'));
             error_log("  - telefono: " . ($resultado['telefono'] ?? 'NULL'));
             error_log("  - foto_perfil: " . ($resultado['foto_perfil'] ?? 'NULL'));
+            error_log("  - correo: " . ($resultado['correo'] ?? 'NULL'));
         } else {
             error_log("❌ No se encontraron datos para usuario: $id_usuario");
         }
@@ -98,6 +99,7 @@ class Usuario {
         return $resultado;
     } catch (PDOException $e) {
         error_log("❌ Error en obtenerPorId: " . $e->getMessage());
+        error_log("❌ SQL: " . $sql);
         return false;
     }
 }
