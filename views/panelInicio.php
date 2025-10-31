@@ -1,5 +1,5 @@
 <?php
-require_once __DIR__ . '/../config/bootstrap_session.php';;
+require_once __DIR__ . '/../config/bootstrap_session.php';
 require_once '../config/database.php'; 
 
 if (!isset($_SESSION['usuario_id'])) {
@@ -245,8 +245,8 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 <span>Ojo en la Vía</span>
             </div>
             <div class="user-menu">
-                <img id="headerAvatar" class="user-avatar" src="/imagenes/fiveicon.png" alt="Avatar" 
-                    onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()">
+                <!--<img id="headerAvatar" class="user-avatar" src="/imagenes/fiveicon.png" alt="Avatar" 
+                    onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()"> -->
             </div>
         </header>
 
@@ -307,10 +307,10 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                     <div class="profile-hero">
                         <div class="profile-hero-content">
                             <div class="profile-avatar-container">
-                                <img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">
-                                <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
+                                <!--<img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">-->
+                              <!--  <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
                                     <i class="fas fa-camera"></i>
-                                </div>
+                                </div>-->
                             </div>
                             <div class="profile-hero-info">
                                 <h1 id="profileName">Cargando...</h1>

@@ -1,4 +1,4 @@
-// perfil.js - VERSIÓN SIMPLIFICADA SIN VALIDACIONES
+// perfil.js - VERSIÓN SIN IMÁGENES
 
 class PerfilManager {
     constructor() {
@@ -36,17 +36,8 @@ class PerfilManager {
             btnCancelProfile.addEventListener('click', () => this.ocultarFormularioEdicion());
         }
 
-        // Botón editar avatar
-        const editAvatarBtn = document.getElementById('editAvatarBtn');
-        if (editAvatarBtn) {
-            editAvatarBtn.addEventListener('click', () => this.seleccionarNuevaFoto());
-        }
-
-        // Input de foto de perfil (oculto)
-        const fotoPerfilInput = document.getElementById('fotoPerfil');
-        if (fotoPerfilInput) {
-            fotoPerfilInput.addEventListener('change', (e) => this.procesarNuevaFoto(e));
-        }
+        // QUITAMOS los listeners de foto de perfil
+        console.log('🔗 Event listeners configurados (sin gestión de imágenes)');
     }
 
     // CONFIGURACIÓN DE NAVEGACIÓN
@@ -103,8 +94,7 @@ class PerfilManager {
                 nombres: data.nombres || window.usuarioNombres || 'Usuario',
                 apellidos: data.apellidos || '',
                 correo: data.correo || window.usuarioCorreo || '',
-                telefono: data.telefono || '',
-                foto_perfil: data.foto_perfil || '/imagenes/default-avatar.png'
+                telefono: data.telefono || ''
             };
 
             console.log('✅ Datos del perfil preparados:', this.datosUsuario);
@@ -130,8 +120,7 @@ class PerfilManager {
             nombres: window.usuarioNombres || 'Usuario',
             apellidos: '',
             correo: window.usuarioCorreo || '',
-            telefono: '',
-            foto_perfil: '/imagenes/default-avatar.png'
+            telefono: ''
         };
         
         this.mostrarDatosEnUI();
@@ -158,32 +147,12 @@ class PerfilManager {
             this.actualizarElemento('profileEmailCard', datos.correo || 'No disponible');
             this.actualizarElemento('profilePhoneCard', this.formatearTelefono(datos.telefono));
 
-            // 3. ACTUALIZAR AVATAR
-            this.actualizarAvatar(datos.foto_perfil);
-
-            // 4. LLENAR FORMULARIO DE EDICIÓN
-            this.llenarFormularioEdicion(datos);
-
-            console.log('✅ Interfaz actualizada correctamente');
+            // 3. QUITAMOS la actualización de avatar
+            console.log('✅ Interfaz actualizada correctamente (sin avatar)');
 
         } catch (error) {
             console.error('❌ Error actualizando la interfaz:', error);
         }
-    }
-
-    actualizarAvatar(fotoPerfil) {
-        console.log('🖼️ Actualizando avatar:', fotoPerfil);
-        
-        const avatares = [
-            document.getElementById('headerAvatar'),
-            document.getElementById('profileAvatar')
-        ];
-
-        avatares.forEach(avatar => {
-            if (avatar) {
-                this.cargarImagenSegura(avatar, fotoPerfil);
-            }
-        });
     }
 
     llenarFormularioEdicion(datos) {
@@ -216,7 +185,7 @@ class PerfilManager {
         document.querySelector('.profile-main .profile-card:first-child').style.display = 'block';
     }
 
-    // GUARDAR PERFIL - SIN VALIDACIONES
+    // GUARDAR PERFIL - SIN IMÁGENES
     async guardarPerfil() {
         console.log('💾 Iniciando guardado de perfil...');
         
@@ -239,17 +208,11 @@ class PerfilManager {
 
             console.log('📤 Enviando datos para actualizar:', datosFormulario);
 
-            // Crear FormData para enviar datos
+            // Crear FormData para enviar datos (sin imágenes)
             const formData = new FormData();
             formData.append('nombres', datosFormulario.nombres);
             formData.append('apellidos', datosFormulario.apellidos);
             formData.append('telefono', datosFormulario.telefono);
-
-            // Agregar foto si fue seleccionada
-            const fotoInput = document.getElementById('fotoPerfil');
-            if (fotoInput && fotoInput.files[0]) {
-                formData.append('foto', fotoInput.files[0]);
-            }
 
             const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
                 method: 'POST',
@@ -277,11 +240,6 @@ class PerfilManager {
                 // Mostrar notificación
                 this.mostrarNotificacionPerfil('Perfil actualizado correctamente', 'success');
                 
-                // Limpiar input de archivo
-                if (fotoInput) {
-                    fotoInput.value = '';
-                }
-                
             } else {
                 throw new Error(data.error || data.mensaje || 'Error del servidor');
             }
@@ -294,43 +252,6 @@ class PerfilManager {
             btnSave.innerHTML = originalText;
             btnSave.disabled = false;
         }
-    }
-
-    // GESTIÓN DE FOTOS DE PERFIL
-    seleccionarNuevaFoto() {
-        console.log('📸 Solicitando selección de nueva foto');
-        const fotoInput = document.getElementById('fotoPerfil');
-        if (fotoInput) {
-            fotoInput.click();
-        }
-    }
-
-    procesarNuevaFoto(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        console.log('🖼️ Archivo seleccionado:', file.name);
-
-        // Mostrar preview
-        this.mostrarPreviewFoto(file);
-        this.mostrarNotificacionPerfil('Foto seleccionada. Guarda los cambios para aplicarla.', 'info');
-    }
-
-    mostrarPreviewFoto(file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const avatares = [
-                document.getElementById('headerAvatar'),
-                document.getElementById('profileAvatar')
-            ];
-            
-            avatares.forEach(avatar => {
-                if (avatar) {
-                    avatar.src = e.target.result;
-                }
-            });
-        };
-        reader.readAsDataURL(file);
     }
 
     // SISTEMA DE NOTIFICACIONES
@@ -395,28 +316,6 @@ class PerfilManager {
         return telefono;
     }
 
-    cargarImagenSegura(elemento, url) {
-        if (!elemento) return;
-
-        if (!url || url === '' || url === 'null') {
-            elemento.src = window.location.origin + '/imagenes/default-avatar.png';
-            return;
-        }
-
-        let imagenUrl = url;
-        if (!url.startsWith('http') && !url.startsWith('data:')) {
-            const baseUrl = window.location.origin;
-            imagenUrl = baseUrl + (url.startsWith('/') ? url : '/' + url);
-        }
-
-        elemento.src = imagenUrl;
-        
-        elemento.onerror = function() {
-            console.warn('❌ Error cargando imagen:', this.src);
-            this.src = window.location.origin + '/imagenes/default-avatar.png';
-        };
-    }
-
     mostrarEstadoCarga(cargando) {
         const elementos = document.querySelectorAll('#profileView [id^="profile"]');
         
@@ -465,7 +364,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }, 100);
 });
 
-// DEBUG TEMPORAL
+// DEBUG TEMPORAL - MEJORADO
 function debugPerfil() {
     console.log('🐛 DEBUG PERFIL:');
     console.log('- URL Controlador:', '../controllers/usuario_controlador.php?action=obtener');
@@ -475,14 +374,26 @@ function debugPerfil() {
         usuarioCorreo: window.usuarioCorreo
     });
     
+    // Probar la conexión con mejor manejo de errores
     fetch('../controllers/usuario_controlador.php?action=obtener', {
         credentials: 'include'
     })
     .then(r => {
         console.log('🔍 Respuesta HTTP:', r.status, r.statusText);
-        return r.json();
+        if (!r.ok) {
+            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
+        }
+        return r.text(); // Usamos text() en lugar de json() para ver la respuesta cruda
     })
-    .then(data => console.log('🔍 Datos crudos:', data))
+    .then(text => {
+        console.log('🔍 Respuesta cruda:', text);
+        try {
+            const data = JSON.parse(text);
+            console.log('🔍 Datos parseados:', data);
+        } catch (e) {
+            console.log('🔍 No es JSON válido:', e.message);
+        }
+    })
     .catch(err => console.error('🔍 Error prueba:', err));
 }
 
