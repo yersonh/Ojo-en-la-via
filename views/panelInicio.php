@@ -1,5 +1,5 @@
 <?php
-session_start();
+
 require_once '../config/database.php'; 
 
 if (!isset($_SESSION['usuario_id'])) {
@@ -10,9 +10,7 @@ if (!isset($_SESSION['usuario_id'])) {
 // Obtener datos del usuario de la sesión
 $usuario_id = $_SESSION['usuario_id'];
 $usuario_nombres = $_SESSION['nombres'] ?? 'Usuario';
-$usuario_apellidos = $_SESSION['apellidos'] ?? '';
 $usuario_correo = $_SESSION['correo'] ?? '';
-$usuario_telefono = $_SESSION['telefono'] ?? '';
 
 // Determinar la URL base para el iframe - ACTUALIZADO A HTTPS
 $baseUrl = 'https://' . $_SERVER['HTTP_HOST'];
@@ -32,19 +30,18 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     <link rel="stylesheet" href="styles/mapa.css">
     <link rel="stylesheet" href="styles/panel.css">
     
-    <!-- Pasar variables de sesión a JavaScript - SOLO UNA FORMA -->
+    <!-- Pasar variables de sesión a JavaScript -->
     <script>
         // Variables globales con datos del usuario desde PHP
-        window.usuarioData = {
-            id: <?php echo json_encode($usuario_id); ?>,
-            nombres: <?php echo json_encode($usuario_nombres); ?>,
-            apellidos: <?php echo json_encode($usuario_apellidos); ?>,
-            correo: <?php echo json_encode($usuario_correo); ?>,
-            telefono: <?php echo json_encode($usuario_telefono); ?>,
-            foto_perfil: "/imagenes/fiveicon.png"
-        };
+        window.usuarioId = <?php echo json_encode($usuario_id); ?>;
+        window.usuarioNombres = <?php echo json_encode($usuario_nombres); ?>;
+        window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
         
-        console.log('👤 Usuario cargado:', window.usuarioData);
+        console.log('👤 Usuario cargado:', {
+            id: window.usuarioId,
+            nombres: window.usuarioNombres,
+            correo: window.usuarioCorreo
+        });
     </script>
     
     <!-- Forzar HTTPS en producción -->
