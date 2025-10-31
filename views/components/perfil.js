@@ -82,39 +82,91 @@ class PerfilManager {
     }
 
     // CARGA DE DATOS DEL PERFIL - VERSIÓN SIMPLIFICADA
-    async cargarPerfil() {
+     async cargarPerfil() {
         if (this.perfilCargado) {
             console.log('📊 Perfil ya cargado, mostrando datos existentes');
             this.mostrarDatosEnUI();
             return;
         }
 
-        console.log('📱 Cargando perfil desde datos de sesión...');
+        console.log('📱 Cargando perfil completo desde el servidor...');
         
-        // Usar los datos que YA tenemos en las variables de sesión
-        const datosBasicos = {
+        try {
+            // Mostrar estado de carga
+            this.mostrarEstadoCarga(true);
+
+            const resp = await fetch('../controllers/usuario_controlador.php?action=obtener', {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Cache-Control': 'no-cache'
+                }
+            });
+
+            console.log('📤 Estado de respuesta:', resp.status, resp.statusText);
+
+            if (!resp.ok) {
+                throw new Error(`Error HTTP: ${resp.status} - ${resp.statusText}`);
+            }
+
+            const data = await resp.json();
+            console.log('📥 Datos recibidos del servidor:', data);
+
+            // Verificar si la respuesta es válida
+            if (!data || typeof data !== 'object') {
+                throw new Error('Respuesta del servidor inválida');
+            }
+
+            // Si hay error de autenticación
+            if (data.error === 'No autenticado') {
+                throw new Error('Sesión expirada. Por favor, inicia sesión nuevamente.');
+            }
+
+            // Preparar datos del usuario
+            this.datosUsuario = {
+                id_usuario: data.id_usuario || window.usuarioId || 0,
+                nombres: data.nombres || window.usuarioNombres || 'Usuario',
+                apellidos: data.apellidos || '',
+                correo: data.correo || window.usuarioCorreo || '',
+                telefono: data.telefono || '',
+                foto_perfil: data.foto_perfil || '/imagenes/default-avatar.png',
+                biografia: data.biografia || '',
+                ubicacion: data.ubicacion || ''
+            };
+
+            console.log('✅ Datos del perfil preparados:', this.datosUsuario);
+
+            // Actualizar UI
+            this.perfilCargado = true;
+            this.mostrarDatosEnUI();
+            this.mostrarEstadoCarga(false);
+
+            // Cargar estadísticas en segundo plano
+            this.cargarEstadisticas();
+
+        } catch (error) {
+            console.error('❌ Error cargando perfil:', error);
+            this.mostrarEstadoCarga(false);
+            this.mostrarError(error.message);
+            
+            // Fallback: usar datos básicos de sesión
+            this.usarDatosBasicosSesion();
+        }
+    }
+usarDatosBasicosSesion() {
+        console.log('🔄 Usando datos básicos de sesión como fallback');
+        
+        this.datosUsuario = {
             id_usuario: window.usuarioId || 0,
             nombres: window.usuarioNombres || 'Usuario',
-            apellidos: '', // No disponible en sesión inicialmente
+            apellidos: '', // No disponible en sesión
             correo: window.usuarioCorreo || '',
-            telefono: '', // No disponible en sesión inicialmente  
-            foto_perfil: '/imagenes/default-avatar.png',
-            nombre_rol: 'Usuario'
+            telefono: '', // No disponible en sesión
+            foto_perfil: '/imagenes/default-avatar.png'
         };
         
-        console.log('✅ Datos básicos desde sesión:', {
-            id: datosBasicos.id_usuario,
-            nombres: datosBasicos.nombres,
-            correo: datosBasicos.correo
-        });
-        
-        // Actualizar la UI inmediatamente con datos básicos
-        this.datosUsuario = datosBasicos;
-        this.perfilCargado = true;
         this.mostrarDatosEnUI();
-        
-        // Intentar cargar datos adicionales del servidor en segundo plano
-        this.cargarDatosAdicionales();
+        this.mostrarNotificacionPerfil('Usando datos básicos. Algunos campos pueden estar vacíos.', 'info');
     }
 
     // CARGA DE DATOS ADICIONALES DESDE EL SERVIDOR
@@ -188,7 +240,6 @@ class PerfilManager {
 
         try {
             console.log('🎨 Actualizando interfaz con datos del perfil...');
-            
             const datos = this.datosUsuario;
 
             // 1. ACTUALIZAR HERO SECTION
@@ -322,11 +373,17 @@ class PerfilManager {
 
             console.log('📤 Enviando datos para actualizar:', datosFormulario);
 
-            // Enviar datos al servidor
+            // Crear FormData para enviar datos (incluye archivos si hay)
             const formData = new FormData();
-            Object.entries(datosFormulario).forEach(([key, value]) => {
-                formData.append(key, value);
-            });
+            formData.append('nombres', datosFormulario.nombres);
+            formData.append('apellidos', datosFormulario.apellidos);
+            formData.append('telefono', datosFormulario.telefono);
+
+            // Agregar foto si fue seleccionada
+            const fotoInput = document.getElementById('fotoPerfil');
+            if (fotoInput && fotoInput.files[0]) {
+                formData.append('foto', fotoInput.files[0]);
+            }
 
             const resp = await fetch('../controllers/usuario_controlador.php?action=actualizar', {
                 method: 'POST',
@@ -341,7 +398,10 @@ class PerfilManager {
                 console.log('✅ Perfil actualizado correctamente');
                 
                 // Actualizar datos locales
-                this.datosUsuario = { ...this.datosUsuario, ...datosFormulario };
+                this.datosUsuario = { 
+                    ...this.datosUsuario, 
+                    ...datosFormulario 
+                };
                 this.perfilCargado = false; // Forzar recarga en próxima visita
                 
                 // Actualizar UI y ocultar formulario
@@ -351,11 +411,13 @@ class PerfilManager {
                 // Mostrar notificación de éxito
                 this.mostrarNotificacionPerfil('Perfil actualizado correctamente', 'success');
                 
-                // Actualizar sesión del lado del cliente si es necesario
-                this.actualizarSesionCliente(datosFormulario);
+                // Limpiar input de archivo
+                if (fotoInput) {
+                    fotoInput.value = '';
+                }
                 
             } else {
-                throw new Error(data.error || 'Error del servidor al actualizar');
+                throw new Error(data.error || data.mensaje || 'Error del servidor al actualizar');
             }
 
         } catch (error) {
@@ -367,6 +429,7 @@ class PerfilManager {
             btnSave.disabled = false;
         }
     }
+
 
     obtenerDatosFormulario() {
         return {
@@ -733,6 +796,37 @@ function diagnosticarSistemaPerfil() {
         usuarioCorreo: window.usuarioCorreo
     });
 }
+// Agregar al final de perfil.js para debug
+function debugPerfil() {
+    console.log('🐛 DEBUG PERFIL:');
+    console.log('- URL Controlador:', '../controllers/usuario_controlador.php?action=obtener');
+    console.log('- Sesión JS:', {
+        usuarioId: window.usuarioId,
+        usuarioNombres: window.usuarioNombres,
+        usuarioCorreo: window.usuarioCorreo
+    });
+    
+    // Probar la conexión directamente
+    fetch('../controllers/usuario_controlador.php?action=obtener', {
+        credentials: 'include'
+    })
+    .then(r => {
+        console.log('🔍 Respuesta HTTP:', r.status, r.statusText);
+        return r.json();
+    })
+    .then(data => console.log('🔍 Datos crudos:', data))
+    .catch(err => console.error('🔍 Error prueba:', err));
+}
+
+// Ejecutar debug cuando se haga clic en perfil (temporal)
+document.addEventListener('DOMContentLoaded', function() {
+    const profileNav = document.querySelector('.nav-item[data-target="profileView"]');
+    if (profileNav) {
+        profileNav.addEventListener('click', () => {
+            setTimeout(debugPerfil, 1000);
+        });
+    }
+});
 
 // INICIALIZAR CUANDO EL DOCUMENTO ESTÉ LISTO
 document.addEventListener('DOMContentLoaded', function() {
