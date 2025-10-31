@@ -1,4 +1,5 @@
 <?php
+require_once '../config/bootstrap_session.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../controllers/admin_controlador.php';
 
