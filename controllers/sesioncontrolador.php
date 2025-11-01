@@ -29,7 +29,7 @@ class SesionControlador {
 
     public function login($correo, $password) {
         // Obtener usuario CON DATOS DE PERSONA (JOIN)
-        $usuario = $this->usuarioModel->obtenerPorCorreoConPersona($correo);
+        $usuario = $this->usuarioModel->obtenerPorCorreo($correo);
         
         if ($usuario && password_verify($password, $usuario['contrasena'])) {
             if ($usuario['id_estado'] == 1) { // 1 = Activo
