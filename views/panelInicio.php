@@ -80,15 +80,13 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         window.usuarioApellidos = <?php echo json_encode($usuario_apellidos ?? ''); ?>;
         window.usuarioCorreo = <?php echo json_encode($usuario_correo); ?>;
         window.usuarioTelefono = <?php echo json_encode($usuario_telefono ?? ''); ?>;
-        window.usuarioFotoPerfil = <?php echo json_encode($foto_perfil ?? ''); ?>;
         
         console.log('👤 Usuario cargado:', {
             id: window.usuarioId,
             nombres: window.usuarioNombres,
             apellidos: window.usuarioApellidos,
             correo: window.usuarioCorreo,
-            telefono: window.usuarioTelefono,
-            foto: window.usuarioFotoPerfil
+            telefono: window.usuarioTelefono
         });
     </script>
     
@@ -267,193 +265,6 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         cursor: not-allowed;
     }
 
-    /* Estilos para avatares */
-    .user-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 2px solid #3498db;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .user-avatar:hover {
-        transform: scale(1.05);
-        border-color: #2980b9;
-    }
-
-    .default-avatar {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        cursor: pointer;
-        border: 2px solid #3498db;
-    }
-
-    .default-avatar.large {
-        width: 100px;
-        height: 100px;
-        font-size: 2.5rem;
-    }
-
-    .default-avatar.medium {
-        width: 80px;
-        height: 80px;
-        font-size: 2rem;
-    }
-
-    /* Contenedor de avatar en perfil */
-    .profile-avatar-container {
-        position: relative;
-        display: inline-block;
-    }
-
-    .profile-main-avatar {
-        width: 100px;
-        height: 100px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 4px solid white;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
-    }
-
-    /* Botón de editar avatar */
-    .avatar-edit-btn {
-        position: absolute;
-        bottom: 5px;
-        right: 5px;
-        width: 32px;
-        height: 32px;
-        background: #3498db;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        cursor: pointer;
-        border: 2px solid white;
-        transition: all 0.3s ease;
-    }
-
-    .avatar-edit-btn:hover {
-        background: #2980b9;
-        transform: scale(1.1);
-    }
-
-    /* Estados de carga para avatar */
-    .avatar-loading {
-        opacity: 0.7;
-        pointer-events: none;
-    }
-
-    .avatar-loading::after {
-        content: '';
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        width: 20px;
-        height: 20px;
-        border: 2px solid #f3f3f3;
-        border-top: 2px solid #3498db;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        transform: translate(-50%, -50%);
-    }
-
-    @keyframes spin {
-        0% { transform: translate(-50%, -50%) rotate(0deg); }
-        100% { transform: translate(-50%, -50%) rotate(360deg); }
-    }
-
-    /* Estilos para la sección de foto en formulario */
-    .form-photo-section {
-        margin-bottom: 20px;
-        padding: 20px;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
-
-    .photo-upload-container {
-        display: flex;
-        align-items: center;
-        gap: 20px;
-    }
-
-    .current-photo img {
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        object-fit: cover;
-        border: 3px solid #3498db;
-    }
-
-    .photo-upload-controls {
-        flex: 1;
-    }
-
-    .photo-input {
-        display: none;
-    }
-
-    .btn-outline {
-        background: transparent;
-        border: 2px solid #3498db;
-        color: #3498db;
-        padding: 8px 16px;
-        border-radius: 6px;
-        cursor: pointer;
-        transition: all 0.3s ease;
-    }
-
-    .btn-outline:hover {
-        background: #3498db;
-        color: white;
-    }
-
-    .photo-info {
-        margin-top: 8px;
-    }
-
-    .photo-info small {
-        color: #6c757d;
-        font-size: 0.8rem;
-    }
-
-    /* Preview de imagen seleccionada */
-    .photo-preview {
-        margin-top: 10px;
-        text-align: center;
-    }
-
-    .photo-preview img {
-        max-width: 150px;
-        max-height: 150px;
-        border-radius: 8px;
-        border: 2px solid #ddd;
-    }
-
-    /* Estilos para el estado de la foto */
-    .photo-status {
-        color: #27ae60;
-        font-weight: 500;
-    }
-
-    .photo-status.not-set {
-        color: #e74c3c;
-    }
-
-    .contact-value .photo-status::before {
-        content: '•';
-        margin-right: 5px;
-    }
-
     /* Responsive */
     @media (max-width: 768px) {
         .comentarios-modal {
@@ -468,29 +279,8 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
         .modal-body {
             padding: 15px;
         }
-
-        .profile-main-avatar {
-            width: 80px;
-            height: 80px;
-        }
-        
-        .default-avatar.large {
-            width: 80px;
-            height: 80px;
-            font-size: 2rem;
-        }
-        
-        .avatar-edit-btn {
-            width: 28px;
-            height: 28px;
-        }
-
-        .photo-upload-container {
-            flex-direction: column;
-            align-items: flex-start;
-        }
     }
-    </style>
+</style>
 </head>
 <body>
     <div class="app">
@@ -501,17 +291,8 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 <span>Ojo en la Vía</span>
             </div>
             <div class="user-menu">
-                <?php if (!empty($foto_perfil)): ?>
-                    <img id="headerAvatar" class="user-avatar" 
-                         src="../uploads/perfiles/<?php echo htmlspecialchars($foto_perfil); ?>" 
-                         alt="Avatar"
-                         onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()">
-                <?php else: ?>
-                    <div class="user-avatar default-avatar" 
-                         onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()">
-                        <i class="fas fa-user"></i>
-                    </div>
-                <?php endif; ?>
+                <!--<img id="headerAvatar" class="user-avatar" src="/imagenes/fiveicon.png" alt="Avatar" 
+                    onclick="document.querySelector('.nav-item[data-target=\"profileView\"]').click()"> -->
             </div>
         </header>
 
@@ -572,19 +353,10 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                     <div class="profile-hero">
                         <div class="profile-hero-content">
                             <div class="profile-avatar-container">
-                                <?php if (!empty($foto_perfil)): ?>
-                                    <img id="profileAvatar" class="profile-main-avatar" 
-                                         src="../uploads/perfiles/<?php echo htmlspecialchars($foto_perfil); ?>" 
-                                         alt="Avatar del usuario">
-                                <?php else: ?>
-                                    <div class="profile-main-avatar default-avatar large">
-                                        <i class="fas fa-user"></i>
-                                    </div>
-                                <?php endif; ?>
-                                <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
+                                <!--<img id="profileAvatar" class="profile-main-avatar" src="/imagenes/fiveicon.png" alt="Avatar del usuario">-->
+                              <!--  <div class="avatar-edit-btn" id="editAvatarBtn" title="Cambiar foto de perfil">
                                     <i class="fas fa-camera"></i>
-                                    <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
-                                </div>
+                                </div>-->
                             </div>
                             <div class="profile-hero-info">
                                 <h1 id="profileName"><?php echo htmlspecialchars($usuario_nombres . ' ' . ($usuario_apellidos ?? '')); ?></h1>
@@ -647,57 +419,15 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                                             <div class="contact-value" id="profilePhoneCard"><?php echo htmlspecialchars($usuario_telefono ?? 'No especificado'); ?></div>
                                         </div>
                                     </div>
-                                    <div class="contact-item">
-                                        <div class="contact-icon">
-                                            <i class="fas fa-camera"></i>
-                                        </div>
-                                        <div class="contact-details">
-                                            <div class="contact-label">Foto de Perfil</div>
-                                            <div class="contact-value">
-                                                <?php if (!empty($foto_perfil)): ?>
-                                                    <span class="photo-status">Configurada</span>
-                                                <?php else: ?>
-                                                    <span class="photo-status not-set">No configurada</span>
-                                                <?php endif; ?>
-                                            </div>
-                                        </div>
-                                    </div>
                                 </div>
                             </div>
 
                             <!-- Formulario de Edición (oculto inicialmente) -->
-                            <form id="profileForm" style="display:none;" class="profile-card edit-form" enctype="multipart/form-data">
+                            <form id="profileForm" style="display:none;" class="profile-card edit-form">
                                 <div class="profile-card-header">
                                     <h3><i class="fas fa-edit"></i> Editar Perfil</h3>
                                 </div>
-                                
-                                <!-- Sección de foto de perfil en el formulario -->
-                                <div class="form-photo-section">
-                                    <label class="form-label">Foto de Perfil</label>
-                                    <div class="photo-upload-container">
-                                        <div class="current-photo">
-                                            <?php if (!empty($foto_perfil)): ?>
-                                                <img id="formAvatarPreview" src="../uploads/perfiles/<?php echo htmlspecialchars($foto_perfil); ?>" alt="Foto actual">
-                                            <?php else: ?>
-                                                <div class="default-avatar medium">
-                                                    <i class="fas fa-user"></i>
-                                                </div>
-                                            <?php endif; ?>
-                                        </div>
-                                        <div class="photo-upload-controls">
-                                            <input type="file" id="fotoPerfil" name="foto_perfil" accept="image/*" class="photo-input">
-                                            <label for="fotoPerfil" class="btn btn-outline">
-                                                <i class="fas fa-camera"></i> Cambiar Foto
-                                            </label>
-                                            <div class="photo-info">
-                                                <small>Formatos: JPG, PNG, GIF (Máx. 2MB)</small>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="photo-preview" id="photoPreview" style="display: none;">
-                                        <img id="previewImage" src="" alt="Vista previa">
-                                    </div>
-                                </div>
+                                <input type="file" id="fotoPerfil" name="foto" accept="image/*" style="display: none;">
                                 
                                 <div class="form-grid">
                                     <div class="form-group">
