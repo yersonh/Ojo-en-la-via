@@ -1,7 +1,6 @@
 <?php
 // usuario_controlador.php - VERSIÓN SIMPLIFICADA Y FUNCIONAL
 header('Content-Type: application/json; charset=utf-8');
-session_start();
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/bootstrap_session.php';
@@ -52,15 +51,16 @@ try {
     switch ($action) {
         case 'obtener':
             $query = "SELECT 
-                         u.id_usuario, 
-                         u.correo,
-                         p.nombres, 
-                         p.apellidos, 
-                         p.telefono
+                        u.id_usuario, 
+                        u.correo,
+                        p.nombres, 
+                        p.apellidos, 
+                        p.telefono,
+                        p.foto_perfil
                       FROM usuario u
                       INNER JOIN persona p ON u.id_persona = p.id_persona
                       WHERE u.id_usuario = :id_usuario";
-
+            
             $stmt = $db->prepare($query);
             $stmt->execute([':id_usuario' => $usuario_id]);
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -85,9 +85,9 @@ try {
             }
 
             $query = "UPDATE persona 
-                      SET nombres = :nombres, apellidos = :apellidos, telefono = :telefono 
-                      WHERE id_persona = (SELECT id_persona FROM usuario WHERE id_usuario = :id_usuario)";
-
+                    SET nombres = :nombres, apellidos = :apellidos, telefono = :telefono 
+                    WHERE id_persona = (SELECT id_persona FROM usuario WHERE id_usuario = :id_usuario)";
+            
             $stmt = $db->prepare($query);
             $result = $stmt->execute([
                 ':nombres' => $nombres,
@@ -108,7 +108,7 @@ try {
 
         case 'obtener_estadisticas':
             // 🆕 ESTADÍSTICAS DIRECTAS - SIN FUNCIÓN SEPARADA
-
+            
             // 1. CONTAR REPORTES DEL USUARIO
             $stmt = $db->prepare("SELECT COUNT(*) as total FROM reporte WHERE id_usuario = ?");
             $stmt->execute([$usuario_id]);
@@ -165,6 +165,7 @@ try {
                 ]
             ];
             break;
+            
 
         default:
             throw new Exception('Acción no reconocida: ' . $action);
@@ -179,3 +180,4 @@ try {
 
 echo json_encode($response);
 exit;
+?>
