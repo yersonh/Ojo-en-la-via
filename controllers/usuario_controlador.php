@@ -165,40 +165,7 @@ try {
                 ]
             ];
             break;
-            case 'actualizar_foto':
-    if (isset($_FILES['foto_perfil']) && $_FILES['foto_perfil']['error'] === UPLOAD_ERR_OK) {
-        $uploadDir = __DIR__ . '/../uploads/perfiles/';
-        
-        // Crear directorio si no existe
-        if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
-        }
-        
-        $fileName = uniqid() . '_' . basename($_FILES['foto_perfil']['name']);
-        $uploadFile = $uploadDir . $fileName;
-        
-        if (move_uploaded_file($_FILES['foto_perfil']['tmp_name'], $uploadFile)) {
-            // Actualizar en base de datos
-            $query = "UPDATE persona SET foto_perfil = :foto_perfil 
-                    WHERE id_persona = (SELECT id_persona FROM usuario WHERE id_usuario = :id_usuario)";
             
-            $stmt = $db->prepare($query);
-            $result = $stmt->execute([
-                ':foto_perfil' => $fileName,
-                ':id_usuario' => $usuario_id
-            ]);
-            
-            if ($result) {
-                $_SESSION['foto_perfil'] = $fileName;
-                $response = [
-                    'success' => true,
-                    'mensaje' => 'Foto actualizada correctamente',
-                    'foto_url' => '/uploads/perfiles/' . $fileName
-                ];
-            }
-        }
-    }
-    break;
 
         default:
             throw new Exception('Acción no reconocida: ' . $action);
