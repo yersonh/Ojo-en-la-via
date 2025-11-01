@@ -1,5 +1,5 @@
 <?php
-// usuario_controlador.php - VERSIÓN COMPLETA CON ESTADÍSTICAS
+// usuario_controlador.php - VERSIÓN CORREGIDA
 header('Content-Type: application/json; charset=utf-8');
 
 // Iniciar sesión primero
@@ -139,8 +139,9 @@ try {
     ];
 }
 
-// Enviar respuesta FINAL
+// 🚨 CORRECIÓN: AGREGAR exit DESPUÉS DEL JSON
 echo json_encode($response);
+exit; // ← ESTA LÍNEA ES CRÍTICA
 
 // 🆕 FUNCIÓN PARA CALCULAR ESTADÍSTICAS (adaptada a tu estructura de BD)
 function calcularEstadisticas($db, $id_usuario) {
@@ -199,14 +200,11 @@ function calcularEstadisticas($db, $id_usuario) {
         // Como no hay campo 'visitas', contamos reportes como proxy
         $estadisticas['views'] = $estadisticas['reports'] * 10; // Ejemplo: 10 vistas por reporte
 
-        // Alternativa: contar likes + comentarios como "interacciones"
-        // $estadisticas['views'] = $estadisticas['likes'] + $estadisticas['comments'];
-
         return $estadisticas;
 
     } catch (PDOException $e) {
         error_log("Error calculando estadísticas: " . $e->getMessage());
-        return $estadisticas; // Retornar valores por defecto en caso de error
+        return $estadisticas;
     }
 }
 ?>
