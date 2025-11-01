@@ -1,7 +1,4 @@
 <?php
-// config/bootstrap_session.php
-
-// VERIFICAR de manera más robusta si la sesión ya está activa
 if (session_status() === PHP_SESSION_NONE) {
     // Solo iniciar si NO hay sesión activa
     require_once __DIR__ . '/sessions.php';

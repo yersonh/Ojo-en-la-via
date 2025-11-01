@@ -1,6 +1,4 @@
         <?php
-        // config/sessions.php
-
         class SessionManager {
             public static function start() {
                 // VERIFICAR si la sesión ya está iniciada
@@ -8,7 +6,6 @@
                     error_log("🔍 Sesión ya está activa - ID: " . session_id());
                     return; // No hacer nada si ya está iniciada
                 }
-
                 // DEBUG
                 error_log("=== INICIANDO NUEVA SESION ===");
                 error_log("APP_ENV: " . (getenv('APP_ENV') ?: 'NOT_SET'));
@@ -17,7 +14,6 @@
                 // Configurar Redis ANTES de iniciar sesión
                 $redisUrl = getenv('REDIS_URL') ?: 'redis://default:DRNukNuOugIPIHsJZOxwPuyrBySWqjzC@redis.railway.internal:6379';
                 self::setupRedisSession($redisUrl);
-
                 // Configurar cookies ANTES de iniciar sesión
                 session_set_cookie_params([
                     'lifetime' => 0,

@@ -1,12 +1,8 @@
 <?php
-
 require_once __DIR__ . '/config/config.php';
 require_once __DIR__ . '/config/bootstrap_session.php';
 require_once BASE_PATH . 'config/database.php';
 require_once BASE_PATH . 'controllers/sesioncontrolador.php';
-require_once BASE_PATH . 'models/persona.php';
-require_once BASE_PATH . 'models/usuario.php';
-
 require_once __DIR__ . '/phpmailer/PHPMailer.php';
 require_once __DIR__ . '/phpmailer/SMTP.php';
 require_once __DIR__ . '/phpmailer/Exception.php';
