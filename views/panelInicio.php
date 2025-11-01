@@ -781,7 +781,7 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
                 ComentariosManager.inicializar();
                 console.log('✅ ComentariosManager inicializado correctamente');
             } else {
-                console.error('❌ ComentariosManager no está definido');
+                console.error('❌ ComentariosManager no está definidao');
             }
         });
     </script>

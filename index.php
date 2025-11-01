@@ -274,7 +274,6 @@ function procesarRecuperacion($db, $correoUsuario, $base_url) {
         return "❌ El correo ingresado no está registrado en nuestro sistema.";
     }
 }
-
 ?>
 
 <!DOCTYPE html>
