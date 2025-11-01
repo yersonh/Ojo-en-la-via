@@ -1,7 +1,6 @@
 <?php
 // usuario_controlador.php - VERSIÓN SIMPLIFICADA Y FUNCIONAL
 header('Content-Type: application/json; charset=utf-8');
-session_start();
 
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../config/bootstrap_session.php';
