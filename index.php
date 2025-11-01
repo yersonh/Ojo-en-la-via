@@ -1,9 +1,7 @@
 <?php
 
-require_once __DIR__ . '/config/sessions.php';
-SessionManager::start();
-error_log("✅ SESIÓN INICIADA DESDE INDEX - ID: " . session_id());
 require_once __DIR__ . '/config/config.php';
+require_once __DIR__ . '/config/bootstrap_session.php';
 require_once BASE_PATH . 'config/database.php';
 require_once BASE_PATH . 'controllers/sesioncontrolador.php';
 require_once BASE_PATH . 'models/persona.php';

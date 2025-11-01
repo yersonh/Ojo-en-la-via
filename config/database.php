@@ -1,6 +1,5 @@
 <?php
 
-//require_once __DIR__ . '/sessions.php';
 
 class Database {
     private $host;
