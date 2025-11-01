@@ -1,19 +1,13 @@
 <?php
-// usuario_controlador.php - VERSIÓN COMPLETA CON ESTADÍSTICAS
+// usuario_controlador.php - VERSIÓN CORREGIDA
 header('Content-Type: application/json; charset=utf-8');
-
-// Iniciar sesión primero
 session_start();
 
 // Configuración básica de errores
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-// Respuesta por defecto
-$response = ['success' => false, 'error' => 'Acción no válida'];
-
 try {
-    // Conectar a la base de datos PRIMERO para algunas acciones
     require_once __DIR__ . '/../config/database.php';
     $database = new Database();
     $db = $database->conectar();
@@ -23,49 +17,41 @@ try {
     }
 
     $action = $_GET['action'] ?? '';
+    $usuario_id = $_SESSION['usuario_id'] ?? null;
 
-    // Acciones que NO requieren sesión
     switch ($action) {
         case 'verificar_sesion':
             $response = [
                 'sesion_activa' => isset($_SESSION['usuario_id']),
-                'usuario_id' => $_SESSION['usuario_id'] ?? null
+                'usuario_id' => $usuario_id
             ];
-            echo json_encode($response);
-            exit;
+            break;
 
         case 'obtener_id':
-            if (isset($_SESSION['usuario_id'])) {
-                $response = [
-                    'success' => true,
-                    'id_usuario' => $_SESSION['usuario_id']
-                ];
-            } else {
-                $response = [
-                    'success' => false,
-                    'message' => 'Usuario no autenticado'
-                ];
+            $response = [
+                'success' => isset($_SESSION['usuario_id']),
+                'id_usuario' => $usuario_id
+            ];
+            break;
+
+        case 'obtener_estadisticas':
+            if (!$usuario_id) {
+                throw new Exception('No autenticado');
             }
-            echo json_encode($response);
-            exit;
-    }
+            
+            $estadisticas = calcularEstadisticas($db, $usuario_id);
+            $response = [
+                'success' => true,
+                'estadisticas' => $estadisticas
+            ];
+            break;
 
-    // El resto de acciones SÍ requieren sesión
-    if (!isset($_SESSION['usuario_id'])) {
-        throw new Exception('No autenticado');
-    }
-
-    $usuario_id = $_SESSION['usuario_id'];
-
-    switch ($action) {
         case 'obtener':
-            // Consulta SIMPLIFICADA - solo lo esencial
-            $query = "SELECT 
-                         u.id_usuario, 
-                         u.correo,
-                         p.nombres, 
-                         p.apellidos, 
-                         p.telefono
+            if (!$usuario_id) {
+                throw new Exception('No autenticado');
+            }
+            
+            $query = "SELECT u.id_usuario, u.correo, p.nombres, p.apellidos, p.telefono
                       FROM usuario u
                       INNER JOIN persona p ON u.id_persona = p.id_persona
                       WHERE u.id_usuario = :id_usuario";
@@ -75,27 +61,25 @@ try {
             $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($usuario) {
-                $response = [
-                    'success' => true,
-                    'data' => $usuario
-                ];
+                $response = ['success' => true, 'data' => $usuario];
             } else {
-                throw new Exception('Usuario no encontrado en la base de datos');
+                throw new Exception('Usuario no encontrado');
             }
             break;
 
         case 'actualizar':
-            // Datos básicos del formulario
+            if (!$usuario_id) {
+                throw new Exception('No autenticado');
+            }
+            
             $nombres = trim($_POST['nombres'] ?? '');
             $apellidos = trim($_POST['apellidos'] ?? '');
             $telefono = trim($_POST['telefono'] ?? '');
 
-            // Validaciones básicas
             if (empty($nombres) || empty($apellidos)) {
                 throw new Exception('Nombres y apellidos son obligatorios');
             }
 
-            // Actualizar datos
             $query = "UPDATE persona 
                       SET nombres = :nombres, apellidos = :apellidos, telefono = :telefono 
                       WHERE id_persona = (SELECT id_persona FROM usuario WHERE id_usuario = :id_usuario)";
@@ -118,18 +102,8 @@ try {
             }
             break;
 
-        case 'obtener_estadisticas':
-            // 🆕 OBTENER ESTADÍSTICAS DEL USUARIO
-            $estadisticas = $this->calcularEstadisticas($db, $usuario_id);
-            
-            $response = [
-                'success' => true,
-                'estadisticas' => $estadisticas
-            ];
-            break;
-
         default:
-            throw new Exception('Acción no reconocida: ' . $action);
+            throw new Exception('Acción no válida: ' . $action);
     }
 
 } catch (Exception $e) {
@@ -139,14 +113,15 @@ try {
     ];
 }
 
-// Enviar respuesta FINAL
+// SOLO UNA SALIDA JSON
 echo json_encode($response);
+exit;
 
-// 🆕 FUNCIÓN PARA CALCULAR ESTADÍSTICAS (adaptada a tu estructura de BD)
+// FUNCIÓN PARA CALCULAR ESTADÍSTICAS
 function calcularEstadisticas($db, $id_usuario) {
     $estadisticas = [
         'reports' => 0,
-        'likes' => 0,
+        'likes' => 0, 
         'comments' => 0,
         'views' => 0
     ];
@@ -163,7 +138,7 @@ function calcularEstadisticas($db, $id_usuario) {
         $result = $stmt->fetch(PDO::FETCH_ASSOC);
         $estadisticas['reports'] = $result['total'] ?? 0;
 
-        // 2. CONTAR LIKES RECIBIDOS EN SUS REPORTES (usando like_reporte)
+        // 2. CONTAR LIKES RECIBIDOS EN SUS REPORTES
         $stmt = $db->prepare("
             SELECT COUNT(*) as total 
             FROM like_reporte lr
@@ -176,67 +151,30 @@ function calcularEstadisticas($db, $id_usuario) {
         $estadisticas['likes'] = $result['total'] ?? 0;
 
         // 3. CONTAR COMENTARIOS RECIBIDOS EN SUS REPORTES
-        // Primero verificar si existe la tabla comentarios
-        $stmt = $db->prepare("
-            SELECT COUNT(*) as total 
-            FROM comentarios c
-            INNER JOIN reporte r ON c.id_reporte = r.id_reporte
-            WHERE r.id_usuario = :id_usuario
-        ");
-        $stmt->bindParam(':id_usuario', $id_usuario);
-        
+        // Verificar si existe la tabla comentarios
         try {
+            $stmt = $db->prepare("
+                SELECT COUNT(*) as total 
+                FROM comentarios c
+                INNER JOIN reporte r ON c.id_reporte = r.id_reporte
+                WHERE r.id_usuario = :id_usuario
+            ");
+            $stmt->bindParam(':id_usuario', $id_usuario);
             $stmt->execute();
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             $estadisticas['comments'] = $result['total'] ?? 0;
         } catch (PDOException $e) {
-            // Si la tabla comentarios no existe, usar 0
-            error_log("Tabla comentarios no encontrada, usando valor 0");
+            // Si no existe la tabla, usar 0
             $estadisticas['comments'] = 0;
         }
 
-        // 4. CONTAR VISITAS TOTALES A SUS REPORTES
-        // Como no hay campo 'visitas', contamos reportes como proxy
-        $estadisticas['views'] = $estadisticas['reports'] * 10; // Ejemplo: 10 vistas por reporte
-
-        // Alternativa: contar likes + comentarios como "interacciones"
-        // $estadisticas['views'] = $estadisticas['likes'] + $estadisticas['comments'];
-
-        return $estadisticas;
+        // 4. VISITAS (estimación basada en reportes)
+        $estadisticas['views'] = $estadisticas['reports'] * 10;
 
     } catch (PDOException $e) {
         error_log("Error calculando estadísticas: " . $e->getMessage());
-        return $estadisticas; // Retornar valores por defecto en caso de error
     }
-}
 
-// 🆕 MANEJADOR DE PETICIONES ESPECÍFICAS PARA ESTADÍSTICAS
-if (isset($_GET['action']) && $_GET['action'] === 'obtener_estadisticas') {
-    try {
-        session_start();
-        
-        if (!isset($_SESSION['usuario_id'])) {
-            echo json_encode(['success' => false, 'error' => 'No autenticado']);
-            exit;
-        }
-        
-        require_once __DIR__ . '/../config/database.php';
-        $database = new Database();
-        $db = $database->conectar();
-        
-        $estadisticas = calcularEstadisticas($db, $_SESSION['usuario_id']);
-        
-        echo json_encode([
-            'success' => true,
-            'estadisticas' => $estadisticas
-        ]);
-        
-    } catch (Exception $e) {
-        echo json_encode([
-            'success' => false,
-            'error' => $e->getMessage()
-        ]);
-    }
-    exit;
+    return $estadisticas;
 }
 ?>
