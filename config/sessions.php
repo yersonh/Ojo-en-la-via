@@ -6,7 +6,7 @@
                     error_log("🔍 Sesión ya está activa - ID: " . session_id());
                     return; // No hacer nada si ya está iniciada
                 }
-                // DEBUG
+                //a DEBUG
                 error_log("=== INICIANDO NUEVA SESION ===");
                 error_log("APP_ENV: " . (getenv('APP_ENV') ?: 'NOT_SET'));
                 error_log("REDIS_URL: " . (getenv('REDIS_URL') ?: 'NOT_SET'));
