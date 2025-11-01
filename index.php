@@ -31,19 +31,29 @@ if (!isset($_SESSION['usuario_id']) && isset($_COOKIE['remember_token'])) {
     $token = $_COOKIE['remember_token'];
     
     try {
-        // Buscar el token en la base de datos
-        $stmt = $db->prepare("SELECT u.* FROM usuario u 
-                             INNER JOIN remember_tokens rt ON u.id_usuario = rt.id_usuario 
-                             WHERE rt.token = :token AND rt.expiracion > NOW()");
+        // Buscar el token en la base de datos CON JOIN PARA OBTENER DATOS DE PERSONA
+        $stmt = $db->prepare("SELECT 
+                                u.id_usuario, 
+                                u.id_rol, 
+                                u.correo,
+                                p.nombres,
+                                p.apellidos,
+                                p.telefono
+                              FROM usuario u
+                              INNER JOIN persona p ON u.id_persona = p.id_persona
+                              INNER JOIN remember_tokens rt ON u.id_usuario = rt.id_usuario 
+                              WHERE rt.token = :token AND rt.expiracion > NOW()");
         $stmt->bindParam(':token', $token);
         $stmt->execute();
         $usuario = $stmt->fetch(PDO::FETCH_ASSOC);
         
         if ($usuario) {
-            // Iniciar sesión automáticamente
+            // Iniciar sesión automáticamente CON TODOS LOS DATOS
             $_SESSION['usuario_id'] = $usuario['id_usuario'];
             $_SESSION['rol'] = $usuario['id_rol'];
             $_SESSION['nombres'] = $usuario['nombres'];
+            $_SESSION['apellidos'] = $usuario['apellidos'];
+            $_SESSION['telefono'] = $usuario['telefono'];
             $_SESSION['correo'] = $usuario['correo'];
             
             // 🆕 FORZAR guardado en Redis
@@ -90,16 +100,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['email'])) {
                 require_once BASE_PATH . 'config/sessions.php';
             }
             
+            // ✅ CORRECCIÓN: GUARDAR TODOS LOS DATOS DEL USUARIO (incluyendo de persona)
             $_SESSION['usuario_id'] = $usuario['id_usuario'];
             $_SESSION['rol'] = $usuario['id_rol'];
             $_SESSION['nombres'] = $usuario['nombres'];
+            $_SESSION['apellidos'] = $usuario['apellidos'];
+            $_SESSION['telefono'] = $usuario['telefono'];
             $_SESSION['correo'] = $usuario['correo'];
             
             // 🆕 DEBUG después del login
-            error_log("✅ LOGIN EXITOSO - Datos guardados:");
+            error_log("✅ LOGIN EXITOSO - Datos COMPLETOS guardados:");
             error_log("  usuario_id: " . $_SESSION['usuario_id']);
-            error_log("  rol: " . $_SESSION['rol']);
             error_log("  nombres: " . $_SESSION['nombres']);
+            error_log("  apellidos: " . $_SESSION['apellidos']);
+            error_log("  telefono: " . $_SESSION['telefono']);
+            error_log("  correo: " . $_SESSION['correo']);
             error_log("  session_id: " . session_id());
             
             // 3. CREAR COOKIE DE "RECUÉRDAME" SI EL USUARIO LO SOLICITÓ

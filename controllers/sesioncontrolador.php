@@ -14,7 +14,6 @@ class SesionControlador {
     public function registrar($nombres, $apellidos, $correo, $telefono, $id_rol, $id_estado, $password) {
         // Validar si el correo ya existe en la tabla usuario
         if ($this->usuarioModel->existeCorreo($correo)) {
-            
             return false;
         }
 
@@ -29,14 +28,13 @@ class SesionControlador {
     }
 
     public function login($correo, $password) {
-        $usuario = $this->usuarioModel->obtenerPorCorreo($correo);
+        // Obtener usuario CON DATOS DE PERSONA (JOIN)
+        $usuario = $this->usuarioModel->obtenerPorCorreoConPersona($correo);
         
         if ($usuario && password_verify($password, $usuario['contrasena'])) {
-
             if ($usuario['id_estado'] == 1) { // 1 = Activo
                 return $usuario;
             } else {
-                
                 return false;
             }
         }
@@ -45,7 +43,7 @@ class SesionControlador {
     }
 
     public function obtenerUsuario($id_usuario) {
-        return $this->usuarioModel->obtenerPorId($id_usuario);
+        return $this->usuarioModel->obtenerPorIdConPersona($id_usuario);
     }
 
     public function actualizarEstado($id_usuario, $id_estado) {
