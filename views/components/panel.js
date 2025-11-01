@@ -1,4 +1,4 @@
-// Panel.js - Versión sin carga de perfil
+// Panel.js - Versión con carga de estadísticas en perfil
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando panel...');
     
@@ -140,6 +140,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         cargarFeedSuave();
                     } else if (target === 'notificationsView') {
                         cargarNotificacionesSuave();
+                    } else if (target === 'profileView') {
+                        // 🆕 CARGAR ESTADÍSTICAS DEL PERFIL
+                        cargarEstadisticasPerfil();
                     }
                     
                     const mapButton = document.querySelector('.map-floating-button');
@@ -182,6 +185,77 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }, 100);
 });
+
+// 🆕 FUNCIÓN PARA CARGAR ESTADÍSTICAS DEL PERFIL
+async function cargarEstadisticasPerfil() {
+    console.log('📊 Cargando estadísticas del perfil...');
+    
+    try {
+        const usuarioId = await obtenerUsuarioId();
+        if (!usuarioId) {
+            console.error('❌ No se pudo obtener el ID del usuario');
+            return;
+        }
+
+        // Mostrar estado de carga
+        actualizarEstadisticasUI({
+            reports: '...',
+            likes: '...', 
+            comments: '...',
+            views: '...'
+        });
+
+        const resp = await fetch(`../controllers/usuario_controlador.php?action=obtener_estadisticas&id_usuario=${usuarioId}`, {
+            method: 'GET',
+            credentials: 'include'
+        });
+
+        if (!resp.ok) {
+            throw new Error(`Error HTTP: ${resp.status}`);
+        }
+
+        const data = await resp.json();
+        
+        if (data.success) {
+            console.log('✅ Estadísticas cargadas:', data.estadisticas);
+            actualizarEstadisticasUI(data.estadisticas);
+        } else {
+            throw new Error(data.message || 'Error al cargar estadísticas');
+        }
+
+    } catch (error) {
+        console.error('❌ Error cargando estadísticas:', error);
+        // Mostrar valores por defecto en caso de error
+        actualizarEstadisticasUI({
+            reports: '0',
+            likes: '0',
+            comments: '0', 
+            views: '0'
+        });
+    }
+}
+
+// 🆕 FUNCIÓN PARA ACTUALIZAR LA UI CON LAS ESTADÍSTICAS
+function actualizarEstadisticasUI(estadisticas) {
+    const elementos = {
+        reports: document.getElementById('statReports'),
+        likes: document.getElementById('statLikes'),
+        comments: document.getElementById('statComments'),
+        views: document.getElementById('statViews')
+    };
+
+    for (const [key, element] of Object.entries(elementos)) {
+        if (element && estadisticas[key] !== undefined) {
+            element.textContent = estadisticas[key];
+            
+            // Animación simple al actualizar
+            element.style.transform = 'scale(1.1)';
+            setTimeout(() => {
+                element.style.transform = 'scale(1)';
+            }, 300);
+        }
+    }
+}
 
 // FUNCIÓN PARA VERIFICAR SESIÓN
 async function verificarSesion() {
