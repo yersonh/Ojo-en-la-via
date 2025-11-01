@@ -187,18 +187,10 @@
             });
 
             // 🆕 FUNCIÓN PARA CARGAR ESTADÍSTICAS DEL PERFIL
-            async function cargarEstadisticasPerfil() {
+    async function cargarEstadisticasPerfil() {
     console.log('📊 Cargando estadísticas del perfil...');
     
     try {
-        const usuarioId = await obtenerUsuarioId();
-        if (!usuarioId) {
-            console.error('❌ No se pudo obtener el ID del usuario');
-            return;
-        }
-
-        console.log('🔍 Usuario ID:', usuarioId);
-
         // Mostrar estado de carga
         actualizarEstadisticasUI({
             reports: '...',
@@ -207,43 +199,28 @@
             views: '...'
         });
 
-        const url = `../controllers/usuario_controlador.php?action=obtener_estadisticas&id_usuario=${usuarioId}`;
-        console.log('🌐 URL de petición:', url);
-
-        const resp = await fetch(url, {
+        // 🚨 URL SIMPLE - sin parámetros extra
+        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
             method: 'GET',
             credentials: 'include'
         });
 
-        console.log('📨 Respuesta HTTP:', resp.status, resp.statusText);
-
         if (!resp.ok) {
-            throw new Error(`Error HTTP: ${resp.status} ${resp.statusText}`);
+            throw new Error(`Error HTTP: ${resp.status}`);
         }
 
-        // 🆕 DEBUG: Ver el contenido crudo de la respuesta
-        const responseText = await resp.text();
-        console.log('📝 Respuesta cruda:', responseText);
-
-        // Intentar parsear JSON
-        let data;
-        try {
-            data = JSON.parse(responseText);
-        } catch (parseError) {
-            console.error('❌ Error parseando JSON:', parseError);
-            throw new Error('Respuesta JSON inválida del servidor');
-        }
+        const data = await resp.json();
         
         if (data.success) {
             console.log('✅ Estadísticas cargadas:', data.estadisticas);
             actualizarEstadisticasUI(data.estadisticas);
         } else {
-            throw new Error(data.error || data.message || 'Error al cargar estadísticas');
+            throw new Error(data.error || 'Error al cargar estadísticas');
         }
 
     } catch (error) {
         console.error('❌ Error cargando estadísticas:', error);
-        // Mostrar valores por defecto en caso de error
+        // Mostrar valores por defecto
         actualizarEstadisticasUI({
             reports: '0',
             likes: '0',
