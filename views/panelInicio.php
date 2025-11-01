@@ -6,6 +6,8 @@ if (!isset($_SESSION['usuario_id'])) {
     header('Location: ../index.php');
     exit();
 }
+$database = new Database();
+$pdo = $database->conectar();
 
 // Obtener datos del usuario de la sesión
 $usuario_id = $_SESSION['usuario_id'];
@@ -707,7 +709,6 @@ $mapUrl = $baseUrl . '/views/vermapa.php';
     </script>
 
     <script src="components/panel.js"></script>
-    <script src="components/perfil.js"></script>
     <script type="module" src="components/mapa/index.js"></script>
     <script type="module" src="components/formulario/index.js"></script>
     <script src="components/comentarios.js"></script>
