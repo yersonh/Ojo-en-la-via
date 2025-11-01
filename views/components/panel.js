@@ -200,7 +200,7 @@
         });
 
         // 🚨 URL SIMPLE - sin parámetros extra
-        const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_estadisticas', {
+        const resp = await fetch('../../controllers/usuario_controlador.php?action=obtener_estadisticas', {
             method: 'GET',
             credentials: 'include'
         });
@@ -254,7 +254,7 @@
             // FUNCIÓN PARA VERIFICAR SESIÓN
             async function verificarSesion() {
                 try {
-                    const resp = await fetch('../controllers/usuario_controlador.php?action=verificar_sesion', {
+                    const resp = await fetch('../../controllers/usuario_controlador.php?action=verificar_sesion', {
                         method: 'GET',
                         credentials: 'include'
                     });
@@ -470,7 +470,7 @@
                 }
                 
                 try {
-                    const resp = await fetch('../controllers/usuario_controlador.php?action=obtener_id', {
+                    const resp = await fetch('../../controllers/usuario_controlador.php?action=obtener_id', {
                         credentials: 'include'
                     });
                     const data = await resp.json();
