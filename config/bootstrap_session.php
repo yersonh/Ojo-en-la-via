@@ -11,4 +11,4 @@ if (session_status() === PHP_SESSION_NONE) {
 } else {
     error_log("⚠️ bootstrap_session.php: Sesión YA activa - ID: " . session_id());
 }
-?>a
+?>

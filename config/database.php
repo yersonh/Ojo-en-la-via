@@ -6,7 +6,7 @@ class Database {
     private $user;
     private $password;
     private $conn;
-a
+
 
     public function __construct() {
         // Verificar si la extensión pdo_pgsql está instalada
